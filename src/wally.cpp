@@ -10,13 +10,13 @@
 #endif
 
 #include "version.h"
-#include "jelly.h"
+#include "region.h"
 
-using namespace jellynas;
+using namespace wallysworld;
 
 inline void
 displayUsage() {
-  std::cout << "Usage: jelly <command> <arguments>" << std::endl;
+  std::cout << "Usage: wally <command> <arguments>" << std::endl;
   std::cout << std::endl;
   std::cout << "    region         plot genomic region" << std::endl;
   std::cout << std::endl;
@@ -25,19 +25,19 @@ displayUsage() {
 
 int main(int argc, char **argv) {
     if (argc < 2) { 
-      printTitle("Delly");
+      printTitle("Wally");
       displayUsage();
       return 0;
     }
 
     if ((std::string(argv[1]) == "version") || (std::string(argv[1]) == "--version") || (std::string(argv[1]) == "--version-only") || (std::string(argv[1]) == "-v")) {
-      std::cout << "Delly version: v" << dellyVersionNumber << std::endl;
+      std::cout << "Wally version: v" << wallyVersionNumber << std::endl;
       std::cout << " using Boost: v" << BOOST_VERSION / 100000 << "." << BOOST_VERSION / 100 % 1000 << "." << BOOST_VERSION % 100 << std::endl;
       std::cout << " using HTSlib: v" << hts_version() << std::endl;
       return 0;
     }
     else if ((std::string(argv[1]) == "help") || (std::string(argv[1]) == "--help") || (std::string(argv[1]) == "-h") || (std::string(argv[1]) == "-?")) {
-      printTitle("Delly");
+      printTitle("Wally");
       displayUsage();
       return 0;
     }
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
       return 0;
     }
     else if ((std::string(argv[1]) == "region")) {
-      return jelly(argc-1,argv+1);
+      return region(argc-1,argv+1);
     }
     std::cerr << "Unrecognized command " << std::string(argv[1]) << std::endl;
     return 1;

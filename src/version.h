@@ -5,22 +5,22 @@
 
 #include <htslib/sam.h>
 
-namespace jellynas
+namespace wallysworld
 {
 
 
-  std::string dellyVersionNumber = "0.8.7";
+  std::string wallyVersionNumber = "0.1.1";
 
   inline 
     void printTitle(std::string const& title) 
     {
       std::cout << "**********************************************************************" << std::endl;
-      std::cout << "Program: Delly" << std::endl;
+      std::cout << "Program: Wally" << std::endl;
       std::cout << "This is free software, and you are welcome to redistribute it under" << std::endl;
       std::cout << "certain conditions (BSD License); for license details use '-l'." << std::endl;
       std::cout << "This program comes with ABSOLUTELY NO WARRANTY; for details use '-w'." << std::endl;
       std::cout <<  std::endl;
-      std::cout <<  title << " (Version: " << dellyVersionNumber << ")" << std::endl;
+      std::cout <<  title << " (Version: " << wallyVersionNumber << ")" << std::endl;
       std::cout << "Contact: Tobias Rausch (rausch@embl.de)" << std::endl;
       std::cout << "**********************************************************************" << std::endl;
       std::cout << std::endl;
@@ -41,7 +41,7 @@ namespace jellynas
 
     inline void
     bsd() {
-      std::cout << "Copyright (c) 2020 Delly Project Authors (see AUTHORS file for details)." << std::endl;
+      std::cout << "Copyright (c) 2020 Wally Project Authors (see AUTHORS file for details)." << std::endl;
       std::cout << "All rights reserved." << std::endl;
       std::cout << std::endl;
       std::cout << "Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:" << std::endl;

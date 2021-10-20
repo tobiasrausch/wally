@@ -1,5 +1,5 @@
-#ifndef JELLY_H
-#define JELLY_H
+#ifndef REGION_H
+#define REGION_H
 
 
 #include <iostream>
@@ -23,7 +23,7 @@
 
 #include "version.h"
 
-namespace jellynas
+namespace wallysworld
 {
 
   // Config arguments
@@ -48,9 +48,9 @@ namespace jellynas
 
   
   template<typename TConfigStruct>
-  inline int jellyRun(TConfigStruct& c) {
+  inline int wallyRun(TConfigStruct& c) {
 #ifdef PROFILE
-    ProfilerStart("delly.prof");
+    ProfilerStart("wally.prof");
 #endif
 
     //NOTE: this sample will overwrite the file or test.png without warning!
@@ -87,7 +87,7 @@ namespace jellynas
   }
 
 
-  int jelly(int argc, char **argv) {
+  int region(int argc, char **argv) {
     Config c;
     
     // Define generic options
@@ -133,7 +133,7 @@ namespace jellynas
     // Check command line arguments
     if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("genome"))) { 
       std::cout << std::endl;
-      std::cout << "Usage: delly " << argv[0] << " [OPTIONS] -g <ref.fa> <sample1.sort.bam> <sample2.sort.bam> ..." << std::endl;
+      std::cout << "Usage: wally " << argv[0] << " [OPTIONS] -g <ref.fa> <sample1.sort.bam> <sample2.sort.bam> ..." << std::endl;
       std::cout << visible_options << "\n";
       return 0;
     }
@@ -141,11 +141,11 @@ namespace jellynas
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";
-    std::cout << "jelly ";
+    std::cout << "wally ";
     for(int i=0; i<argc; ++i) { std::cout << argv[i] << ' '; }
     std::cout << std::endl;
     
-    return jellyRun(c);
+    return wallyRun(c);
   }
 
 }
