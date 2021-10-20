@@ -18,8 +18,7 @@ inline void
 displayUsage() {
   std::cout << "Usage: jelly <command> <arguments>" << std::endl;
   std::cout << std::endl;
-  std::cout << "Short-read SV calling:" << std::endl;
-  std::cout << "    call         discover and genotype structural variants" << std::endl;
+  std::cout << "    region         plot genomic region" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 }
@@ -50,7 +49,7 @@ int main(int argc, char **argv) {
       bsd();
       return 0;
     }
-    else if ((std::string(argv[1]) == "call")) {
+    else if ((std::string(argv[1]) == "region")) {
       return jelly(argc-1,argv+1);
     }
     std::cerr << "Unrecognized command " << std::string(argv[1]) << std::endl;
