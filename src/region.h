@@ -22,8 +22,6 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-# define w 400
-
 #include <iostream>
 
 #include "version.h"
@@ -49,11 +47,20 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
-    char atom_window[] = "Drawing 1: Atom";
+    cv::Mat color = cv::imread("Plate59.png");
+    cv::Mat gray = cv::imread("Plate59.png", cv::IMREAD_GRAYSCALE);
 
-    cv::Mat  atom_image = cv::Mat::zeros(w, w, CV_8UC3);
+    cv::imwrite("Plate59.gray.jpg", gray);
+
+    int32_t myRow = color.rows - 1;
+    int32_t myCol = color.cols - 1;
+    auto pixel = color.at<cv::Vec3b>(myRow, myCol);
+    std::cout << "Pixel value (B, G, R): (" << (int) pixel[0] << "," << (int) pixel[1] << "," << (int) pixel[2] << ")" << std::endl;
+
+    cv::imshow("Lena BGR", color);
+    cv::imshow("Lena Gray", gray);
+    cv::waitKey(0);
     
-
 #ifdef PROFILE
     ProfilerStop();
 #endif
