@@ -25,6 +25,8 @@
 #include <iostream>
 
 #include "version.h"
+#include "util.h"
+#include "draw.h"
 
 namespace wallysworld
 {
@@ -35,6 +37,8 @@ namespace wallysworld
     uint32_t maxCov;
     uint32_t width;
     uint32_t height;
+    uint32_t tlheight;  // pixel height of a track line
+    uint32_t rdheight;  // pixel height of a single read
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
     std::vector<boost::filesystem::path> files;
@@ -47,17 +51,69 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
-    cv::Mat color = cv::imread("Plate59.png");
-    cv::Mat gray = cv::imread("Plate59.png", cv::IMREAD_GRAYSCALE);
-    cv::imwrite("Plate59.gray.jpg", gray);
+    cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
-    int32_t myRow = color.rows - 1;
-    int32_t myCol = color.cols - 1;
-    auto pixel = color.at<cv::Vec3b>(myRow, myCol);
-    std::cout << "Pixel value (B, G, R): (" << (int) pixel[0] << "," << (int) pixel[1] << "," << (int) pixel[2] << ")" << std::endl;
+    // Tracks
+    int32_t maxTracks = c.height / c.tlheight;
+    std::vector<int32_t> taken(maxTracks, -2000000);
+    
+    // Open file handles
+    typedef std::vector<samFile*> TSamFile;
+    typedef std::vector<hts_idx_t*> TIndex;
+    TSamFile samfile(c.files.size());
+    TIndex idx(c.files.size());
+    for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+      samfile[file_c] = sam_open(c.files[file_c].string().c_str(), "r");
+      hts_set_fai_filename(samfile[file_c], c.genome.string().c_str());
+      idx[file_c] = sam_index_load(samfile[file_c], c.files[file_c].string().c_str());
+    }
+    bam_hdr_t* hdr = sam_hdr_read(samfile[0]);
 
-    cv::imshow("Lena BGR", color);
-    cv::imshow("Lena Gray", gray);
+    // Parse BAM files
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Parsing BAMs" << std::endl;
+    faidx_t* fai = fai_load(c.genome.string().c_str());
+
+    // Iterate files
+    int32_t rgbeg = 17383;
+    int32_t rgend = 17456;
+    int32_t rgsize = 17456 - 17383;
+    for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+      // Read alignments
+      hts_itr_t* iter = sam_itr_queryi(idx[file_c], 0, rgbeg, rgend);
+	
+      bam1_t* rec = bam_init1();
+      while (sam_itr_next(samfile[file_c], iter, rec) >= 0) {
+	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
+	if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
+	int32_t px = pixelX(c.width, rgsize, (rec->core.pos - rgbeg));
+	int32_t pxend = pixelX(c.width, rgsize, (rec->core.pos + alignmentLength(rec) - rgbeg));
+
+	// Search empty track
+	for(uint32_t i = 0; i < taken.size(); ++i) {
+	  if (taken[i] + 1 < px) {
+	    drawRead(bg, px, i * c.tlheight, pxend - px, c.rdheight, (rec->core.flag & BAM_FREVERSE));
+	    taken[i] = pxend;
+	    break;
+	  }
+	}
+      }
+      bam_destroy1(rec);
+      hts_itr_destroy(iter);
+    }
+
+    // Clean-up
+    fai_destroy(fai);
+    bam_hdr_destroy(hdr);
+    for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+      hts_idx_destroy(idx[file_c]);
+      sam_close(samfile[file_c]);
+    }	
+    
+
+    std::string str("title");
+    cv::imwrite("bg.jpg", bg);
+    cv::imshow(str.c_str(), bg);
     cv::waitKey(0);
 
 #ifdef PROFILE
@@ -65,7 +121,7 @@ namespace wallysworld
 #endif
   
     // End
-    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;;
     return 0;
   }
@@ -73,7 +129,8 @@ namespace wallysworld
 
   int region(int argc, char **argv) {
     Config c;
-    
+    c.tlheight = 10;
+    c.rdheight = 8;
     // Define generic options
     std::string svtype;
     boost::program_options::options_description generic("Generic options");
@@ -91,7 +148,7 @@ namespace wallysworld
     
     boost::program_options::options_description geno("Graphics options");
     geno.add_options()
-      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(512), "width of the plot")
+      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(512), "height of the plot")
       ;
 

@@ -56,7 +56,7 @@ all:   	$(TARGETS)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoheader && autoconf && ./configure --disable-s3 --disable-gcs --disable-libcurl --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
 .opencv: $(OPENCVSOURCES)
-	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv .. &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv -D WITH_GTK=ON .. &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
 
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
@@ -68,7 +68,7 @@ install: ${BUILT_PROGRAMS}
 clean:
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && $(MAKE) clean; fi
 	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES}
-	rm -rf src/ocv/
+	rm -rf src/ocv/ src/opencv/build/
 
 distclean: clean
 	rm -f ${BUILT_PROGRAMS}
