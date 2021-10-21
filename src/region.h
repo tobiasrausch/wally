@@ -49,7 +49,6 @@ namespace wallysworld
 
     cv::Mat color = cv::imread("Plate59.png");
     cv::Mat gray = cv::imread("Plate59.png", cv::IMREAD_GRAYSCALE);
-
     cv::imwrite("Plate59.gray.jpg", gray);
 
     int32_t myRow = color.rows - 1;
@@ -60,7 +59,7 @@ namespace wallysworld
     cv::imshow("Lena BGR", color);
     cv::imshow("Lena Gray", gray);
     cv::waitKey(0);
-    
+
 #ifdef PROFILE
     ProfilerStop();
 #endif
