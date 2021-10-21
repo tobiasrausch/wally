@@ -4,6 +4,7 @@
 # Binaries
 bin/
 src/wally
+src/ocv
 
 # Prerequisites
 *.d

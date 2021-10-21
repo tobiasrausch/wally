@@ -18,7 +18,12 @@
 #include <htslib/vcf.h>
 #include <htslib/sam.h>
 
-#include "lodepng.h"
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
+# define w 400
+
 #include <iostream>
 
 #include "version.h"
@@ -38,43 +43,16 @@ namespace wallysworld
   };
 
 
-  void encodeOneStep(const char* filename, std::vector<unsigned char>& image, unsigned width, unsigned height) {
-    //Encode the image
-    unsigned error = lodepng::encode(filename, image, width, height);
-
-    //if there's an error, display it
-    if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
-  }
-
-  
   template<typename TConfigStruct>
   inline int wallyRun(TConfigStruct& c) {
 #ifdef PROFILE
     ProfilerStart("wally.prof");
 #endif
 
-    //NOTE: this sample will overwrite the file or test.png without warning!
-    const char* filename = "test.png";
+    char atom_window[] = "Drawing 1: Atom";
 
-    //generate some image
-    std::vector<unsigned char> image;
-    image.resize(c.width * c.height * 4);
-    for(uint32_t y = 0; y < c.height; y++)
-      for(uint32_t x = 0; x < c.width; x++) {
-	if (x == 100) {
-	  image[4 * c.width * y + 4 * x + 0] = 255;
-	  image[4 * c.width * y + 4 * x + 1] = 255;
-	  image[4 * c.width * y + 4 * x + 2] = 255;
-	  image[4 * c.width * y + 4 * x + 3] = 255;
-	} else {
-	  image[4 * c.width * y + 4 * x + 0] = 0;
-	  image[4 * c.width * y + 4 * x + 1] = 0;
-	  image[4 * c.width * y + 4 * x + 2] = 0;
-	  image[4 * c.width * y + 4 * x + 3] = 255;
-	}
-      }
-   
-    encodeOneStep(filename, image, c.width, c.height);
+    cv::Mat  atom_image = cv::Mat::zeros(w, w, CV_8UC3);
+    
 
 #ifdef PROFILE
     ProfilerStop();

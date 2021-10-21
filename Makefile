@@ -4,7 +4,8 @@ STATIC ?= 0
 # Submodules
 PWD = $(shell pwd)
 EBROOTHTSLIB ?= ${PWD}/src/htslib/
-LODEPNG ?= ${PWD}/src/lodepng/
+OPENCVSRC ?= ${PWD}/src/opencv/
+OPENCV ?= ${PWD}/src/ocv/
 
 # Install dir
 prefix = ${PWD}
@@ -13,8 +14,8 @@ bindir ?= $(exec_prefix)/bin
 
 # Flags
 CXX=g++
-CXXFLAGS += -isystem ${EBROOTHTSLIB} -isystem ${LODEPNG} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
-LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time 
+CXXFLAGS += -isystem ${EBROOTHTSLIB} -isystem ${OPENCV}/include/opencv4 -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
+LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -L ${OPENCV}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time -lopencv_core
 
 # Flags for static compile
 ifeq (${STATIC}, 1)
@@ -35,10 +36,14 @@ endif
 ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
 	SUBMODULES += .htslib
 endif
+ifeq (${OPENCVSRC}, ${PWD}/src/opencv/)
+	SUBMODULES += .opencv
+endif
 
 
 # External sources
 HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
+OPENCVSOURCES = $(wildcard src/opencv/CMakeLists.txt)
 SOURCES = $(wildcard src/*.h) $(wildcard src/*.cpp)
 
 # Targets
@@ -50,8 +55,11 @@ all:   	$(TARGETS)
 .htslib: $(HTSLIBSOURCES)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoheader && autoconf && ./configure --disable-s3 --disable-gcs --disable-libcurl --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
+.opencv: $(OPENCVSOURCES)
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
+
 src/wally: ${SUBMODULES} $(SOURCES)
-	$(CXX) $(CXXFLAGS) $@.cpp src/lodepng/lodepng.cpp -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
 
 install: ${BUILT_PROGRAMS}
 	mkdir -p ${bindir}
@@ -60,6 +68,7 @@ install: ${BUILT_PROGRAMS}
 clean:
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && $(MAKE) clean; fi
 	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES}
+	rm -rf src/ocv/
 
 distclean: clean
 	rm -f ${BUILT_PROGRAMS}
