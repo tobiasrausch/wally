@@ -17,16 +17,32 @@
 namespace wallysworld
 {
 
+  struct Region {
+    int32_t tid;
+    int32_t beg;
+    int32_t end;
+    int32_t size;
+    
+  Region() : tid(0), beg(0), end(0), size(0) {}
+  };
+
+
+  template<typename TConfig>
   inline bool
-    parseRegion(std::string const& str, std::string& chr, uint32_t& rgbeg, uint32_t& rgend) {
-    std::size_t pos = str.find(":");
+    parseRegion(bam_hdr_t* hdr, TConfig const& c, Region& rg) {
+    std::size_t pos = c.regionStr.find(":");
     if (pos == std::string::npos) return false;
-    chr = str.substr(0, pos);
-    std::string tmp = str.substr(pos+1);
+    std::string chrName(c.regionStr.substr(0, pos));
+    std::string tmp = c.regionStr.substr(pos+1);
     pos = tmp.find("-");
     if (pos == std::string::npos) return false;
-    rgbeg = (uint32_t) boost::lexical_cast<int32_t>(tmp.substr(0, pos));
-    rgend = (uint32_t) boost::lexical_cast<int32_t>(tmp.substr(pos+1));
+    rg.beg = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+    rg.end = boost::lexical_cast<int32_t>(tmp.substr(pos+1));
+    rg.tid = bam_name2id(hdr, chrName.c_str());
+    if (rg.tid < 0) return false;
+    if (rg.beg >= rg.end) return false;
+    if (rg.end - rg.beg > 50000) return false;
+    rg.size = rg.end - rg.beg;
     return true;
   }
 

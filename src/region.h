@@ -45,7 +45,6 @@ namespace wallysworld
     std::vector<boost::filesystem::path> files;
   };
 
-
   template<typename TConfigStruct>
   inline int wallyRun(TConfigStruct& c) {
 #ifdef PROFILE
@@ -84,41 +83,25 @@ namespace wallysworld
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Parsing BAMs" << std::endl;
 
     // Split region
-    uint32_t rgbeg = 17383;
-    uint32_t rgend = 17456;
-    std::string chrName("NA");
-    if (!parseRegion(c.regionStr, chrName, rgbeg, rgend)) {
+    Region rg;
+    if (!parseRegion(hdr, c, rg)) {
       std::cerr << "Invalid region specified: " << c.regionStr << std::endl;
-      return 1;
-    }
-    int32_t tid = bam_name2id(hdr, chrName.c_str());
-    if (tid < 0) {
-      std::cerr << "Chromosome does not exist in BAM file: " << chrName << std::endl;
-      return 1;
-    }
-    if (rgbeg >= rgend) {
-      std::cerr << "Region begin needs to be smaller than region end: " << rgbeg << ',' << rgend << std::endl;
-      return 1;
-    }
-    if (rgend - rgbeg > 50000) {
-      std::cerr << "Region needs to be smaller than 50kbp!" << std::endl;
       return 1;
     }
 
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
     int32_t seqlen;
-    char* seq = faidx_fetch_seq(fai, chrName.c_str(), 0, hdr->target_len[tid], &seqlen);
+    char* seq = faidx_fetch_seq(fai, hdr->target_name[rg.tid], 0, hdr->target_len[rg.tid], &seqlen);
     
     // Coverage
-    uint32_t rgsize = rgend - rgbeg;
     uint32_t maxCoverage = std::numeric_limits<uint32_t>::max();
-    std::vector<uint32_t> cov(rgsize, 0);
+    std::vector<uint32_t> cov(rg.size, 0);
 	
     // Iterate files
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       // Read alignments
-      hts_itr_t* iter = sam_itr_queryi(idx[file_c], tid, rgbeg, rgend);	
+      hts_itr_t* iter = sam_itr_queryi(idx[file_c], rg.tid, rg.beg, rg.end);	
       bam1_t* rec = bam_init1();
       while (sam_itr_next(samfile[file_c], iter, rec) >= 0) {
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
@@ -140,8 +123,8 @@ namespace wallysworld
 	    // match or mismatch
 	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 	      // Increase coverage
-	      int32_t rpadj = (int32_t) rp - (int32_t) rgbeg;
-	      if ((rpadj >= 0) && (rpadj < (int32_t) rgsize) && cov[rpadj] < maxCoverage) ++cov[rpadj];
+	      int32_t rpadj = (int32_t) rp - (int32_t) rg.beg;
+	      if ((rpadj >= 0) && (rpadj < (int32_t) rg.size) && cov[rpadj] < maxCoverage) ++cov[rpadj];
 	      if (rec->core.l_qseq) {
 		if (sequence[sp] != seq[rp]) std::cout << rp << std::endl;
 	      }
@@ -169,8 +152,8 @@ namespace wallysworld
 	  }
 	}
 
-	int32_t px = pixelX(c.width, rgsize, (rec->core.pos - rgbeg));
-	int32_t pxend = pixelX(c.width, rgsize, (rec->core.pos + alignmentLength(rec) - rgbeg));
+	int32_t px = pixelX(c.width, rg.size, (rec->core.pos - rg.beg));
+	int32_t pxend = pixelX(c.width, rg.size, (rec->core.pos + alignmentLength(rec) - rg.beg));
 
 	// Search empty track
 	for(uint32_t i = 0; i < taken.size(); ++i) {
