@@ -17,6 +17,19 @@
 namespace wallysworld
 {
 
+  inline bool
+    parseRegion(std::string const& str, std::string& chr, uint32_t& rgbeg, uint32_t& rgend) {
+    std::size_t pos = str.find(":");
+    if (pos == std::string::npos) return false;
+    chr = str.substr(0, pos);
+    std::string tmp = str.substr(pos+1);
+    pos = tmp.find("-");
+    if (pos == std::string::npos) return false;
+    rgbeg = (uint32_t) boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+    rgend = (uint32_t) boost::lexical_cast<int32_t>(tmp.substr(pos+1));
+    return true;
+  }
+
   inline unsigned hash_string(const char *s) {
     unsigned h = 37;
     while (*s) {

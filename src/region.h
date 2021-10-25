@@ -39,6 +39,7 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
+    std::string regionStr;
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
     std::vector<boost::filesystem::path> files;
@@ -74,18 +75,88 @@ namespace wallysworld
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Parsing BAMs" << std::endl;
     faidx_t* fai = fai_load(c.genome.string().c_str());
 
+    // Split region
+    uint32_t rgbeg = 17383;
+    uint32_t rgend = 17456;
+    std::string chrName("NA");
+    if (!parseRegion(c.regionStr, chrName, rgbeg, rgend)) {
+      std::cerr << "Invalid region specified: " << c.regionStr << std::endl;
+      return 1;
+    }
+    int32_t tid = bam_name2id(hdr, chrName.c_str());
+    if (tid < 0) {
+      std::cerr << "Chromosome does not exist in BAM file: " << chrName << std::endl;
+      return 1;
+    }
+
+	
     // Iterate files
-    int32_t rgbeg = 17383;
-    int32_t rgend = 17456;
-    int32_t rgsize = 17456 - 17383;
+    int32_t rgsize = rgend - rgbeg;
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       // Read alignments
-      hts_itr_t* iter = sam_itr_queryi(idx[file_c], 0, rgbeg, rgend);
-	
+      hts_itr_t* iter = sam_itr_queryi(idx[file_c], tid, rgbeg, rgend);	
       bam1_t* rec = bam_init1();
       while (sam_itr_next(samfile[file_c], iter, rec) >= 0) {
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
 	if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
+
+	/*
+	uint32_t rp = 0; // reference pointer
+	uint32_t sp = 0; // sequence pointer
+	// Parse the CIGAR
+	uint32_t* cigar = bam_get_cigar(rec);
+	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+	  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+	    // match or mismatch
+	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+	      if (rec->core.l_qseq) {
+		if (sequence[sp] == refslice[rp]) ++itRg->second.bc.matchCount;
+	      } else {
+		if (bam_cigar_op(cigar[i]) == BAM_CEQUAL) ++itRg->second.bc.matchCount;
+		else if (bam_cigar_op(cigar[i]) == BAM_CDIFF) ++itRg->second.bc.mismatchCount;
+	      }
+	      // Count bp-level coverage
+	      if (itRg->second.bc.cov[rec->core.pos + rp] < itRg->second.bc.maxCoverage) ++itRg->second.bc.cov[rec->core.pos + rp];
+	      ++sp;
+	      ++rp;
+	    }
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
+	    ++itRg->second.bc.delCount;
+	    if (rec->core.l_qseq) ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
+	    if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.delSize[bam_cigar_oplen(cigar[i])];
+	    else ++itRg->second.bc.delSize[itRg->second.bc.maxIndelSize];
+	    rp += bam_cigar_oplen(cigar[i]);
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
+	    ++itRg->second.bc.insCount;
+	    if (rec->core.l_qseq) ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
+	    if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.insSize[bam_cigar_oplen(cigar[i])];
+	    else ++itRg->second.bc.insSize[itRg->second.bc.maxIndelSize];
+	    sp += bam_cigar_oplen(cigar[i]);
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	    if (!softClippedOnce) {
+	      ++itRg->second.bc.softClipCount;
+	      softClippedOnce = true;
+	    }
+	    sp += bam_cigar_oplen(cigar[i]);
+	  } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	    if (!hardClippedOnce) {
+	      ++itRg->second.bc.hardClipCount;
+	      hardClippedOnce = true;
+	    }
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	    if (!spliced) {
+	      ++itRg->second.rc.spliced;
+	      spliced = true;
+	    }
+	    rp += bam_cigar_oplen(cigar[i]);
+	  } else {
+	    std::cerr << "Unknown Cigar options" << std::endl;
+	    return 1;
+	  }
+	}
+	*/
+	
+
 	int32_t px = pixelX(c.width, rgsize, (rec->core.pos - rgbeg));
 	int32_t pxend = pixelX(c.width, rgsize, (rec->core.pos + alignmentLength(rec) - rgbeg));
 
@@ -113,7 +184,7 @@ namespace wallysworld
 
     std::string str("title");
     cv::imwrite("bg.jpg", bg);
-    cv::imshow(str.c_str(), bg);
+    //cv::imshow(str.c_str(), bg);
     cv::waitKey(0);
 
 #ifdef PROFILE
@@ -131,6 +202,7 @@ namespace wallysworld
     Config c;
     c.tlheight = 10;
     c.rdheight = 8;
+    
     // Define generic options
     std::string svtype;
     boost::program_options::options_description generic("Generic options");
@@ -144,12 +216,13 @@ namespace wallysworld
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
       ("max-cov,m", boost::program_options::value<uint32_t>(&c.maxCov)->default_value(100), "max. coverage to display")
+      ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
       ;
     
     boost::program_options::options_description geno("Graphics options");
     geno.add_options()
-      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
-      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(512), "height of the plot")
+      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(2048), "width of the plot")
+      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
       ;
 
     // Define hidden options
@@ -178,7 +251,7 @@ namespace wallysworld
       std::cout << visible_options << "\n";
       return 0;
     }
-    
+
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";

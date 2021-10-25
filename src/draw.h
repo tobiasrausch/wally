@@ -21,15 +21,15 @@ namespace wallysworld
   inline void
   drawRead(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse) {
     cv::Rect rect(x, y, w, h);
-    cv::rectangle(img, rect, cv::Scalar(50, 50, 50), -1);
+    cv::rectangle(img, rect, cv::Scalar(150, 150, 150), -1);
     typedef std::vector<cv::Point> TPointVector;
     TPointVector pvec;
     if (reverse) {
-      cv::line(img, cv::Point(x, y), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(50, 50, 50), 1);
-      cv::line(img, cv::Point(x, y+h), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(50, 50, 50), 1);
+      cv::line(img, cv::Point(x, y), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
+      cv::line(img, cv::Point(x, y+h), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
     } else {
-      cv::line(img, cv::Point(x+w, y), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(50, 50, 50), 1);
-      cv::line(img, cv::Point(x+w, y+h), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(50, 50, 50), 1);
+      cv::line(img, cv::Point(x+w, y), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
+      cv::line(img, cv::Point(x+w, y+h), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
     }
   }
 
