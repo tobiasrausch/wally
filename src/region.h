@@ -39,6 +39,7 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
+    uint32_t rdspacing;  // pixel spacing between reads
     std::string regionStr;
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
@@ -61,9 +62,9 @@ namespace wallysworld
       return 1;
     }
     // First 3 tracks: coverage
-    taken[0] = c.width;
-    taken[1] = c.width;
-    taken[2] = c.width;
+    taken[0] = 1073741824;
+    taken[1] = 1073741824;
+    taken[2] = 1073741824;
 
     
     // Open file handles
@@ -97,7 +98,10 @@ namespace wallysworld
     // Coverage
     uint32_t maxCoverage = std::numeric_limits<uint32_t>::max();
     std::vector<uint32_t> cov(rg.size, 0);
-	
+
+    // Read spacing
+    int32_t rdspace = pixelX(c.width, rg.size, c.rdspacing);
+    
     // Iterate files
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       // Read alignments
@@ -113,6 +117,17 @@ namespace wallysworld
 	uint8_t* seqptr = bam_get_seq(rec);
 	for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 
+	// Search empty track
+	int32_t trackIdx = -1;
+	for(uint32_t i = 0; i < taken.size(); ++i) {
+	  if (taken[i] < rec->core.pos) {
+	    trackIdx = i;
+	    taken[i] = rec->core.pos + alignmentLength(rec) + rdspace;
+	    break;
+	  }
+	}
+	if (trackIdx == -1) continue;
+	
 	// Parse CIGAR
 	uint32_t rp = rec->core.pos; // reference pointer
 	uint32_t sp = 0; // sequence pointer
@@ -120,6 +135,7 @@ namespace wallysworld
 	uint32_t* cigar = bam_get_cigar(rec);
 	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+	    drawRead(c, rg, bg, trackIdx, (rp - rg.beg), (rp + bam_cigar_oplen(cigar[i]) - rg.beg), (rec->core.flag & BAM_FREVERSE));
 	    // match or mismatch
 	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 	      // Increase coverage
@@ -152,17 +168,6 @@ namespace wallysworld
 	  }
 	}
 
-	int32_t px = pixelX(c.width, rg.size, (rec->core.pos - rg.beg));
-	int32_t pxend = pixelX(c.width, rg.size, (rec->core.pos + alignmentLength(rec) - rg.beg));
-
-	// Search empty track
-	for(uint32_t i = 0; i < taken.size(); ++i) {
-	  if (taken[i] + 1 < px) {
-	    drawRead(bg, px, i * c.tlheight, pxend - px, c.rdheight, (rec->core.flag & BAM_FREVERSE));
-	    taken[i] = pxend;
-	    break;
-	  }
-	}
       }
       bam_destroy1(rec);
       hts_itr_destroy(iter);
@@ -180,7 +185,7 @@ namespace wallysworld
 
     std::string str("title");
     cv::imwrite("bg.jpg", bg);
-    cv::imshow(str.c_str(), bg);
+    //cv::imshow(str.c_str(), bg);
     cv::waitKey(0);
 
 #ifdef PROFILE
@@ -196,8 +201,9 @@ namespace wallysworld
 
   int region(int argc, char **argv) {
     Config c;
-    c.tlheight = 10;
-    c.rdheight = 8;
+    c.tlheight = 25;
+    c.rdheight = 16;
+    c.rdspacing = 5;
     
     // Define generic options
     std::string svtype;

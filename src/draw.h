@@ -17,6 +17,17 @@
 namespace wallysworld
 {
 
+  
+
+  inline int32_t
+    pixelX(int32_t const width, int32_t const rgsz, int32_t const genomicX) {
+    return (int32_t) (((double) genomicX / (double) rgsz) * width);
+  }
+
+  inline int32_t
+    genomicX(int32_t const width, int32_t const rgsz, int32_t const pixelX) {
+    return (int32_t) (((double) pixelX / (double) width) * rgsz);
+  }
 
   inline void
   drawRead(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse) {
@@ -33,12 +44,13 @@ namespace wallysworld
     }
   }
 
-  inline int32_t
-    pixelX(int32_t const width, int32_t const sz, int32_t const genomicX) {
-    return (int32_t) (((double) genomicX / (double) sz) * width);
+  template<typename TConfig>
+  inline void
+    drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse) {
+    int32_t px = pixelX(c.width, rg.size, gstart);
+    int32_t pxend = pixelX(c.width, rg.size, gend);
+    drawRead(img, px, track * c.tlheight, pxend - px, c.rdheight, reverse);
   }
-  
-
 
 }
 
