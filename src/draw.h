@@ -59,20 +59,45 @@ namespace wallysworld
 
   inline void
   drawNuc(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
+    // Background rectangle
     cv::Rect rect(x, y, w, h);
-    if ((nuc == 'a') or (nuc == 'A')) {
-      cv::rectangle(img, rect, cv::Scalar(0, 255, 0), -1);
-    }
-    else if ((nuc == 'c') or (nuc == 'C')) {
-      cv::rectangle(img, rect, cv::Scalar(0, 0, 255), -1);
-    }
-    else if ((nuc == 'g') or (nuc == 'G')) {
-      cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
-    }
-    else if ((nuc == 't') or (nuc == 'T')) {
-      cv::rectangle(img, rect, cv::Scalar(5, 113, 209), -1);
-    } else {
-      cv::rectangle(img, rect, cv::Scalar(0, 0, 0), -1);
+
+    // Font
+    std::string text(1, nuc);
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    double frac = (double) textSize.width / (double) w;
+
+    // Put nucleotide if there is space
+    if (frac < 1) {
+      cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      if ((nuc == 'a') or (nuc == 'A')) {
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 255, 0), font_thickness);
+      }
+      else if ((nuc == 'c') or (nuc == 'C')) {
+      	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness);
+      }
+      else if ((nuc == 'g') or (nuc == 'G')) {
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(5, 113, 209), font_thickness);
+      }
+      else if ((nuc == 't') or (nuc == 'T')) {
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 255), font_thickness);
+      }
+    } else { 
+      if ((nuc == 'a') or (nuc == 'A')) {
+	cv::rectangle(img, rect, cv::Scalar(0, 255, 0), -1);
+      }
+      else if ((nuc == 'c') or (nuc == 'C')) {
+	cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
+      }
+      else if ((nuc == 'g') or (nuc == 'G')) {
+	cv::rectangle(img, rect, cv::Scalar(5, 113, 209), -1);
+      }
+      else if ((nuc == 't') or (nuc == 'T')) {
+	cv::rectangle(img, rect, cv::Scalar(0, 0, 255), -1);
+      }
     }
   }
   
@@ -87,17 +112,17 @@ namespace wallysworld
   inline void
   drawDel(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len) {
     std::string text = boost::lexical_cast<std::string>(len);
-    double font_scale = 0.5;
-    double font_thickness = 1;
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
     int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), cv::Scalar(0, 0, 0), 3);
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), cv::Scalar(0, 0, 0), 1.8);
     double frac = (double) textSize.width / (double) w;
     // Put length if there is space
-    if (frac < 0.4) {
-      cv::Rect rect(x+w/2, y, textSize.width, h);
+    if (frac < 0.5) {
+      cv::Rect rect(x+w/2-textSize.width/2, y, textSize.width, h);
       cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
-      cv::putText(img, text, cv::Point(x+w/2, y+h/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness);
+      cv::putText(img, text, cv::Point(x+w/2 - textSize.width/2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
     }
   }
 

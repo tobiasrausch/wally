@@ -149,7 +149,7 @@ namespace wallysworld
 	      if ((rpadj >= 0) && (rpadj < (int32_t) rg.size) && cov[rpadj] < maxCoverage) ++cov[rpadj];
 	      if (rec->core.l_qseq) {
 		if (sequence[sp] != seq[rp]) {
-		  drawNuc(c, rg, bg, trackIdx, (rp - rg.beg), (rp + 1 - rg.beg), seq[rp]);
+		  drawNuc(c, rg, bg, trackIdx, (rp - rg.beg), (rp + 1 - rg.beg), sequence[sp]);
 		}
 	      }
 	      ++sp;
@@ -207,8 +207,8 @@ namespace wallysworld
 
   int region(int argc, char **argv) {
     Config c;
-    c.tlheight = 16;
-    c.rdheight = 14;
+    c.tlheight = 14;
+    c.rdheight = 12;
     
     // Define generic options
     std::string svtype;
