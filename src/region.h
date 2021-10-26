@@ -150,9 +150,7 @@ namespace wallysworld
 	      ++rp;
 	    }
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	    //if (rec->core.l_qseq) ++itRg->second.bc.delHomACGTN[homopolymerContext(sequence, sp, 3)];
-	    //if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.delSize[bam_cigar_oplen(cigar[i])];
-	    //else ++itRg->second.bc.delSize[itRg->second.bc.maxIndelSize];
+	    drawDel(c, rg, bg, trackIdx, (rp - rg.beg), (rp + bam_cigar_oplen(cigar[i]) - rg.beg), bam_cigar_oplen(cigar[i]));
 	    rp += bam_cigar_oplen(cigar[i]);
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
 	    //if (rec->core.l_qseq) ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
@@ -187,7 +185,7 @@ namespace wallysworld
 
     std::string str("title");
     cv::imwrite("bg.jpg", bg);
-    //cv::imshow(str.c_str(), bg);
+    cv::imshow(str.c_str(), bg);
     cv::waitKey(0);
 
 #ifdef PROFILE
