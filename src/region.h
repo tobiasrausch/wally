@@ -142,7 +142,9 @@ namespace wallysworld
 	      int32_t rpadj = (int32_t) rp - (int32_t) rg.beg;
 	      if ((rpadj >= 0) && (rpadj < (int32_t) rg.size) && cov[rpadj] < maxCoverage) ++cov[rpadj];
 	      if (rec->core.l_qseq) {
-		if (sequence[sp] != seq[rp]) std::cout << rp << std::endl;
+		if (sequence[sp] != seq[rp]) {
+		  drawNuc(c, rg, bg, trackIdx, (rp - rg.beg), (rp + 1 - rg.beg), seq[rp]);
+		}
 	      }
 	      ++sp;
 	      ++rp;
@@ -202,7 +204,7 @@ namespace wallysworld
   int region(int argc, char **argv) {
     Config c;
     c.tlheight = 25;
-    c.rdheight = 16;
+    c.rdheight = 21;
     c.rdspacing = 5;
     
     // Define generic options

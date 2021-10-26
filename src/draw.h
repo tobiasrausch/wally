@@ -32,7 +32,7 @@ namespace wallysworld
   inline void
   drawRead(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse) {
     cv::Rect rect(x, y, w, h);
-    cv::rectangle(img, rect, cv::Scalar(150, 150, 150), -1);
+    cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
     typedef std::vector<cv::Point> TPointVector;
     TPointVector pvec;
     if (reverse) {
@@ -50,6 +50,33 @@ namespace wallysworld
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawRead(img, px, track * c.tlheight, pxend - px, c.rdheight, reverse);
+  }
+
+  inline void
+  drawNuc(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
+    cv::Rect rect(x, y, w, h);
+    if ((nuc == 'a') or (nuc == 'A')) {
+      cv::rectangle(img, rect, cv::Scalar(0, 255, 0), -1);
+    }
+    else if ((nuc == 'c') or (nuc == 'C')) {
+      cv::rectangle(img, rect, cv::Scalar(0, 0, 255), -1);
+    }
+    else if ((nuc == 'g') or (nuc == 'G')) {
+      cv::rectangle(img, rect, cv::Scalar(0, 0, 0), -1);
+    }
+    else if ((nuc == 't') or (nuc == 'T')) {
+      cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
+    } else {
+      cv::rectangle(img, rect, cv::Scalar(0, 0, 0), -1);
+    }
+  }
+  
+  template<typename TConfig>
+  inline void
+  drawNuc(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, char const nuc) {
+    int32_t px = pixelX(c.width, rg.size, gstart);
+    int32_t pxend = pixelX(c.width, rg.size, gend);
+    drawNuc(img, px, track * c.tlheight, pxend - px, c.rdheight, nuc);
   }
 
 }
