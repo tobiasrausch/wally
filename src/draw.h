@@ -31,6 +31,51 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
+  drawGenome(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track) {
+    std::string text(boost::lexical_cast<std::string>(rg.end));
+    int32_t n = text.length() - 3;
+    while (n > 0) {
+      text.insert(n, ",");
+      n -= 3;
+    }
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+
+    // Find suitable tick size
+    uint32_t modval = 0;
+    for(uint32_t i = 10; i < 1000000; i *= 10) {
+      if (i * c.pxoffset > textSize.width) {
+	modval = i;
+	break;
+      }
+    }
+    cv::line(img, cv::Point(0, track * c.tlheight + c.tlheight), cv::Point(c.width, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+    double px = 0;
+    for(int32_t i = rg.beg; i < rg.end; ++i) {
+      if (i % (modval / 2) == 0) {
+	cv::line(img, cv::Point(px, track * c.tlheight), cv::Point(px, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+      }
+      if (i % modval == 0) {
+	// Font
+	text = boost::lexical_cast<std::string>(i);
+	n = text.length() - 3;
+	while (n > 0) {
+	  text.insert(n, ",");
+	  n -= 3;
+	}
+	baseline = 0;
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	cv::putText(img, text, cv::Point(px - textSize.width/2, (track - 1) * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      }
+      px += c.pxoffset;
+    }
+  }
+
+  
+  template<typename TConfig>
+  inline void
   drawRead(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const tri) {
     cv::Rect rect(x, y, w, h);
     cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);

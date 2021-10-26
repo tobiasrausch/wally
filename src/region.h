@@ -65,7 +65,6 @@ namespace wallysworld
     taken[0] = 1073741824;
     taken[1] = 1073741824;
     taken[2] = 1073741824;
-
     
     // Open file handles
     typedef std::vector<samFile*> TSamFile;
@@ -91,6 +90,10 @@ namespace wallysworld
     }
     c.pxoffset = (1.0 / (double) rg.size) * (double) c.width;
 
+    // Header
+    drawGenome(c, rg, bg, 1);
+
+    
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
     int32_t seqlen;
@@ -159,9 +162,7 @@ namespace wallysworld
 	    drawDel(c, rg, bg, trackIdx, (rp - rg.beg), (rp + bam_cigar_oplen(cigar[i]) - rg.beg), bam_cigar_oplen(cigar[i]));
 	    rp += bam_cigar_oplen(cigar[i]);
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-	    //if (rec->core.l_qseq) ++itRg->second.bc.insHomACGTN[homopolymerContext(sequence, sp, 3)];
-	    //if (bam_cigar_oplen(cigar[i]) < itRg->second.bc.maxIndelSize) ++itRg->second.bc.insSize[bam_cigar_oplen(cigar[i])];
-	    //else ++itRg->second.bc.insSize[itRg->second.bc.maxIndelSize];
+	    // ToDo
 	    sp += bam_cigar_oplen(cigar[i]);
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	    sp += bam_cigar_oplen(cigar[i]);
@@ -228,7 +229,7 @@ namespace wallysworld
     
     boost::program_options::options_description geno("Graphics options");
     geno.add_options()
-      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(2048), "width of the plot")
+      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
       ;
 
