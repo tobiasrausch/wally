@@ -39,7 +39,7 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
-    uint32_t rdspacing;  // pixel spacing between reads
+    double pxoffset; // 1bp in pixel
     std::string regionStr;
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
@@ -89,6 +89,7 @@ namespace wallysworld
       std::cerr << "Invalid region specified: " << c.regionStr << std::endl;
       return 1;
     }
+    c.pxoffset = (1.0 / (double) rg.size) * (double) c.width;
 
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
@@ -99,9 +100,6 @@ namespace wallysworld
     uint32_t maxCoverage = std::numeric_limits<uint32_t>::max();
     std::vector<uint32_t> cov(rg.size, 0);
 
-    // Read spacing
-    int32_t rdspace = pixelX(c.width, rg.size, c.rdspacing);
-    
     // Iterate files
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       // Read alignments
@@ -122,20 +120,28 @@ namespace wallysworld
 	for(uint32_t i = 0; i < taken.size(); ++i) {
 	  if (taken[i] < rec->core.pos) {
 	    trackIdx = i;
-	    taken[i] = rec->core.pos + alignmentLength(rec) + rdspace;
+	    taken[i] = rec->core.pos + alignmentLength(rec) + 5;
 	    break;
 	  }
 	}
 	if (trackIdx == -1) continue;
 	
 	// Parse CIGAR
+	uint32_t alnend = rec->core.pos + alignmentLength(rec);
 	uint32_t rp = rec->core.pos; // reference pointer
 	uint32_t sp = 0; // sequence pointer
+	bool firstBox = true;
 	// Parse the CIGAR
 	uint32_t* cigar = bam_get_cigar(rec);
 	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
-	    drawRead(c, rg, bg, trackIdx, (rp - rg.beg), (rp + bam_cigar_oplen(cigar[i]) - rg.beg), (rec->core.flag & BAM_FREVERSE));
+	    bool drawTriangle = false;
+	    if (firstBox) {
+	      if (rec->core.flag & BAM_FREVERSE) drawTriangle = true;
+	      firstBox = false;
+	    }
+	    if ((rp + bam_cigar_oplen(cigar[i]) == alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
+	    drawRead(c, rg, bg, trackIdx, (rp - rg.beg), (rp + bam_cigar_oplen(cigar[i]) - rg.beg), (rec->core.flag & BAM_FREVERSE), drawTriangle);
 	    // match or mismatch
 	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 	      // Increase coverage
@@ -201,9 +207,8 @@ namespace wallysworld
 
   int region(int argc, char **argv) {
     Config c;
-    c.tlheight = 25;
-    c.rdheight = 21;
-    c.rdspacing = 5;
+    c.tlheight = 16;
+    c.rdheight = 14;
     
     // Define generic options
     std::string svtype;

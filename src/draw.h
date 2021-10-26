@@ -29,29 +29,32 @@ namespace wallysworld
     return (int32_t) (((double) pixelX / (double) width) * rgsz);
   }
 
+  template<typename TConfig>
   inline void
-  drawRead(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse) {
+  drawRead(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const tri) {
     cv::Rect rect(x, y, w, h);
     cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
-    /*
-    typedef std::vector<cv::Point> TPointVector;
-    TPointVector pvec;
-    if (reverse) {
-      cv::line(img, cv::Point(x, y), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
-      cv::line(img, cv::Point(x, y+h), cv::Point(x-2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
-    } else {
-      cv::line(img, cv::Point(x+w, y), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
-      cv::line(img, cv::Point(x+w, y+h), cv::Point(x+w+2, y + (int)(h/2)), cv::Scalar(150, 150, 150), 1);
+    if (tri) {
+      typedef std::vector<cv::Point> TPointVector;
+      TPointVector pvec;
+      if (reverse) {
+	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset, y + h/2)};
+	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
+	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
+      } else {
+	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset, y + h/2)};
+	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
+	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
+      }
     }
-    */
   }
 
   template<typename TConfig>
   inline void
-    drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse) {
+  drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse, bool const tri) {
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
-    drawRead(img, px, track * c.tlheight, pxend - px, c.rdheight, reverse);
+    drawRead(c, img, px, track * c.tlheight, pxend - px, c.rdheight, reverse, tri);
   }
 
   inline void
