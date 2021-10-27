@@ -105,6 +105,12 @@ namespace wallysworld
     uint32_t maxCoverage = std::numeric_limits<uint32_t>::max();
     std::vector<uint32_t> cov(rg.size, 0);
 
+    // Read offset
+    int32_t genomicReadOffset = 0.05 * rg.size;
+    if (genomicReadOffset > 5) genomicReadOffset = 5;
+    else if (genomicReadOffset < 1) genomicReadOffset = 1;
+    std::cout << genomicReadOffset << std::endl;
+    
     // Iterate files
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       // Read alignments
@@ -125,7 +131,7 @@ namespace wallysworld
 	for(uint32_t i = 0; i < taken.size(); ++i) {
 	  if (taken[i] < rec->core.pos) {
 	    trackIdx = i;
-	    taken[i] = rec->core.pos + alignmentLength(rec) + 5;
+	    taken[i] = rec->core.pos + alignmentLength(rec) + genomicReadOffset;
 	    break;
 	  }
 	}

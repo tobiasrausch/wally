@@ -42,6 +42,11 @@ namespace wallysworld
     if (rg.tid < 0) return false;
     if (rg.beg >= rg.end) return false;
     if (rg.end - rg.beg > 50000) return false;
+    // Regions are 1-based, offset
+    if (rg.beg > 0) {
+      --rg.beg;
+      --rg.end;
+    } else return false;
     rg.size = rg.end - rg.beg;
     return true;
   }

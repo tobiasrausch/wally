@@ -29,6 +29,18 @@ namespace wallysworld
     return (int32_t) (((double) pixelX / (double) width) * rgsz);
   }
 
+  inline uint32_t
+  findTicks(double const pxoffset, double const textwidth) {
+    std::vector<int32_t> bounds{5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000};
+    for(uint32_t i = 0; i < bounds.size(); ++i) {
+      if (bounds[i] * pxoffset > textwidth * 1.5) {
+	return bounds[i];
+	break;
+      }
+    }
+    return 1000000;
+  }
+    
   template<typename TConfig>
   inline void
   drawGenome(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track) {
@@ -44,18 +56,12 @@ namespace wallysworld
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 
     // Find suitable tick size
-    uint32_t modval = 0;
-    for(uint32_t i = 10; i < 1000000; i *= 10) {
-      if (i * c.pxoffset > textSize.width) {
-	modval = i;
-	break;
-      }
-    }
+    uint32_t modval = findTicks(c.pxoffset, textSize.width);
     cv::line(img, cv::Point(0, track * c.tlheight + c.tlheight), cv::Point(c.width, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
     double px = 0;
     for(int32_t i = rg.beg; i < rg.end; ++i) {
-      if (i % (modval / 2) == 0) {
-	cv::line(img, cv::Point(px, track * c.tlheight), cv::Point(px, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+      if (i % modval == 0) {
+	cv::line(img, cv::Point(px - c.pxoffset/2, track * c.tlheight), cv::Point(px - c.pxoffset/2, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
       }
       if (i % modval == 0) {
 	// Font
@@ -67,7 +73,7 @@ namespace wallysworld
 	}
 	baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	cv::putText(img, text, cv::Point(px - textSize.width/2, (track - 1) * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, (track - 1) * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
       }
       px += c.pxoffset;
     }
@@ -81,17 +87,19 @@ namespace wallysworld
       if (cov[i] > maxObsCov) maxObsCov = cov[i];
     }
 
-    // Find suitable window
-    uint32_t win = (int32_t) (10 / c.pxoffset) + 1;
-    std::cout << win << std::endl;
-
     // Draw coverage histogram
     double px = 0;
     for(int32_t i = 0; i < rg.size; ++i) {
       double frac = (double) cov[i] / (double) maxObsCov;
       int32_t ch = (int32_t) (frac * 2 * c.tlheight);
-      cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
-      cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      if (c.pxoffset > 5) {
+	cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
+	cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      } else {
+	int32_t wi = (int32_t) (c.pxoffset) + 1;
+	cv::Rect rect(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, wi, ch);
+	cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      }
       px += c.pxoffset;
     }
   }
@@ -106,11 +114,11 @@ namespace wallysworld
       typedef std::vector<cv::Point> TPointVector;
       TPointVector pvec;
       if (reverse) {
-	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset/2, y + h/2)};
+	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset/3, y + h/2)};
 	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
 	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
       } else {
-	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset/2, y + h/2)};
+	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset/3, y + h/2)};
 	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
 	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
       }
