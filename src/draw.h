@@ -73,6 +73,29 @@ namespace wallysworld
     }
   }
 
+  template<typename TConfig, typename TCoverage>
+  inline void
+  drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& cov, int32_t const track) {
+    uint32_t maxObsCov = 0;
+    for(uint32_t i = 0; i < cov.size(); ++i) {
+      if (cov[i] > maxObsCov) maxObsCov = cov[i];
+    }
+
+    // Find suitable window
+    uint32_t win = (int32_t) (10 / c.pxoffset) + 1;
+    std::cout << win << std::endl;
+
+    // Draw coverage histogram
+    double px = 0;
+    for(int32_t i = 0; i < rg.size; ++i) {
+      double frac = (double) cov[i] / (double) maxObsCov;
+      int32_t ch = (int32_t) (frac * 2 * c.tlheight);
+      cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
+      cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      px += c.pxoffset;
+    }
+  }
+
   
   template<typename TConfig>
   inline void
@@ -83,11 +106,11 @@ namespace wallysworld
       typedef std::vector<cv::Point> TPointVector;
       TPointVector pvec;
       if (reverse) {
-	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset, y + h/2)};
+	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset/2, y + h/2)};
 	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
 	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
       } else {
-	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset, y + h/2)};
+	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset/2, y + h/2)};
 	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
 	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
       }

@@ -65,6 +65,9 @@ namespace wallysworld
     taken[0] = 1073741824;
     taken[1] = 1073741824;
     taken[2] = 1073741824;
+    taken[3] = 1073741824;
+    taken[4] = 1073741824;
+    taken[5] = 1073741824;
     
     // Open file handles
     typedef std::vector<samFile*> TSamFile;
@@ -92,7 +95,6 @@ namespace wallysworld
 
     // Header
     drawGenome(c, rg, bg, 1);
-
     
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
@@ -178,6 +180,9 @@ namespace wallysworld
       }
       bam_destroy1(rec);
       hts_itr_destroy(iter);
+
+      // Fill-in coverage track
+      drawCoverage(c, rg, bg, cov, 4);
     }
 
     // Clean-up
@@ -187,8 +192,7 @@ namespace wallysworld
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
       hts_idx_destroy(idx[file_c]);
       sam_close(samfile[file_c]);
-    }	
-    
+    }
 
     std::string str("title");
     cv::imwrite("bg.jpg", bg);
