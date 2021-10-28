@@ -111,42 +111,55 @@ namespace wallysworld
     // Draw coverage histogram
     double px = 0;
     for(int32_t i = 0; i < rg.size; ++i) {
-      uint32_t cumsum =	covA[i];
-      cumsum += covC[i];
-      cumsum += covG[i];
-      cumsum += covT[i];
-      double frac = (double) cumsum / (double) maxObsCov;
-      int32_t ch = (int32_t) (frac * 2 * c.tlheight);
-      if (c.pxoffset >= WALLY_PX) {
-	if (!snp[i]) {
+      if (!snp[i]) {
+	uint32_t cumsum = covA[i];
+	cumsum += covC[i];
+	cumsum += covG[i];
+	cumsum += covT[i];
+	double frac = (double) cumsum / (double) maxObsCov;
+	int32_t ch = (int32_t) (frac * 2 * c.tlheight);    
+	if (c.pxoffset >= WALLY_PX) {
 	  cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
 	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
 	} else {
-	  double frac = (double) covA[i] / (double) maxObsCov;
-	  int32_t ch = (int32_t) (frac * 2 * c.tlheight);
-	  int32_t cumCH = ch;
-	  cv::Rect rectA(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
-	  cv::rectangle(img, rectA, WALLY_A, -1);
-	  frac = (double) covC[i] / (double) maxObsCov;
-	  ch = (int32_t) (frac * 2 * c.tlheight);
-	  cumCH += ch;
-	  cv::Rect rectC(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
-	  cv::rectangle(img, rectC, WALLY_C, -1);
-	  frac = (double) covG[i] / (double) maxObsCov;
-	  ch = (int32_t) (frac * 2 * c.tlheight);
-	  cumCH += ch;
-	  cv::Rect rectG(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
-	  cv::rectangle(img, rectG, WALLY_G, -1);
-	  frac = (double) covT[i] / (double) maxObsCov;
-	  ch = (int32_t) (frac * 2 * c.tlheight);
-	  cumCH += ch;
-	  cv::Rect rectT(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
-	  cv::rectangle(img, rectT, WALLY_T, -1);
+	  cv::Rect rect(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset + 1, ch);
+	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
 	}
-      } else {
-	int32_t wi = (int32_t) (c.pxoffset) + 1;
-	cv::Rect rect(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, wi, ch);
-	cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      }
+      px += c.pxoffset;
+    }
+
+    // Overdraw SNPs
+    px = 0;
+    for(int32_t i = 0; i < rg.size; ++i) {
+      if (snp[i]) {
+	int32_t pxs = px;
+	int32_t pxw = c.pxoffset;
+	if (pxw < 1) pxw = 1;
+	if (c.pxoffset >= WALLY_PX) {
+	  pxs = px + 1;
+	  pxw = c.pxoffset - 1;
+	}
+	double frac = (double) covA[i] / (double) maxObsCov;
+	int32_t ch = (int32_t) (frac * 2 * c.tlheight);
+	int32_t cumCH = ch;
+	cv::Rect rectA(pxs, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, pxw, ch);
+	cv::rectangle(img, rectA, WALLY_A, -1);
+	frac = (double) covC[i] / (double) maxObsCov;
+	ch = (int32_t) (frac * 2 * c.tlheight);
+	cumCH += ch;
+	cv::Rect rectC(pxs, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, pxw, ch);
+	cv::rectangle(img, rectC, WALLY_C, -1);
+	frac = (double) covG[i] / (double) maxObsCov;
+	ch = (int32_t) (frac * 2 * c.tlheight);
+	cumCH += ch;
+	cv::Rect rectG(pxs, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, pxw, ch);
+	cv::rectangle(img, rectG, WALLY_G, -1);
+	frac = (double) covT[i] / (double) maxObsCov;
+	ch = (int32_t) (frac * 2 * c.tlheight);
+	cumCH += ch;
+	cv::Rect rectT(pxs, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, pxw, ch);
+	cv::rectangle(img, rectT, WALLY_T, -1);
       }
       px += c.pxoffset;
     }
@@ -243,7 +256,9 @@ namespace wallysworld
     double font_thickness = 1.5;
     int32_t baseline = 0;
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), cv::Scalar(0, 0, 0), 1.8);
+    int32_t pxw = w;
+    if (w < 1) pxw = 1;
+    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+pxw, y+h/2), cv::Scalar(0, 0, 0), 2);
     double frac = (double) textSize.width / (double) w;
     // Put length if there is space
     if (frac < 0.5) {
