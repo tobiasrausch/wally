@@ -34,6 +34,7 @@ namespace wallysworld
   // Config arguments
   struct Config {
     bool showWindow;
+    bool hasRegionFile;
     uint32_t minMapQual;
     uint32_t width;
     uint32_t height;
@@ -43,7 +44,6 @@ namespace wallysworld
     float snvvaf;
     double pxoffset; // 1bp in pixel    
     std::string regionStr;
-    boost::filesystem::path outfile;
     boost::filesystem::path genome;
     boost::filesystem::path regionFile;
     std::vector<boost::filesystem::path> files;
@@ -73,13 +73,8 @@ namespace wallysworld
     char* seq = NULL;
     
     // Split region
-    std::vector<Region> rg(1);
-    Region tmp;
-    parseRegion(hdr, c.regionStr, tmp);
-    rg[0].tid = tmp.tid;
-    rg[0].beg = tmp.beg;
-    rg[0].end = tmp.end;
-    rg[0].size = tmp.size;
+    std::vector<Region> rg;
+    if (!parseRegions(hdr, c, rg)) return 1;
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
@@ -104,7 +99,7 @@ namespace wallysworld
     
       // Parse BAM files
       boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Parsing BAMs" << std::endl;
+      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << std::endl;
 
       // Lazy loading of genome
       std::string chrName = hdr->target_name[rg[rgIdx].tid];
@@ -250,7 +245,9 @@ namespace wallysworld
       }
 
       // Store image
-      cv::imwrite(c.outfile.string().c_str(), bg);
+      std::string outfile = rg[rgIdx].id;
+      outfile += ".jpg";
+      cv::imwrite(outfile.c_str(), bg);
       if (c.showWindow) {
 	std::string str = hdr->target_name[rg[rgIdx].tid];
 	str += ":" + boost::lexical_cast<std::string>(rg[rgIdx].beg + 1);
@@ -291,7 +288,6 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("region.jpg"), "output file")
       ;
     
     boost::program_options::options_description disc("Graphics options");
@@ -340,6 +336,15 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Region file
+    if (vm.count("rfile")) {
+      if (!(boost::filesystem::exists(c.regionFile) && boost::filesystem::is_regular_file(c.regionFile) && boost::filesystem::file_size(c.regionFile))) {
+	std::cerr << "BED file with regions is missing: " << c.regionFile.string() << std::endl;
+	return 1;
+      }
+      c.hasRegionFile = true;
+    } else c.hasRegionFile = false;
     
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();

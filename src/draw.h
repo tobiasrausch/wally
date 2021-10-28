@@ -184,9 +184,6 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawNuc(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
-    // Background rectangle
-    cv::Rect rect(x, y, w, h);
-
     // Font
     std::string text(1, nuc);
     double font_scale = 0.4;
@@ -196,6 +193,7 @@ namespace wallysworld
 
     // Put nucleotide if there is space
     if (c.pxoffset >= WALLY_PX) {
+      cv::Rect rect(x, y, w, h);
       cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
       if ((nuc == 'a') or (nuc == 'A')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness);
@@ -209,7 +207,10 @@ namespace wallysworld
       else if ((nuc == 't') or (nuc == 'T')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness);
       }
-    } else { 
+    } else {
+      int32_t pxw = w;
+      if (pxw < 1) pxw = 1; // Make mismatches always visible
+      cv::Rect rect(x, y, pxw, h);
       if ((nuc == 'a') or (nuc == 'A')) {
 	cv::rectangle(img, rect, WALLY_A, -1);
       }

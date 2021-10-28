@@ -42,8 +42,9 @@ namespace wallysworld
     int32_t beg;
     int32_t end;
     int32_t size;
+    std::string id;
     
-  Region() : tid(0), beg(0), end(0), size(0) {}
+    Region() : tid(0), beg(0), end(0), size(0), id("") {}
   };
 
 
@@ -64,7 +65,15 @@ namespace wallysworld
       return false;
     }
     rg.beg = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
-    rg.end = boost::lexical_cast<int32_t>(tmp.substr(pos+1));
+    tmp = tmp.substr(pos+1);
+    pos = tmp.find(":");
+    if (pos == std::string::npos) {
+      rg.end = boost::lexical_cast<int32_t>(tmp);
+      rg.id = chrName + "_" + boost::lexical_cast<std::string>(rg.beg) + "_" + boost::lexical_cast<std::string>(rg.end);
+    } else {
+      rg.end = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+      rg.id = tmp.substr(pos+1);
+    }
     rg.tid = bam_name2id(hdr, chrName.c_str());
     if (rg.tid < 0) {
       std::cerr << "Invalid region " << regionStr << std::endl;
@@ -91,6 +100,44 @@ namespace wallysworld
       return false;
     }
     rg.size = rg.end - rg.beg;
+    return true;
+  }
+
+  template<typename TConfig>
+  inline bool
+  parseRegions(bam_hdr_t* hdr, TConfig const& c, std::vector<Region>& rg) {
+    if (c.hasRegionFile) {
+      std::ifstream regionFile(c.regionFile.string().c_str(), std::ifstream::in);
+      if (regionFile.is_open()) {
+	while (regionFile.good()) {
+	  std::string gline;
+	  getline(regionFile, gline);
+	  typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+	  boost::char_separator<char> sep(" \t,;");
+	  Tokenizer tokens(gline, sep);
+	  Tokenizer::iterator tokIter = tokens.begin();
+	  if (tokIter!=tokens.end()) {
+	    std::string chrName=*tokIter++;
+	    if (tokIter != tokens.end()) {
+	      std::string start = *tokIter++;
+	      if (tokIter != tokens.end()) {
+		std::string end = *tokIter++;
+		std::string str = chrName + ":" + start + "-" + end;
+		if (tokIter != tokens.end()) str += ":" + std::string(*tokIter++);
+		Region tmp;
+		if (!parseRegion(hdr, str, tmp)) return false;
+		rg.push_back(tmp);
+	      }
+	    }
+	  }
+	}
+	regionFile.close();
+      }
+    } else {
+      Region tmp;
+      if (!parseRegion(hdr, c.regionStr, tmp)) return false;
+      rg.push_back(tmp);
+    }
     return true;
   }
 
