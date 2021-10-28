@@ -176,6 +176,7 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse, bool const tri) {
+    if (track == -1) return;
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawRead(c, img, px, track * c.tlheight, pxend - px, c.rdheight, reverse, tri);
@@ -229,6 +230,7 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawNuc(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, char const nuc) {
+    if (track == -1) return;
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawNuc(c, img, px, track * c.tlheight, pxend - px, c.rdheight, nuc);
@@ -254,6 +256,7 @@ namespace wallysworld
   template<typename TConfig>
   inline void
     drawDel(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, int32_t const len) {
+    if (track == -1) return;
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawDel(img, px, track * c.tlheight, pxend - px, c.rdheight, len);

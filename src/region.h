@@ -79,6 +79,7 @@ namespace wallysworld
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
+      
       // Generate image
       cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
@@ -123,9 +124,7 @@ namespace wallysworld
       std::vector<uint16_t> covT(rg[rgIdx].size, 0);
 
       // Read offset
-      int32_t genomicReadOffset = 0.05 * rg[rgIdx].size;
-      if (genomicReadOffset > 5) genomicReadOffset = 5;
-      else if (genomicReadOffset < 1) genomicReadOffset = 1;
+      int32_t genomicReadOffset  = (2.0 / (double) c.width) * (double) rg[rgIdx].size;
       
       // Iterate files
       for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
@@ -151,7 +150,6 @@ namespace wallysworld
 	      break;
 	    }
 	  }
-	  if (trackIdx == -1) continue;
 	  
 	  // Parse CIGAR
 	  uint32_t alnend = rec->core.pos + alignmentLength(rec);

@@ -18,11 +18,11 @@ namespace wallysworld
 {
 
   #ifndef WALLY_PX
-  #define WALLY_PX 6
+  #define WALLY_PX 8
   #endif
   
   #ifndef WALLY_A
-  #define WALLY_A cv::Scalar(0,255,0)
+  #define WALLY_A cv::Scalar(0,150,0)
   #endif
 
   #ifndef WALLY_C
