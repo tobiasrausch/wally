@@ -33,6 +33,7 @@ namespace wallysworld
 
   // Config arguments
   struct Config {
+    bool showWindow;
     uint32_t minMapQual;
     uint32_t width;
     uint32_t height;
@@ -44,6 +45,7 @@ namespace wallysworld
     std::string regionStr;
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
+    boost::filesystem::path regionFile;
     std::vector<boost::filesystem::path> files;
   };
 
@@ -88,10 +90,7 @@ namespace wallysworld
 
     // Split region
     Region rg;
-    if (!parseRegion(hdr, c, rg)) {
-      std::cerr << "Invalid region specified: " << c.regionStr << std::endl;
-      return 1;
-    }
+    if (!parseRegion(hdr, c.regionStr, rg)) return 1;
     c.pxoffset = (1.0 / (double) rg.size) * (double) c.width;
 
     // Load genome
@@ -231,8 +230,18 @@ namespace wallysworld
 	    }
 	  }
 	}
-      }      
+      }
       drawCoverage(c, rg, bg, covA, covC, covG, covT, snp, 4);
+    }
+
+    // Store image
+    cv::imwrite(c.outfile.string().c_str(), bg);
+    if (c.showWindow) {
+      std::string str = hdr->target_name[rg.tid];
+      str += ":" + boost::lexical_cast<std::string>(rg.beg + 1);
+      str += "-" + boost::lexical_cast<std::string>(rg.end + 1);
+      cv::imshow(str.c_str(), bg);
+      cv::waitKey(0);
     }
 
     // Clean-up
@@ -243,11 +252,6 @@ namespace wallysworld
       hts_idx_destroy(idx[file_c]);
       sam_close(samfile[file_c]);
     }
-
-    std::string str("title");
-    cv::imwrite(c.outfile.string().c_str(), bg);
-    cv::imshow(str.c_str(), bg);
-    cv::waitKey(0);
 
 #ifdef PROFILE
     ProfilerStop();
@@ -280,12 +284,14 @@ namespace wallysworld
       ("snv-vaf,s", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
       ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
+      ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ;
     
-    boost::program_options::options_description geno("Layout options");
+    boost::program_options::options_description geno("Display options");
     geno.add_options()
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
+      ("window,w", "show window")
       ;
 
     // Define hidden options
@@ -315,6 +321,10 @@ namespace wallysworld
       return 0;
     }
 
+    // Show window?
+    if (vm.count("window")) c.showWindow = true;
+    else c.showWindow = false;
+    
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";

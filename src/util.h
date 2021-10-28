@@ -47,26 +47,49 @@ namespace wallysworld
   };
 
 
-  template<typename TConfig>
   inline bool
-    parseRegion(bam_hdr_t* hdr, TConfig const& c, Region& rg) {
-    std::size_t pos = c.regionStr.find(":");
-    if (pos == std::string::npos) return false;
-    std::string chrName(c.regionStr.substr(0, pos));
-    std::string tmp = c.regionStr.substr(pos+1);
+  parseRegion(bam_hdr_t* hdr, std::string const& regionStr, Region& rg) {
+    std::size_t pos = regionStr.find(":");
+    if (pos == std::string::npos) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "No chromosome separator found ':'" << std::endl;
+      return false;
+    }
+    std::string chrName(regionStr.substr(0, pos));
+    std::string tmp = regionStr.substr(pos+1);
     pos = tmp.find("-");
-    if (pos == std::string::npos) return false;
+    if (pos == std::string::npos) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "No position separator found '-'" << std::endl;
+      return false;
+    }
     rg.beg = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
     rg.end = boost::lexical_cast<int32_t>(tmp.substr(pos+1));
     rg.tid = bam_name2id(hdr, chrName.c_str());
-    if (rg.tid < 0) return false;
-    if (rg.beg >= rg.end) return false;
-    if (rg.end - rg.beg > 50000) return false;
+    if (rg.tid < 0) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Chromosome not found in BAM file." << std::endl;
+      return false;
+    }
+    if (rg.beg >= rg.end) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Region begin has to be smaller than region end." << std::endl;
+      return false;
+    }
+    if (rg.end - rg.beg > 50000)  {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Region is larger than 50kbp." << std::endl;
+      return false;
+    }
     // Regions are 1-based, offset
     if (rg.beg > 0) {
       --rg.beg;
       --rg.end;
-    } else return false;
+    } else {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Regions are 1-based." << std::endl;
+      return false;
+    }
     rg.size = rg.end - rg.beg;
     return true;
   }
