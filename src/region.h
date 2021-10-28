@@ -245,7 +245,7 @@ namespace wallysworld
     }
 
     std::string str("title");
-    cv::imwrite("bg.jpg", bg);
+    cv::imwrite(c.outfile.string().c_str(), bg);
     cv::imshow(str.c_str(), bg);
     cv::waitKey(0);
 
@@ -271,7 +271,7 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("region.png"), "output file")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("region.jpg"), "output file")
       ;
     
     boost::program_options::options_description disc("Graphics options");
