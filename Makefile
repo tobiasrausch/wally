@@ -5,7 +5,7 @@ STATIC ?= 0
 PWD = $(shell pwd)
 EBROOTHTSLIB ?= ${PWD}/src/htslib/
 OPENCVSRC ?= ${PWD}/src/opencv/
-OPENCV ?= ${PWD}/src/ocv/
+OPENCV ?= ${PWD}/src/ocv
 
 # Install dir
 prefix = ${PWD}
