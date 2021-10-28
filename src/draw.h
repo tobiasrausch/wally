@@ -81,18 +81,26 @@ namespace wallysworld
 
   template<typename TConfig, typename TCoverage>
   inline void
-  drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& cov, int32_t const track) {
+  drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, int32_t const track) {
     uint32_t maxObsCov = 0;
-    for(uint32_t i = 0; i < cov.size(); ++i) {
-      if (cov[i] > maxObsCov) maxObsCov = cov[i];
+    for(uint32_t i = 0; i < covA.size(); ++i) {
+      uint32_t cumsum = covA[i];
+      cumsum += covC[i];
+      cumsum += covG[i];
+      cumsum += covT[i];
+      if (cumsum > maxObsCov) maxObsCov = cumsum;
     }
 
     // Draw coverage histogram
     double px = 0;
     for(int32_t i = 0; i < rg.size; ++i) {
-      double frac = (double) cov[i] / (double) maxObsCov;
+      uint32_t cumsum =	covA[i];
+      cumsum += covC[i];
+      cumsum += covG[i];
+      cumsum += covT[i];
+      double frac = (double) cumsum / (double) maxObsCov;
       int32_t ch = (int32_t) (frac * 2 * c.tlheight);
-      if (c.pxoffset > 5) {
+      if (c.pxoffset >= 5) {
 	cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
 	cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
       } else {
@@ -133,8 +141,9 @@ namespace wallysworld
     drawRead(c, img, px, track * c.tlheight, pxend - px, c.rdheight, reverse, tri);
   }
 
+  template<typename TConfig>
   inline void
-  drawNuc(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
+  drawNuc(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
     // Background rectangle
     cv::Rect rect(x, y, w, h);
 
@@ -144,10 +153,9 @@ namespace wallysworld
     double font_thickness = 1.5;
     int32_t baseline = 0;
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    double frac = (double) textSize.width / (double) w;
 
     // Put nucleotide if there is space
-    if (frac < 1) {
+    if (c.pxoffset >= 5) {
       cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
       if ((nuc == 'a') or (nuc == 'A')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 255, 0), font_thickness);
@@ -182,7 +190,7 @@ namespace wallysworld
   drawNuc(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, char const nuc) {
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
-    drawNuc(img, px, track * c.tlheight, pxend - px, c.rdheight, nuc);
+    drawNuc(c, img, px, track * c.tlheight, pxend - px, c.rdheight, nuc);
   }
 
   inline void

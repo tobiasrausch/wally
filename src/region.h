@@ -102,8 +102,11 @@ namespace wallysworld
     char* seq = faidx_fetch_seq(fai, hdr->target_name[rg.tid], 0, hdr->target_len[rg.tid], &seqlen);
     
     // Coverage
-    uint32_t maxCoverage = std::numeric_limits<uint32_t>::max();
-    std::vector<uint32_t> cov(rg.size, 0);
+    uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
+    std::vector<uint16_t> covA(rg.size, 0);
+    std::vector<uint16_t> covC(rg.size, 0);
+    std::vector<uint16_t> covG(rg.size, 0);
+    std::vector<uint16_t> covT(rg.size, 0);
 
     // Read offset
     int32_t genomicReadOffset = 0.05 * rg.size;
@@ -157,7 +160,18 @@ namespace wallysworld
 	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 	      // Increase coverage
 	      int32_t rpadj = (int32_t) rp - (int32_t) rg.beg;
-	      if ((rpadj >= 0) && (rpadj < (int32_t) rg.size) && cov[rpadj] < maxCoverage) ++cov[rpadj];
+	      if ((rpadj >= 0) && (rpadj < (int32_t) rg.size)) {
+		if (sequence[sp] == 'A') {
+		  if (covA[rpadj] < maxCoverage) ++covA[rpadj];
+		} else if (sequence[sp] == 'C') {
+		  if (covC[rpadj] < maxCoverage) ++covC[rpadj];
+		} else if (sequence[sp] == 'G') {
+		  if (covG[rpadj] < maxCoverage) ++covG[rpadj];
+		} else if (sequence[sp] == 'T') {
+		  if (covT[rpadj] < maxCoverage) ++covT[rpadj];
+		}
+	      }
+	      // Draw nucleotide for mismatches
 	      if (rec->core.l_qseq) {
 		if (sequence[sp] != seq[rp]) {
 		  drawNuc(c, rg, bg, trackIdx, (rp - rg.beg), (rp + 1 - rg.beg), sequence[sp]);
@@ -188,7 +202,7 @@ namespace wallysworld
       hts_itr_destroy(iter);
 
       // Fill-in coverage track
-      drawCoverage(c, rg, bg, cov, 4);
+      drawCoverage(c, rg, bg, covA, covC, covG, covT, 4);
     }
 
     // Clean-up
