@@ -34,12 +34,12 @@ namespace wallysworld
   // Config arguments
   struct Config {
     uint32_t minMapQual;
-    uint32_t maxCov;
     uint32_t width;
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
-    double pxoffset; // 1bp in pixel
+    float snvvaf;
+    double pxoffset; // 1bp in pixel    
     std::string regionStr;
     boost::filesystem::path outfile;
     boost::filesystem::path genome;
@@ -112,7 +112,6 @@ namespace wallysworld
     int32_t genomicReadOffset = 0.05 * rg.size;
     if (genomicReadOffset > 5) genomicReadOffset = 5;
     else if (genomicReadOffset < 1) genomicReadOffset = 1;
-    std::cout << genomicReadOffset << std::endl;
     
     // Iterate files
     for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
@@ -202,7 +201,34 @@ namespace wallysworld
       hts_itr_destroy(iter);
 
       // Fill-in coverage track
-      drawCoverage(c, rg, bg, covA, covC, covG, covT, 4);
+      std::vector<bool> snp(rg.size, false);
+      for(int32_t rp = rg.beg; rp < rg.end; ++rp) {
+	int32_t rpadj = (int32_t) rp - (int32_t) rg.beg;
+	uint32_t cumsum = covA[rpadj];
+	cumsum += covC[rpadj];
+	cumsum += covG[rpadj];
+	cumsum += covT[rpadj];
+	if (cumsum > 0) {
+	  if ((seq[rp] == 'a') || (seq[rp] == 'A')) {
+	    if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 'c') || (seq[rp] == 'C')) {
+	    if (((double) covC[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 'g') || (seq[rp] == 'G')) {
+	    if (((double) covG[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 't') || (seq[rp] == 'T')) {
+	    if (((double) covT[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  }
+	}
+      }      
+      drawCoverage(c, rg, bg, covA, covC, covG, covT, snp, 4);
     }
 
     // Clean-up
@@ -244,14 +270,14 @@ namespace wallysworld
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("region.png"), "output file")
       ;
     
-    boost::program_options::options_description disc("Read selection options");
+    boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("max-cov,m", boost::program_options::value<uint32_t>(&c.maxCov)->default_value(100), "max. coverage to display")
+      ("snv-vaf,s", boost::program_options::value<float>(&c.snvvaf)->default_value(0.05), "min. SNV VAF")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
       ;
     
-    boost::program_options::options_description geno("Graphics options");
+    boost::program_options::options_description geno("Layout options");
     geno.add_options()
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")

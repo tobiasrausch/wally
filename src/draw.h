@@ -81,7 +81,7 @@ namespace wallysworld
 
   template<typename TConfig, typename TCoverage>
   inline void
-  drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, int32_t const track) {
+  drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, std::vector<bool> const& snp, int32_t const track) {
     uint32_t maxObsCov = 0;
     for(uint32_t i = 0; i < covA.size(); ++i) {
       uint32_t cumsum = covA[i];
@@ -101,8 +101,31 @@ namespace wallysworld
       double frac = (double) cumsum / (double) maxObsCov;
       int32_t ch = (int32_t) (frac * 2 * c.tlheight);
       if (c.pxoffset >= 5) {
-	cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
-	cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+	if (!snp[i]) {
+	  cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
+	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+	} else {
+	  double frac = (double) covA[i] / (double) maxObsCov;
+	  int32_t ch = (int32_t) (frac * 2 * c.tlheight);
+	  int32_t cumCH = ch;
+	  cv::Rect rectA(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
+	  cv::rectangle(img, rectA, WALLY_A, -1);
+	  frac = (double) covC[i] / (double) maxObsCov;
+	  ch = (int32_t) (frac * 2 * c.tlheight);
+	  cumCH += ch;
+	  cv::Rect rectC(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
+	  cv::rectangle(img, rectC, WALLY_C, -1);
+	  frac = (double) covG[i] / (double) maxObsCov;
+	  ch = (int32_t) (frac * 2 * c.tlheight);
+	  cumCH += ch;
+	  cv::Rect rectG(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
+	  cv::rectangle(img, rectG, WALLY_G, -1);
+	  frac = (double) covT[i] / (double) maxObsCov;
+	  ch = (int32_t) (frac * 2 * c.tlheight);
+	  cumCH += ch;
+	  cv::Rect rectT(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - cumCH, c.pxoffset - 1, ch);
+	  cv::rectangle(img, rectT, WALLY_T, -1);
+	}
       } else {
 	int32_t wi = (int32_t) (c.pxoffset) + 1;
 	cv::Rect rect(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, wi, ch);
@@ -158,29 +181,29 @@ namespace wallysworld
     if (c.pxoffset >= 5) {
       cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
       if ((nuc == 'a') or (nuc == 'A')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 255, 0), font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness);
       }
       else if ((nuc == 'c') or (nuc == 'C')) {
-      	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness);
+      	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_C, font_thickness);
       }
       else if ((nuc == 'g') or (nuc == 'G')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(5, 113, 209), font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_G, font_thickness);
       }
       else if ((nuc == 't') or (nuc == 'T')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 255), font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness);
       }
     } else { 
       if ((nuc == 'a') or (nuc == 'A')) {
-	cv::rectangle(img, rect, cv::Scalar(0, 255, 0), -1);
+	cv::rectangle(img, rect, WALLY_A, -1);
       }
       else if ((nuc == 'c') or (nuc == 'C')) {
-	cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
+	cv::rectangle(img, rect, WALLY_C, -1);
       }
       else if ((nuc == 'g') or (nuc == 'G')) {
-	cv::rectangle(img, rect, cv::Scalar(5, 113, 209), -1);
+	cv::rectangle(img, rect, WALLY_G, -1);
       }
       else if ((nuc == 't') or (nuc == 'T')) {
-	cv::rectangle(img, rect, cv::Scalar(0, 0, 255), -1);
+	cv::rectangle(img, rect, WALLY_T, -1);
       }
     }
   }

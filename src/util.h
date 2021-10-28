@@ -17,6 +17,22 @@
 namespace wallysworld
 {
 
+  #ifndef WALLY_A
+  #define WALLY_A cv::Scalar(0,255,0)
+  #endif
+
+  #ifndef WALLY_C
+  #define WALLY_C cv::Scalar(255,0,0)
+  #endif
+
+  #ifndef WALLY_G
+  #define WALLY_G cv::Scalar(5,113,209)
+  #endif
+
+  #ifndef WALLY_T
+  #define WALLY_T cv::Scalar(0,0,255)
+  #endif
+
   struct Region {
     int32_t tid;
     int32_t beg;
