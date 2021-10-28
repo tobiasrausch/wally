@@ -17,6 +17,10 @@
 namespace wallysworld
 {
 
+  #ifndef WALLY_PX
+  #define WALLY_PX 6
+  #endif
+  
   #ifndef WALLY_A
   #define WALLY_A cv::Scalar(0,255,0)
   #endif

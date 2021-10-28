@@ -79,6 +79,23 @@ namespace wallysworld
     }
   }
 
+  template<typename TConfig>
+  inline void
+  drawReference(TConfig const& c, Region const& rg, cv::Mat& img, std::string const& ref, int32_t const track) {
+    if (c.pxoffset >= WALLY_PX) {
+      double px = 0;
+      double font_scale = 0.4;
+      double font_thickness = 1.5;
+      int32_t baseline = 0;
+      for(int32_t i = 0; i < rg.size; ++i) {
+	std::string text(1, ref[i]);
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	cv::putText(img, text, cv::Point(px + c.pxoffset/2 - textSize.width/2, track * c.tlheight + textSize.height + 1), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	px += c.pxoffset;
+      }
+    }
+  }
+  
   template<typename TConfig, typename TCoverage>
   inline void
   drawCoverage(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, std::vector<bool> const& snp, int32_t const track) {
@@ -100,7 +117,7 @@ namespace wallysworld
       cumsum += covT[i];
       double frac = (double) cumsum / (double) maxObsCov;
       int32_t ch = (int32_t) (frac * 2 * c.tlheight);
-      if (c.pxoffset >= 5) {
+      if (c.pxoffset >= WALLY_PX) {
 	if (!snp[i]) {
 	  cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
 	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
@@ -178,7 +195,7 @@ namespace wallysworld
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 
     // Put nucleotide if there is space
-    if (c.pxoffset >= 5) {
+    if (c.pxoffset >= WALLY_PX) {
       cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
       if ((nuc == 'a') or (nuc == 'A')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness);

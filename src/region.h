@@ -38,6 +38,7 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
+    uint32_t snvcov;
     float snvvaf;
     double pxoffset; // 1bp in pixel    
     std::string regionStr;
@@ -93,13 +94,16 @@ namespace wallysworld
     }
     c.pxoffset = (1.0 / (double) rg.size) * (double) c.width;
 
-    // Header
-    drawGenome(c, rg, bg, 1);
-    
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
     int32_t seqlen;
     char* seq = faidx_fetch_seq(fai, hdr->target_name[rg.tid], 0, hdr->target_len[rg.tid], &seqlen);
+    
+    // Header
+    drawGenome(c, rg, bg, 1);
+
+    // Reference
+    drawReference(c, rg, bg, boost::to_upper_copy(std::string(seq + rg.beg, seq + rg.end)), 2);
     
     // Coverage
     uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
@@ -208,7 +212,7 @@ namespace wallysworld
 	cumsum += covC[rpadj];
 	cumsum += covG[rpadj];
 	cumsum += covT[rpadj];
-	if (cumsum > 0) {
+	if (cumsum >= c.snvcov) {
 	  if ((seq[rp] == 'a') || (seq[rp] == 'A')) {
 	    if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 	      snp[rpadj] = true;
@@ -273,7 +277,8 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("snv-vaf,s", boost::program_options::value<float>(&c.snvvaf)->default_value(0.05), "min. SNV VAF")
+      ("snv-vaf,s", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
+      ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
       ;
     
