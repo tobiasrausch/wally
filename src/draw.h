@@ -251,20 +251,22 @@ namespace wallysworld
 
   inline void
   drawDel(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len) {
-    std::string text = boost::lexical_cast<std::string>(len);
-    double font_scale = 0.4;
-    double font_thickness = 1.5;
-    int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
     int32_t pxw = w;
     if (w < 1) pxw = 1;
     cv::line(img, cv::Point(x, y+h/2), cv::Point(x+pxw, y+h/2), cv::Scalar(0, 0, 0), 2);
-    double frac = (double) textSize.width / (double) w;
-    // Put length if there is space
-    if (frac < 0.5) {
-      cv::Rect rect(x+w/2-textSize.width/2, y, textSize.width, h);
-      cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
-      cv::putText(img, text, cv::Point(x+w/2 - textSize.width/2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+    if (w > 1) {
+      std::string text = boost::lexical_cast<std::string>(len);
+      double font_scale = 0.4;
+      double font_thickness = 1.5;
+      int32_t baseline = 0;
+      cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+      double frac = (double) textSize.width / (double) w;
+      // Put length if there is space
+      if (frac < 0.5) {
+	cv::Rect rect(x+w/2-textSize.width/2, y, textSize.width, h);
+	cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
+	cv::putText(img, text, cv::Point(x+w/2 - textSize.width/2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+      }
     }
   }
 
@@ -275,6 +277,34 @@ namespace wallysworld
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawDel(img, px, track * c.tlheight, pxend - px, c.rdheight, len);
+  }
+
+  inline void
+  drawIns(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len) {
+    int32_t psw = w/2;
+    if (w < 1) psw = -1 + w;
+    std::vector<cv::Point> pvec{cv::Point(x+psw, y), cv::Point(x+psw, y+h), cv::Point(x+w, y + h/2)};
+    cv::polylines(img, pvec, true, cv::Scalar(220, 24, 118), 1);
+    cv::fillPoly(img, pvec, cv::Scalar(220, 24, 118));
+    if (w > 1) {
+      std::string text = boost::lexical_cast<std::string>(len);
+      double font_scale = 0.4;
+      double font_thickness = 1.5;
+      int32_t baseline = 0;
+      cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+      // Put length if space takes max. 1 genomic position
+      if (textSize.width <= w) {
+	cv::putText(img, text, cv::Point(x+w/2 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+      }
+    }
+  }
+    
+  template<typename TConfig>
+  inline void
+    drawIns(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const len) {
+    if (track == -1) return;
+    int32_t px = pixelX(c.width, rg.size, gstart - 1);
+    drawIns(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len);
   }
   
 }
