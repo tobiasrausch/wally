@@ -306,6 +306,28 @@ namespace wallysworld
     int32_t px = pixelX(c.width, rg.size, gstart - 1);
     drawIns(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len);
   }
+
+  inline void
+  drawSC(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len, bool const leading) {
+    if (w < 1) return; // Do nothing
+    cv::line(img, cv::Point(x + w - 1, y), cv::Point(x + w - 1, y+h), cv::Scalar(0, 0, 0), 2);
+    std::string text = boost::lexical_cast<std::string>(len);
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+    if (textSize.width <= w) {
+      cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+    }
+  }
+
+  template<typename TConfig>
+  inline void
+  drawSC(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const len, bool const leading) {
+    if (track == -1) return;
+    int32_t px = pixelX(c.width, rg.size, gstart - 1);
+    drawSC(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len, leading);
+  }
   
 }
 

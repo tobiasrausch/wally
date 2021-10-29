@@ -198,6 +198,9 @@ namespace wallysworld
 	      drawIns(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	      bool leading = false;
+	      if (sp == 0) leading = true;
+	      drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), leading);
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
