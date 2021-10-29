@@ -244,7 +244,7 @@ namespace wallysworld
 
       // Store image
       std::string outfile = rg[rgIdx].id;
-      outfile += ".jpg";
+      outfile += ".png";
       cv::imwrite(outfile.c_str(), bg);
       if (c.showWindow) {
 	std::string str = hdr->target_name[rg[rgIdx].tid];
