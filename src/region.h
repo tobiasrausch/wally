@@ -34,6 +34,8 @@ namespace wallysworld
   // Config arguments
   struct Config {
     bool showWindow;
+    bool showSoftClip;
+    bool showSupplementary;
     bool hasRegionFile;
     uint32_t minMapQual;
     uint32_t width;
@@ -132,8 +134,9 @@ namespace wallysworld
 	hts_itr_t* iter = sam_itr_queryi(idx[file_c], rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
 	bam1_t* rec = bam_init1();
 	while (sam_itr_next(samfile[file_c], iter, rec) >= 0) {
-	  if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
+	  if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
 	  if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
+	  if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;
 	  
 	  // Load sequence
 	  std::string sequence;
@@ -156,6 +159,7 @@ namespace wallysworld
 	  uint32_t rp = rec->core.pos; // reference pointer
 	  uint32_t sp = 0; // sequence pointer
 	  bool firstBox = true;
+	  uint32_t leadingSC = 0;
 	  // Parse the CIGAR
 	  uint32_t* cigar = bam_get_cigar(rec);
 	  for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
@@ -167,6 +171,10 @@ namespace wallysworld
 	      }
 	      if ((rp + bam_cigar_oplen(cigar[i]) == alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
 	      drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle);
+	      if (leadingSC > 0) {
+		drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
+		leadingSC = 0;
+	      }
 	      // match or mismatch
 	      for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
 		// Increase coverage
@@ -198,11 +206,12 @@ namespace wallysworld
 	      drawIns(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
-	      bool leading = false;
-	      if (sp == 0) leading = true;
-	      drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), leading);
+	      if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
+	      else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	      if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
+	      else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
 	      rp += bam_cigar_oplen(cigar[i]);
 	    } else {
@@ -298,6 +307,8 @@ namespace wallysworld
       ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
+      ("supplementary,u", "show supplementary alignments")
+      ("clip,c", "show soft- and hard-clips")
       ;
     
     boost::program_options::options_description geno("Display options");
@@ -337,6 +348,14 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Soft-clips
+    if (vm.count("clip")) c.showSoftClip = true;
+    else c.showSoftClip = false;
+
+    // Supplementary
+    if (vm.count("supplementary")) c.showSupplementary = true;
+    else c.showSupplementary = false;
 
     // Region file
     if (vm.count("rfile")) {

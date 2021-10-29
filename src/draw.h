@@ -292,8 +292,8 @@ namespace wallysworld
       double font_thickness = 1.5;
       int32_t baseline = 0;
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-      // Put length if space takes max. 1 genomic position
-      if (textSize.width <= w) {
+      // Put length if space takes max. 5 genomic position
+      if (textSize.width <= 5 * w) {
 	cv::putText(img, text, cv::Point(x+w/2 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
       }
     }
@@ -316,8 +316,13 @@ namespace wallysworld
     double font_thickness = 1.5;
     int32_t baseline = 0;
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-    if (textSize.width <= w) {
-      cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+    // Put length if space takes max. 5 genomic position
+    if (textSize.width <= 5 * w) {
+      if (leading) {
+	cv::putText(img, text, cv::Point(x+w - 1, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+      } else {
+	cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+      }
     }
   }
 
@@ -325,8 +330,10 @@ namespace wallysworld
   inline void
   drawSC(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const len, bool const leading) {
     if (track == -1) return;
-    int32_t px = pixelX(c.width, rg.size, gstart - 1);
-    drawSC(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len, leading);
+    if (c.showSoftClip) {
+      int32_t px = pixelX(c.width, rg.size, gstart - 1);
+      drawSC(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len, leading);
+    }
   }
   
 }
