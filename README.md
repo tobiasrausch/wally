@@ -23,7 +23,7 @@ You can specify a plot name using another colon separator
 
 `wally region -r chrA:35-80:myplot -g <genome> <input.bam>`
 
-Most often you probably want to use a BED file with regions of interest and just execute wally in batch. The 4-th column specifies the plot name. For instance to plot 100 variants from a VCF file you can use:
+Most often you probably want to use a BED file with regions of interest and just execute wally in batch. The 4-th column specifies the plot name. For instance to plot variants from a VCF file you can use:
 
 `bcftools query -f "%CHROM\t%POS\n" <input.vcf.gz> | awk '{print $1"\t"($2-50)"\t"($2+50)"\tid"NR;}' > regions.bed`
 
