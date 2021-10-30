@@ -213,6 +213,7 @@ namespace wallysworld
 	      if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
 	      else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	      drawRefSkip(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg));
 	      rp += bam_cigar_oplen(cigar[i]);
 	    } else {
 	      std::cerr << "Unknown Cigar options" << std::endl;
@@ -315,13 +316,13 @@ namespace wallysworld
     geno.add_options()
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
-      ("window,w", "show window")
       ;
 
     // Define hidden options
     boost::program_options::options_description hidden("Hidden options");
     hidden.add_options()
       ("input-file", boost::program_options::value< std::vector<boost::filesystem::path> >(&c.files), "input file")
+      ("window,w", "show window")
       ;
     
     boost::program_options::positional_options_description pos_args;

@@ -163,6 +163,20 @@ namespace wallysworld
       }
       px += c.pxoffset;
     }
+
+    // Put coverage scale
+    if (true) {
+      std::string text = "[0-"; 
+      text += boost::lexical_cast<std::string>(maxObsCov);
+      text += "]";
+      double font_scale = 0.4;
+      double font_thickness = 1.5;
+      int32_t baseline = 0;
+      cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+      //cv::Rect rect(0,  (track-1) * c.tlheight, textSize.width, textSize.height);
+      //cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
+      cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    }
   }
 
   
@@ -277,6 +291,20 @@ namespace wallysworld
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
     drawDel(img, px, track * c.tlheight, pxend - px, c.rdheight, len);
+  }
+
+  inline void
+  drawRefSkip(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h) {
+    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), cv::Scalar(154, 128, 64), 1);
+  }
+
+  template<typename TConfig>
+  inline void
+    drawRefSkip(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend) {
+    if (track == -1) return;
+    int32_t px = pixelX(c.width, rg.size, gstart);
+    int32_t pxend = pixelX(c.width, rg.size, gend);
+    drawRefSkip(img, px, track * c.tlheight, pxend - px, c.rdheight);
   }
 
   inline void
