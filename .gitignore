@@ -1,5 +1,6 @@
 .htslib
 .opencv
+singularity/wally.sif
 *~
 
 # Binaries

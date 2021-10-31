@@ -29,7 +29,7 @@ Most often you probably want to use a BED file with regions of interest and just
 
 `wally region -R regions.bed -g <genome> <input.bam>`
 
-# Missing features (work-in-progess)
+# Missing features (work-in-progress)
 
 * Paired-end support
 
