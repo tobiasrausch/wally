@@ -9,7 +9,7 @@ namespace wallysworld
 {
 
 
-  std::string wallyVersionNumber = "0.1.1";
+  std::string wallyVersionNumber = "0.1.2";
 
   inline 
     void printTitle(std::string const& title) 

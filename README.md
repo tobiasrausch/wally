@@ -4,7 +4,7 @@ A genomic variant plotter.
 
 # Installing Wally
 
-The easiest way to get Wally is to download a statically linked binary or the singularity container (SIF file) from the [Wally github release page](https://github.com/tobiasrausch/wally/releases/). You can also build Wally from source using a recursive clone and make. 
+The easiest way to get Wally is to download the statically linked binary from the [Wally github release page](https://github.com/tobiasrausch/wally/releases/). You can also build Wally from source using a recursive clone and make. 
 
 `git clone --recursive https://github.com/tobiasrausch/wally.git`
 
