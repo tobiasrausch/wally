@@ -47,6 +47,13 @@ namespace wallysworld
     Region() : tid(0), beg(0), end(0), size(0), id("") {}
   };
 
+  inline std::string
+  convertToStr(bam_hdr_t* hdr, Region const& irg) {
+    std::string str = hdr->target_name[irg.tid];
+    str += ":" + boost::lexical_cast<std::string>(irg.beg + 1);
+    str += "-" + boost::lexical_cast<std::string>(irg.end + 1);
+    return str;
+  }
 
   inline bool
   parseRegion(bam_hdr_t* hdr, std::string const& regionStr, Region& rg) {

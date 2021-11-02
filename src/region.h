@@ -17,6 +17,7 @@
 #include <htslib/faidx.h>
 #include <htslib/vcf.h>
 #include <htslib/sam.h>
+#include <htslib/tbx.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -27,6 +28,7 @@
 #include "version.h"
 #include "util.h"
 #include "draw.h"
+#include "bed.h"
 
 namespace wallysworld
 {
@@ -37,6 +39,7 @@ namespace wallysworld
     bool showSoftClip;
     bool showSupplementary;
     bool hasRegionFile;
+    bool hasAnnotationFile;
     uint32_t minMapQual;
     uint32_t width;
     uint32_t height;
@@ -46,6 +49,7 @@ namespace wallysworld
     float snvvaf;
     double pxoffset; // 1bp in pixel    
     std::string regionStr;
+    boost::filesystem::path bedFile;
     boost::filesystem::path genome;
     boost::filesystem::path regionFile;
     std::vector<boost::filesystem::path> files;
@@ -73,15 +77,23 @@ namespace wallysworld
     int32_t seqlen;
     std::string oldchr("None");
     char* seq = NULL;
-    
+
     // Split region
     std::vector<Region> rg;
     if (!parseRegions(hdr, c, rg)) return 1;
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
+      // Parse annotation
+      std::vector<Transcript> tr;
+      std::vector<Region> anno;
+      if (!parseAnnotation(hdr, c, rg[rgIdx], tr, anno)) return 1;
+
+      // Debug code
+      //for(uint32_t i = 0; i < tr.size(); ++i) std::cerr << hdr->target_name[tr[i].rg.tid] << ':' << tr[i].rg.beg << '-' << tr[i].rg.end << '\t' << tr[i].rg.id << "\t" << tr[i].forward << std::endl;
+      //for(uint32_t i = 0; i < anno.size(); ++i) std::cerr << hdr->target_name[anno[i].tid] << ':' << anno[i].beg << '-' << anno[i].end << '\t' << anno[i].id << std::endl;
+      
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
-      
       // Generate image
       cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
@@ -117,7 +129,10 @@ namespace wallysworld
 
       // Reference
       drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
-    
+
+      // Genes/Annotation
+      //drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
+      
       // Coverage
       uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
       std::vector<uint16_t> covA(rg[rgIdx].size, 0);
@@ -252,7 +267,7 @@ namespace wallysworld
 	    }
 	  }
 	}
-	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, 4);
+	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, 5);
       }
 
       // Store image
@@ -260,10 +275,7 @@ namespace wallysworld
       outfile += ".png";
       cv::imwrite(outfile.c_str(), bg);
       if (c.showWindow) {
-	std::string str = hdr->target_name[rg[rgIdx].tid];
-	str += ":" + boost::lexical_cast<std::string>(rg[rgIdx].beg + 1);
-	str += "-" + boost::lexical_cast<std::string>(rg[rgIdx].end + 1);
-	cv::imshow(str.c_str(), bg);
+	cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
 	cv::waitKey(0);
       }
     }
@@ -299,6 +311,7 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
+      ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.bedFile), "BED annotation file (optional)")
       ;
     
     boost::program_options::options_description disc("Graphics options");
@@ -366,6 +379,15 @@ namespace wallysworld
       }
       c.hasRegionFile = true;
     } else c.hasRegionFile = false;
+
+        // BED file
+    if (vm.count("bed")) {
+      if (!(boost::filesystem::exists(c.bedFile) && boost::filesystem::is_regular_file(c.bedFile) && boost::filesystem::file_size(c.bedFile))) {
+	std::cerr << "Genome annotation BED file is missing: " << c.bedFile.string() << std::endl;
+	return 1;
+      }
+      c.hasAnnotationFile = true;
+    } else c.hasAnnotationFile = false;
     
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();

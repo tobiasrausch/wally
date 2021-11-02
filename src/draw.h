@@ -13,6 +13,8 @@
 
 #include <htslib/sam.h>
 
+#include "util.h"
+#include "bed.h"
 
 namespace wallysworld
 {
@@ -79,6 +81,33 @@ namespace wallysworld
     }
   }
 
+  template<typename TConfig>
+  inline void
+  drawAnnotation(TConfig const& c, Region const& rg, std::vector<Transcript> const& tr, std::vector<Region> const& anno, cv::Mat& img, int32_t const track) {
+    if (!tr.empty()) {
+      for(uint32_t i = 0; i < tr.size(); ++i) {
+	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg);
+	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg);
+	cv::line(img, cv::Point(px, track * c.tlheight + c.tlheight/2), cv::Point(pxend, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	int32_t pxi = px + 5;
+	if (pxi < 0) pxi = 5;
+	if (tr[i].forward) {
+	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + 1), cv::Point(pxi+5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 1), cv::Point(pxi+5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	  }
+	} else {
+	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + 1), cv::Point(pxi-5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 1), cv::Point(pxi-5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	  }
+	}
+      }
+    }
+    if (!anno.empty()) {
+    }
+  }
+  
   template<typename TConfig>
   inline void
   drawReference(TConfig const& c, Region const& rg, cv::Mat& img, std::string const& ref, int32_t const track) {
