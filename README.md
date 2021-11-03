@@ -34,6 +34,14 @@ Most often you probably want to use a BED file with regions of interest and just
 
 `wally region -R regions.bed -g <genome> <input.bam>`
 
+# Gene annotations
+
+Simple BED files are used to provide gene or other annotations. The BED file needs to be bgzipped and indexed via tabix (`tabix -p bed input.bed.gz`). The required columns are chromosome, start, end and an identifier which is displayed if there is sufficient space.
+
+`wally region -b bed/gencode.hg19.bed.gz -r chr17:7573900-7574000 -g <genome> <input.bam>`
+
+The chromosome names of the genome FASTA file, BAM file and BED annotation file need to match, "chr11" and "11" are not considered identical.
+
 # Missing features (work-in-progress)
 
 * Paired-end support
@@ -41,8 +49,6 @@ Most often you probably want to use a BED file with regions of interest and just
 * Abnormal paired-end coloring
 
 * Split view for SVs
-
-* GTF support
 
 * Multiple BAM files as input
 
