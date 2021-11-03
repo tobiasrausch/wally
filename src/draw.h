@@ -84,27 +84,49 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawAnnotation(TConfig const& c, Region const& rg, std::vector<Transcript> const& tr, std::vector<Region> const& anno, cv::Mat& img, int32_t const track) {
+
+    // Transcripts
     if (!tr.empty()) {
       for(uint32_t i = 0; i < tr.size(); ++i) {
-	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg);
-	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg);
+	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg + 1);
+	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg + 1);
 	cv::line(img, cv::Point(px, track * c.tlheight + c.tlheight/2), cv::Point(pxend, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
 	int32_t pxi = px + 5;
 	if (pxi < 0) pxi = 5;
 	if (tr[i].forward) {
 	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
 	    cv::line(img, cv::Point(pxi, track * c.tlheight + 1), cv::Point(pxi+5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
-	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 1), cv::Point(pxi+5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 2), cv::Point(pxi+5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
 	  }
 	} else {
 	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
 	    cv::line(img, cv::Point(pxi, track * c.tlheight + 1), cv::Point(pxi-5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
-	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 1), cv::Point(pxi-5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
+	    cv::line(img, cv::Point(pxi, track * c.tlheight + c.tlheight - 2), cv::Point(pxi-5, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
 	  }
 	}
       }
     }
+
+    // Annotations (e.g., exons)
     if (!anno.empty()) {
+      for(uint32_t i = 0; i < anno.size(); ++i) {
+	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg + 1);
+	int32_t pxend = pixelX(c.width, rg.size, anno[i].end - rg.beg + 1);
+	cv::Rect rect(px, track * c.tlheight + 1, pxend - px, c.tlheight - 2);
+	cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
+
+	// Add text
+	double font_scale = 0.4;
+	double font_thickness = 1.5;
+	int32_t baseline = 0;
+	cv::Size textSize = cv::getTextSize(anno[i].id, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	if (px < 0) px = 0;
+	if (pxend > c.width) pxend = c.width;
+	int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
+	if ((pxmid > px) && (pxmid + textSize.width < pxend)) {
+	  cv::putText(img, anno[i].id, cv::Point(pxmid, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	}
+      }
     }
   }
   

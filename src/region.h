@@ -131,7 +131,7 @@ namespace wallysworld
       drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
 
       // Genes/Annotation
-      //drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
+      drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
       
       // Coverage
       uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
