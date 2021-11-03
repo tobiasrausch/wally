@@ -10,6 +10,7 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/math/distributions/binomial.hpp>
+#include <boost/dynamic_bitset.hpp>
 
 #include <htslib/sam.h>
 
@@ -108,6 +109,11 @@ namespace wallysworld
     }
 
     // Annotations (e.g., exons)
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    typedef boost::dynamic_bitset<> TBitSet;
+    TBitSet blocked(c.width, false);
     if (!anno.empty()) {
       for(uint32_t i = 0; i < anno.size(); ++i) {
 	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg + 1);
@@ -115,16 +121,48 @@ namespace wallysworld
 	cv::Rect rect(px, track * c.tlheight + 1, pxend - px, c.tlheight - 2);
 	cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
 
-	// Add text
-	double font_scale = 0.4;
-	double font_thickness = 1.5;
-	int32_t baseline = 0;
-	cv::Size textSize = cv::getTextSize(anno[i].id, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	// Block regions
 	if (px < 0) px = 0;
-	if (pxend > c.width) pxend = c.width;
+	if (pxend > (int32_t) c.width) pxend = c.width;
+	if ((pxend - px > 2) && (!tr.empty())) {
+	  for(int32_t k = px; k < pxend; ++k) blocked[k] = true;
+	}
+	
+	// Add text
+	cv::Size textSize = cv::getTextSize(anno[i].id, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 	int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
 	if ((pxmid > px) && (pxmid + textSize.width < pxend)) {
 	  cv::putText(img, anno[i].id, cv::Point(pxmid, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	}
+      }
+    }
+
+    // Transcript labels
+    if (!tr.empty()) {
+      for(uint32_t i = 0; i < tr.size(); ++i) {
+	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg + 1);
+	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg + 1);
+	if (px < 0) px = 0;
+	if (pxend > (int32_t) c.width) pxend = c.width;
+	int32_t kstart = -1;
+	int32_t kend = -1;
+	cv::Size textSize = cv::getTextSize(tr[i].rg.id, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	for(int32_t k = px; k < pxend; ++k) {
+	  if (!blocked[k]) {
+	    if (kstart == -1) kstart = k;
+	    kend = k;
+	    if ((kend - kstart) > 2.5 * textSize.width) {
+	      int32_t midpoint = (kstart + kend) / 2;
+	      cv::Rect rect(midpoint - textSize.width/2, track * c.tlheight, textSize.width, c.tlheight);
+	      cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
+	      cv::putText(img, tr[i].rg.id, cv::Point(midpoint - textSize.width/2, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness);
+	      for(int32_t l = kstart; l < kend; ++l) blocked[l] = true;
+	      break;
+	    }
+	  } else {
+	    kstart = -1;
+	    kend = -1;
+	  }
 	}
       }
     }
@@ -171,10 +209,10 @@ namespace wallysworld
 	int32_t ch = (int32_t) (frac * 2 * c.tlheight);    
 	if (c.pxoffset >= WALLY_PX) {
 	  cv::Rect rect(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch);
-	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+	  cv::rectangle(img, rect, cv::Scalar(100, 100, 100), -1);
 	} else {
 	  cv::Rect rect(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset + 1, ch);
-	  cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+	  cv::rectangle(img, rect, cv::Scalar(100, 100, 100), -1);
 	}
       }
       px += c.pxoffset;
