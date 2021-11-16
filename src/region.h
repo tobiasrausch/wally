@@ -281,7 +281,7 @@ namespace wallysworld
 	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
       }
 
-      // Store image
+      // Store image (comment this for valgrind, png encoder seems leaky)
       std::string outfile = rg[rgIdx].id;
       outfile += ".png";
       cv::imwrite(outfile.c_str(), bg);
