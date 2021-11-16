@@ -98,24 +98,20 @@ namespace wallysworld
       cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
       // Tracks
+      int32_t headerTracks = 4;
       int32_t maxTracks = c.height / c.tlheight;
-      std::vector<int32_t> taken(maxTracks, -2000000);
-      if (maxTracks < 10) {
+      if (maxTracks < headerTracks + 10 * (int32_t) c.files.size()) {
 	std::cerr << "Image height is too small!" << std::endl;
 	return 1;
       }
-      // Header tracks
-      taken[0] = 1073741824;
-      taken[1] = 1073741824;
-      taken[2] = 1073741824;
-      taken[3] = 1073741824;
-      taken[4] = 1073741824;
-      taken[5] = 1073741824;
-    
-      // Parse BAM files
-      boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << std::endl;
 
+      // Block header tracks
+      std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
+      for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
+      
+      // Split by number of BAMs
+      int32_t bamTrackSize = (int32_t) ((maxTracks - headerTracks) / c.files.size());
+          
       // Lazy loading of genome
       std::string chrName = hdr->target_name[rg[rgIdx].tid];
       if (chrName != oldchr) {
@@ -133,18 +129,33 @@ namespace wallysworld
       // Genes/Annotation
       drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
       
-      // Coverage
-      uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
-      std::vector<uint16_t> covA(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covC(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covG(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covT(rg[rgIdx].size, 0);
-
       // Read offset
       int32_t genomicReadOffset  = (2.0 / (double) c.width) * (double) rg[rgIdx].size;
       
       // Iterate files
       for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+	// Parse BAM files
+	boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+	std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << "; File " << c.files[file_c].stem().string() << std::endl;
+	
+	// Reserve tracks for other BAM files
+	int32_t lowerBound = file_c * bamTrackSize + headerTracks;
+	int32_t upperBound = (file_c + 1) * bamTrackSize + headerTracks;
+	for(int32_t i = headerTracks; i < maxTracks; ++i) {
+	  if (i < lowerBound) taken[i] = WALLY_BLOCKED;
+	  else if (i >= upperBound) taken[i] = WALLY_BLOCKED;
+	  else taken[i] = WALLY_UNBLOCK;
+	}
+	// Reserve coverage track
+	for(int32_t i = lowerBound; i < lowerBound + 2; ++i) taken[i] = WALLY_BLOCKED;
+	
+	// Coverage
+	uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
+	std::vector<uint16_t> covA(rg[rgIdx].size, 0);
+	std::vector<uint16_t> covC(rg[rgIdx].size, 0);
+	std::vector<uint16_t> covG(rg[rgIdx].size, 0);
+	std::vector<uint16_t> covT(rg[rgIdx].size, 0);
+	
 	// Read alignments
 	hts_itr_t* iter = sam_itr_queryi(idx[file_c], rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
 	bam1_t* rec = bam_init1();
@@ -267,7 +278,7 @@ namespace wallysworld
 	    }
 	  }
 	}
-	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, 5);
+	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
       }
 
       // Store image

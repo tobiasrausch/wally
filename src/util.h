@@ -37,6 +37,14 @@ namespace wallysworld
   #define WALLY_T cv::Scalar(0,0,255)
   #endif
 
+  #ifndef WALLY_BLOCKED
+  #define WALLY_BLOCKED 1073741824
+  #endif
+
+  #ifndef WALLY_UNBLOCK
+  #define WALLY_UNBLOCK -1073741824
+  #endif
+  
   struct Region {
     int32_t tid;
     int32_t beg;

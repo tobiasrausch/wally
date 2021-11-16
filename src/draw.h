@@ -262,8 +262,8 @@ namespace wallysworld
       double font_thickness = 1.5;
       int32_t baseline = 0;
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-      //cv::Rect rect(0,  (track-1) * c.tlheight, textSize.width, textSize.height);
-      //cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
+      cv::Rect rect(0,  track * c.tlheight - textSize.height/2, textSize.width, textSize.height);
+      cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
       cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
     }
   }
