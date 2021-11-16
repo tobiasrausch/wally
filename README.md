@@ -50,7 +50,7 @@ You can include multiple BAM files in a plot such as a tumor genome and a matche
 
 In fact, wally can be used to create "wallpapers" of genomes which gave rise to the tool name. For instance, the below command can be used to create a full genome view of 96 samples of a full plate of SARS-CoV-2 genomes.
 
-`./src/wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
+`wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
 
 # Missing features (work-in-progress)
 
