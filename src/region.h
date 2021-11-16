@@ -38,6 +38,7 @@ namespace wallysworld
     bool showWindow;
     bool showSoftClip;
     bool showSupplementary;
+    bool showSplitview;
     bool hasRegionFile;
     bool hasAnnotationFile;
     uint32_t minMapQual;
@@ -334,6 +335,7 @@ namespace wallysworld
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("supplementary,u", "show supplementary alignments")
       ("clip,c", "show soft- and hard-clips")
+      ("split,p", "enable split-view")
       ;
     
     boost::program_options::options_description geno("Display options");
@@ -377,6 +379,10 @@ namespace wallysworld
     // Soft-clips
     if (vm.count("clip")) c.showSoftClip = true;
     else c.showSoftClip = false;
+
+    // Splitview
+    if (vm.count("split")) c.showSplitview = true;
+    else c.showSplitview = false;
 
     // Supplementary
     if (vm.count("supplementary")) c.showSupplementary = true;

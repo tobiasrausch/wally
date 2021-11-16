@@ -149,9 +149,17 @@ namespace wallysworld
 	regionFile.close();
       }
     } else {
-      Region tmp;
-      if (!parseRegion(hdr, c.regionStr, tmp)) return false;
-      rg.push_back(tmp);
+      // Split multiple command-line regions
+      typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
+      boost::char_separator<char> sep(",");
+      Tokenizer tokens(c.regionStr, sep);
+      Tokenizer::iterator tokIter = tokens.begin();
+      for(;tokIter != tokens.end(); ++tokIter) {
+	std::string regStr = *tokIter;
+	Region tmp;
+	if (!parseRegion(hdr, regStr, tmp)) return false;
+	rg.push_back(tmp);
+      }
     }
     return true;
   }
