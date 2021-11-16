@@ -42,6 +42,16 @@ Simple BED files are used to provide gene or other annotations. The BED file nee
 
 The chromosome names of the genome FASTA file, BAM file and BED annotation file need to match, "chr11" and "11" are not considered identical.
 
+# Multiple BAM files
+
+You can include multiple BAM files in a plot such as a tumor genome and a matched control in cancer genomics.
+
+`wally region -b bed/gencode.hg19.bed.gz -r chr17:7573900-7574000 -g <genome> <tumor.bam> <control.bam>`
+
+In fact, wally can be used to create "wallpapers" of genomes which gave rise to the tool name. For instance, the below command can be used to create a full genome view of 96 samples of a full plate of SARS-CoV-2 genomes.
+
+`./src/wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
+
 # Missing features (work-in-progress)
 
 * Paired-end support
@@ -50,7 +60,6 @@ The chromosome names of the genome FASTA file, BAM file and BED annotation file 
 
 * Split view for SVs
 
-* Multiple BAM files as input
 
 # License
 
