@@ -1,6 +1,9 @@
 .htslib
 .opencv
 singularity/wally.sif
+bed/*.bed
+bed/*.bed.gz
+bed/*.bed.gz.tbi
 *~
 
 # Binaries
