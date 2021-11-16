@@ -46,7 +46,7 @@ The chromosome names of the genome FASTA file, BAM file and BED annotation file 
 
 You can include multiple BAM files in a plot such as a tumor genome and a matched control in cancer genomics.
 
-`wally region -b bed/gencode.hg19.bed.gz -r chr17:7573900-7574000 -g <genome> <tumor.bam> <control.bam>`
+`wally region -r chr17:7573900-7574000 -g <genome> <tumor.bam> <control.bam>`
 
 In fact, wally can be used to create "wallpapers" of genomes which gave rise to the tool name. For instance, the below command can be used to create a full genome view of 96 samples of a full plate of SARS-CoV-2 genomes.
 
