@@ -58,7 +58,7 @@ Wally allows concatenating images of different regions horizontally using the `-
 
 `wally region -p 3 -x 2048 -r NC_045512.2:22000-24000,NC_045512.2:23000-23100,NC_045512.2:23050-23070 -g NC_045512.2.fa <input.bam>`
 
-You can of course split horizontally and vertically at the same time to view, for instance, a somatic inter-chromosomal translocation.
+You can split horizontally and vertically at the same time to view, for instance, a somatic inter-chromosomal translocation.
 
 `wally region -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
