@@ -52,14 +52,23 @@ In fact, wally can be used to create "wallpapers" of genomes which gave rise to 
 
 `wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
 
+# Aligning multiple regions horizontally (split view)
+
+Wally allows concatenating images of different regions horizontally using the `--split` option. This can be used, for instance, to zoom into a specific variant. On the command line the regions need to be separated by `,` without spaces. As an example, you can zoom into the N501Y variant of the alpha SARS-CoV-2 lineage using 
+
+`wally region -p 3 -x 2048 -r NC_045512.2:22000-24000,NC_045512.2:23000-23100,NC_045512.2:23050-23070 -g NC_045512.2.fa <input.bam>`
+
+You can of course split horizontally and vertically at the same time to view, for instance, a somatic inter-chromosomal translocation.
+
+`wally region -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+
+If you specify the regions in a BED file using the `-R` option then the split parameter operates row-wise, e.g., for `-p 3` row 1-3 of the BED file make up the first image, row 4-6 the second image, and so on.
+
 # Missing features (work-in-progress)
 
 * Paired-end support
 
 * Abnormal paired-end coloring
-
-* Split view for SVs
-
 
 # License
 

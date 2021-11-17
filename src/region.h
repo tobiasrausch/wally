@@ -38,9 +38,9 @@ namespace wallysworld
     bool showWindow;
     bool showSoftClip;
     bool showSupplementary;
-    bool showSplitview;
     bool hasRegionFile;
     bool hasAnnotationFile;
+    uint16_t splits;
     uint32_t minMapQual;
     uint32_t width;
     uint32_t height;
@@ -79,6 +79,14 @@ namespace wallysworld
     std::string oldchr("None");
     char* seq = NULL;
 
+    // Adjust image width by number of split images?
+    c.width /= c.splits;
+    if (c.width < 10) {
+      std::cerr << "Image width is too small or too many splits!" << std::endl;
+      return 1;
+    }
+    std::vector<cv::Mat> imageStore;
+    
     // Split region
     std::vector<Region> rg;
     if (!parseRegions(hdr, c, rg)) return 1;
@@ -283,12 +291,34 @@ namespace wallysworld
       }
 
       // Store image (comment this for valgrind, png encoder seems leaky)
-      std::string outfile = rg[rgIdx].id;
-      outfile += ".png";
-      cv::imwrite(outfile.c_str(), bg);
-      if (c.showWindow) {
-	cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
-	cv::waitKey(0);
+      if (c.splits == 1) {
+	std::string outfile = rg[rgIdx].id;
+	outfile += ".png";
+	cv::imwrite(outfile.c_str(), bg);
+	if (c.showWindow) {
+	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
+	  cv::waitKey(0);
+	}
+      } else {
+	imageStore.push_back(bg);
+	// Concatenate
+	if (imageStore.size() == c.splits) {
+	  cv::Mat dst;
+	  cv::hconcat(imageStore[0], imageStore[1], dst);
+	  for(uint32_t i = 2; i < imageStore.size(); ++i) {
+	    cv::Mat tdst;
+	    cv::hconcat(dst, imageStore[i], tdst);
+	    dst = tdst;
+	  }
+	  std::string outfile = rg[rgIdx].id;
+	  outfile += ".png";
+	  cv::imwrite(outfile.c_str(), dst);
+	  if (c.showWindow) {
+	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
+	    cv::waitKey(0);
+	  }
+	  imageStore.clear();
+	}
       }
     }
 
@@ -335,11 +365,11 @@ namespace wallysworld
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("supplementary,u", "show supplementary alignments")
       ("clip,c", "show soft- and hard-clips")
-      ("split,p", "enable split-view")
       ;
     
     boost::program_options::options_description geno("Display options");
     geno.add_options()
+      ("split,p", boost::program_options::value<uint16_t>(&c.splits)->default_value(1), "number of horizontal images")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
       ;
@@ -380,14 +410,16 @@ namespace wallysworld
     if (vm.count("clip")) c.showSoftClip = true;
     else c.showSoftClip = false;
 
-    // Splitview
-    if (vm.count("split")) c.showSplitview = true;
-    else c.showSplitview = false;
-
     // Supplementary
     if (vm.count("supplementary")) c.showSupplementary = true;
     else c.showSupplementary = false;
 
+    // Check splits
+    if (c.splits < 1) {
+      std::cerr << "The number of horizontal images needs to be >=1." << std::endl;
+      return 1;
+    }
+      
     // Region file
     if (vm.count("rfile")) {
       if (!(boost::filesystem::exists(c.regionFile) && boost::filesystem::is_regular_file(c.regionFile) && boost::filesystem::file_size(c.regionFile))) {
