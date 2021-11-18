@@ -288,9 +288,11 @@ namespace wallysworld
 	  }
 	}
 	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
+	drawSampleLabel(c, lowerBound + 3, c.files[file_c].stem().string(), bg);
       }
       drawBorder(c, bg);
 
+      
       // Store image (comment this for valgrind, png encoder seems leaky)
       if (c.splits == 1) {
 	std::string outfile = rg[rgIdx].id;

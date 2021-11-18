@@ -181,7 +181,7 @@ namespace wallysworld
       for(int32_t i = 0; i < rg.size; ++i) {
 	std::string text(1, ref[i]);
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	cv::putText(img, text, cv::Point(px + c.pxoffset/2 - textSize.width/2, track * c.tlheight + textSize.height + 1), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, text, cv::Point(px + c.pxoffset/2 - textSize.width/2, track * c.tlheight + textSize.height + 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
 	px += c.pxoffset;
       }
     }
@@ -278,6 +278,18 @@ namespace wallysworld
       cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
       cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
     }
+  }
+
+  template<typename TConfig>
+  inline void
+  drawSampleLabel(TConfig const& c, int32_t const track, std::string const& text, cv::Mat& img) {
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+    cv::Rect rect(0,  track * c.tlheight - textSize.height, textSize.width, textSize.height);
+    cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
+    cv::putText(img, text, cv::Point(0, track * c.tlheight), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
   }
 
   
