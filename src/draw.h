@@ -184,6 +184,13 @@ namespace wallysworld
       }
     }
   }
+
+  template<typename TConfig>
+  inline void
+  drawBorder(TConfig const& c, cv::Mat& img) {
+    cv::line(img, cv::Point(0, 0), cv::Point(0, c.height), WALLY_BORDER, 1);
+    cv::line(img, cv::Point(c.width - 1, 0), cv::Point(c.width - 1, c.height), WALLY_BORDER, 1);
+  }
   
   template<typename TConfig, typename TCoverage>
   inline void
@@ -197,6 +204,9 @@ namespace wallysworld
       if (cumsum > maxObsCov) maxObsCov = cumsum;
     }
 
+    // Draw horizontal top line
+    cv::line(img, cv::Point(0, (track-1) * c.tlheight), cv::Point(c.width, (track-1) * c.tlheight), WALLY_BORDER, 1);
+    
     // Draw coverage histogram
     double px = 0;
     for(int32_t i = 0; i < rg.size; ++i) {

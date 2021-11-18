@@ -289,6 +289,7 @@ namespace wallysworld
 	}
 	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
       }
+      drawBorder(c, bg);
 
       // Store image (comment this for valgrind, png encoder seems leaky)
       if (c.splits == 1) {
