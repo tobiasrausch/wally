@@ -5,7 +5,7 @@
 
 # Wally
 
-A genomic variant plotter.
+Plotting of aligned sequencing reads in BAM/CRAM format and visualization of genomic variants.
 
 # Installing Wally
 
