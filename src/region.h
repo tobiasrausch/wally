@@ -38,8 +38,10 @@ namespace wallysworld
     bool showWindow;
     bool showSoftClip;
     bool showSupplementary;
+    bool showPairs;
     bool hasRegionFile;
     bool hasAnnotationFile;
+    uint16_t madCutoff;
     uint16_t splits;
     uint32_t minMapQual;
     uint32_t width;
@@ -61,6 +63,13 @@ namespace wallysworld
 #ifdef PROFILE
     ProfilerStart("wally.prof");
 #endif
+
+    // Get library parameters
+    typedef std::vector<LibraryInfo> TLibInfo;
+    TLibInfo sampleLib(c.files.size());
+    getLibraryParams(c, sampleLib);
+    //for(uint32_t i = 0; i < c.files.size(); ++i) std::cerr << sampleLib[i].rs << ',' << sampleLib[i].median << ',' << sampleLib[i].mad << std::endl;
+    
     // Open file handles
     typedef std::vector<samFile*> TSamFile;
     typedef std::vector<hts_idx_t*> TIndex;
@@ -188,6 +197,22 @@ namespace wallysworld
 	      break;
 	    }
 	  }
+
+	  // Find out layout
+	  cv::Scalar readCol(200, 200, 200);
+	  if (c.showPairs) {
+	    uint8_t pl = layout(rec);
+	    uint32_t minSep = 50;
+	    if (pl == 0) {
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(175, 175, 63);
+	    } else if (pl == 1) {
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(213, 100, 78);
+	    } else if (pl == 2) {
+	      if (std::abs(rec->core.isize) > sampleLib[file_c].median + c.madCutoff * sampleLib[file_c].mad) readCol = cv::Scalar(63, 63, 213);
+	    } else if (pl == 3) {
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(63, 175, 63);
+	    }
+	  }
 	  
 	  // Parse CIGAR
 	  uint32_t alnend = rec->core.pos + alignmentLength(rec);
@@ -205,7 +230,7 @@ namespace wallysworld
 		firstBox = false;
 	      }
 	      if ((rp + bam_cigar_oplen(cigar[i]) == alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
-	      drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle);
+	      drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle, readCol);
 	      if (leadingSC > 0) {
 		drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
 		leadingSC = 0;
@@ -362,17 +387,19 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("snv-vaf,s", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
+      ("mad-cutoff,m", boost::program_options::value<uint16_t>(&c.madCutoff)->default_value(9), "insert size cutoff, median+m*MAD")
+      ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
       ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
+      ("paired,p", "paired-end view")
       ("supplementary,u", "show supplementary alignments")
       ("clip,c", "show soft- and hard-clips")
       ;
     
     boost::program_options::options_description geno("Display options");
     geno.add_options()
-      ("split,p", boost::program_options::value<uint16_t>(&c.splits)->default_value(1), "number of horizontal images")
+      ("split,s", boost::program_options::value<uint16_t>(&c.splits)->default_value(1), "number of horizontal images")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
       ;
@@ -416,6 +443,10 @@ namespace wallysworld
     // Supplementary
     if (vm.count("supplementary")) c.showSupplementary = true;
     else c.showSupplementary = false;
+
+    // Paired-end view
+    if (vm.count("paired")) c.showPairs = true;
+    else c.showPairs = false;
 
     // Check splits
     if (c.splits < 1) {

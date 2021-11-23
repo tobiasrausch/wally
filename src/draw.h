@@ -295,31 +295,31 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  drawRead(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const tri) {
+  drawRead(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const tri, cv::Scalar const& clr) {
     cv::Rect rect(x, y, w, h);
-    cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+    cv::rectangle(img, rect, clr, -1);
     if (tri) {
       typedef std::vector<cv::Point> TPointVector;
       TPointVector pvec;
       if (reverse) {
-	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h), cv::Point(x-c.pxoffset/3, y + h/2)};
-	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
-	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
+	std::vector<cv::Point> pvec{cv::Point(x, y), cv::Point(x, y+h-1), cv::Point(x-c.pxoffset/3, y + h/2)};
+	cv::polylines(img, pvec, true, clr, 1);
+	cv::fillPoly(img, pvec, clr);
       } else {
-	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h), cv::Point(x+w+c.pxoffset/3, y + h/2)};
-	cv::polylines(img, pvec, true, cv::Scalar(200, 200, 200), 1);
-	cv::fillPoly(img, pvec, cv::Scalar(200, 200, 200));
+	std::vector<cv::Point> pvec{cv::Point(x+w, y), cv::Point(x+w, y+h-1), cv::Point(x+w+c.pxoffset/3, y + h/2)};
+	cv::polylines(img, pvec, true, clr, 1);
+	cv::fillPoly(img, pvec, clr);
       }
     }
   }
 
   template<typename TConfig>
   inline void
-  drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse, bool const tri) {
+  drawRead(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, bool const reverse, bool const tri, cv::Scalar const& clr) {
     if (track == -1) return;
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
-    drawRead(c, img, px, track * c.tlheight, pxend - px, c.rdheight, reverse, tri);
+    drawRead(c, img, px, track * c.tlheight, pxend - px, c.rdheight, reverse, tri, clr);
   }
 
   template<typename TConfig>
@@ -460,9 +460,9 @@ namespace wallysworld
     // Put length if space takes max. 5 genomic position
     if (textSize.width <= 5 * w) {
       if (leading) {
-	cv::putText(img, text, cv::Point(x+w - 1, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+	cv::putText(img, text, cv::Point(x+w - 1, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
       } else {
-	cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+	cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
       }
     }
   }
