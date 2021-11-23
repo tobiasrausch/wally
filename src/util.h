@@ -48,6 +48,10 @@ namespace wallysworld
   #ifndef WALLY_UNBLOCK
   #define WALLY_UNBLOCK -1073741824
   #endif
+
+  #ifndef DELLY_SVT_TRANS
+  #define DELLY_SVT_TRANS 5
+  #endif
   
   struct Region {
     int32_t tid;
@@ -314,24 +318,38 @@ namespace wallysworld
     return (rec->core.tid != rec->core.mtid);
   }
   
-  // F+ 0
-  // F- 1
-  // R+ 2
-  // R- 3
+  // F+ 0    --R1-->   --R2-->
+  // F- 1    --R2-->   --R1-->
+  // R+ 2    --R1-->   <--R2--
+  // R- 3    <--R1--   --R2-->
+  //
+  // Inter-chromosomal (R1 maps to chrA, R2 maps to chrB)
+  // DELLY_SVT_TRANS + 0:  --R1--> --R2-->   leads to --A--> <--B--   (3to3)
+  // DELLY_SVT_TRANS + 1:  <--R1-- <--R2--   leads to <--A-- --B-->   (5to5)
+  // DELLY_SVT_TRANS + 2:  --R1--> <--R2--   leads to --A--> --B-->   (3to5)
+  // DELLY_SVT_TRANS + 3:  <--R1-- --R2-->   leads to <--A-- <--B--   (5to3)
+  
   inline uint8_t
   layout(bam1_t const* rec) {
-    if ((!_translocation(rec)) && (rec->core.flag & BAM_FPAIRED)) {
-      if (!(rec->core.flag & BAM_FREVERSE)) {
-	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos < rec->core.mpos) ? 0 : 1;
-	else return (rec->core.pos < rec->core.mpos) ? 2 : 3;
+    if (rec->core.flag & BAM_FPAIRED) {
+      if (!_translocation(rec)) {
+	if (!(rec->core.flag & BAM_FREVERSE)) {
+	  if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos < rec->core.mpos) ? 0 : 1;
+	  else return (rec->core.pos < rec->core.mpos) ? 2 : 3;
+	} else {
+	  if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos > rec->core.mpos) ? 2 : 3;
+	  else return (rec->core.pos > rec->core.mpos) ? 0 : 1;
+	}
       } else {
-	if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.pos > rec->core.mpos) ? 2 : 3;
-	else return (rec->core.pos > rec->core.mpos) ? 0 : 1;
+	if (!(rec->core.flag & BAM_FREVERSE)) {
+	  if (!(rec->core.flag & BAM_FMREVERSE)) return (DELLY_SVT_TRANS + 0);
+	  else return (rec->core.tid < rec->core.mtid) ? (DELLY_SVT_TRANS + 2) : (DELLY_SVT_TRANS + 3);
+	} else {
+	  if (!(rec->core.flag & BAM_FMREVERSE)) return (rec->core.tid > rec->core.mtid) ? (DELLY_SVT_TRANS + 2) : (DELLY_SVT_TRANS + 3);
+	  else return (DELLY_SVT_TRANS + 1);
+	}
       }
-    } else {
-      if (_translocation(rec)) return 255;
-      else return 255;
-    }
+    } else return 4; // Nothing (unpaired)
   }
 
   inline uint32_t alignmentLength(bam1_t const* rec) {

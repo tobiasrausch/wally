@@ -211,6 +211,14 @@ namespace wallysworld
 	      if (std::abs(rec->core.isize) > sampleLib[file_c].median + c.madCutoff * sampleLib[file_c].mad) readCol = cv::Scalar(63, 63, 213);
 	    } else if (pl == 3) {
 	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(63, 175, 63);
+	    } else if (pl == DELLY_SVT_TRANS + 0) {
+	      readCol = cv::Scalar(153, 154, 251);
+	    } else if (pl == DELLY_SVT_TRANS + 1) {
+	      readCol = cv::Scalar(111, 191, 253);
+	    } else if (pl == DELLY_SVT_TRANS + 2) {
+	      readCol = cv::Scalar(0, 127, 255);
+	    } else if (pl == DELLY_SVT_TRANS + 3) {
+	      readCol = cv::Scalar(214, 178, 202);
 	    }
 	  }
 	  
