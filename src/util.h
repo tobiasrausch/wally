@@ -183,11 +183,6 @@ namespace wallysworld
       std::cerr << "Region begin has to be smaller than region end." << std::endl;
       return false;
     }
-    if (rg.end - rg.beg > 100000)  {
-      std::cerr << "Invalid region " << regionStr << std::endl;
-      std::cerr << "Region is larger than 100kbp." << std::endl;
-      return false;
-    }
     // Regions are 1-based, offset
     if (rg.beg > 0) {
       --rg.beg;
