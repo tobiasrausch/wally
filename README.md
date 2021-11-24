@@ -70,6 +70,17 @@ With `-p` you can switch on the paired-end view.
 
 `wally region -p -r chrA:35-80 -g <genome> <input.bam>`
 
+The paired-end coloring highlights candidate structural variants. Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring.
+
+- ![#f03c15](https://via.placeholder.com/15/f03c15/000000?text=+) `#f03c15`
+- ![#c5f015](https://via.placeholder.com/15/c5f015/000000?text=+) `#c5f015`
+- ![#1589F0](https://via.placeholder.com/15/1589F0/000000?text=+) `#1589F0`
+
+For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
+
+`wally region -up -x 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+
+
 # License
 
 Wally is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/wally/blob/master/LICENSE) file for more details.
