@@ -81,9 +81,9 @@ The paired-end coloring highlights candidate structural variants supported by re
 - ![#ff8000](https://via.placeholder.com/15/ff8000/000000?text=+) `inter-chr paired-end, A:--R1--> B:<--R2-- leads to --A--> --B--> junction, BND:3to5`
 - ![#cab2d6](https://via.placeholder.com/15/cab2d6/000000?text=+) `inter-chr paired-end, A:<--R1-- B:--R2--> leads to <--A-- <--B-- junction, BND:5to3`
 
-For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
+For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split with a larger image size.
 
-`wally region -up -x 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+`wally region -up -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
 
 # License
