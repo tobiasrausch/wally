@@ -137,6 +137,14 @@ namespace wallysworld
       sam_close(samfile[file_c]);
     }
   }
+
+  inline int32_t
+  firstEmptyTrack(std::vector<int32_t> const& taken, int32_t const pos) {
+    for(uint32_t i = 0; i < taken.size(); ++i) {
+      if (taken[i] < pos) return i;
+    }
+    return -1;
+  }
   
   inline std::string
   convertToStr(bam_hdr_t* hdr, Region const& irg) {
@@ -249,6 +257,13 @@ namespace wallysworld
       s++;
     }
     return h;
+  }
+
+  template<typename TAlignedReads>
+  inline bool
+  _firstPairObs(bam1_t* rec, unsigned const seed, TAlignedReads const& lastAlignedPosReads) {
+    if (rec->core.tid == rec->core.mtid) return ((rec->core.pos < rec->core.mpos) || ((rec->core.pos == rec->core.mpos) && (lastAlignedPosReads.find(seed) == lastAlignedPosReads.end())));
+    else return (rec->core.tid < rec->core.mtid);
   }
 
   inline std::size_t hash_read(bam1_t* rec) {

@@ -407,6 +407,21 @@ namespace wallysworld
   }
 
   inline void
+  drawPELine(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, cv::Scalar const& clr) {
+    cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), clr, 1);
+  }
+
+  template<typename TConfig>
+  inline void
+  drawPELine(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, cv::Scalar const& clr) {
+    if ((track != -1) && (gstart < gend)) {
+      int32_t px = pixelX(c.width, rg.size, gstart);
+      int32_t pxend = pixelX(c.width, rg.size, gend);
+      drawPELine(img, px, track * c.tlheight, pxend - px, c.rdheight, clr);
+    }
+  }
+
+  inline void
   drawRefSkip(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h) {
     cv::line(img, cv::Point(x, y+h/2), cv::Point(x+w, y+h/2), cv::Scalar(154, 128, 64), 1);
   }

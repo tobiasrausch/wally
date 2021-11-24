@@ -175,6 +175,9 @@ namespace wallysworld
 	std::vector<uint16_t> covT(rg[rgIdx].size, 0);
 	
 	// Read alignments
+	int32_t lastAlignedPos = 0;
+	std::set<std::size_t> lastAlignedPosReads;
+	std::map<std::size_t, int32_t> assignedTrack;
 	hts_itr_t* iter = sam_itr_queryi(idx[file_c], rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
 	bam1_t* rec = bam_init1();
 	while (sam_itr_next(samfile[file_c], iter, rec) >= 0) {
@@ -187,16 +190,6 @@ namespace wallysworld
 	  sequence.resize(rec->core.l_qseq);
 	  uint8_t* seqptr = bam_get_seq(rec);
 	  for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
-	  
-	  // Search empty track
-	  int32_t trackIdx = -1;
-	  for(uint32_t i = 0; i < taken.size(); ++i) {
-	    if (taken[i] < rec->core.pos) {
-	      trackIdx = i;
-	      taken[i] = rec->core.pos + alignmentLength(rec) + genomicReadOffset;
-	      break;
-	    }
-	  }
 
 	  // Find out layout
 	  cv::Scalar readCol(200, 200, 200);
@@ -221,9 +214,52 @@ namespace wallysworld
 	      readCol = cv::Scalar(214, 178, 202);
 	    }
 	  }
-	  
+
+	  // Search empty track
+	  int32_t trackIdx = -1;
+	  int32_t alnend = rec->core.pos + alignmentLength(rec);
+	  if ((c.showPairs) && !(rec->core.flag & BAM_FSUPPLEMENTARY)) {
+	    unsigned seed = hash_string(bam_get_qname(rec));
+	    
+	    // Clean-up the read store for identical alignment positions
+	    if (rec->core.pos > lastAlignedPos) {
+	      lastAlignedPosReads.clear();
+	      lastAlignedPos = rec->core.pos;
+	    }
+	    if (_firstPairObs(rec, seed, lastAlignedPosReads)) {
+	      // First observed read
+	      trackIdx = firstEmptyTrack(taken, rec->core.pos);
+	      if (trackIdx != -1) {
+		if ((rec->core.tid == rec->core.mtid) && (rec->core.mpos < rg[rgIdx].end)) {
+		  // Block until mate
+		  taken[trackIdx] = std::max((int32_t) rec->core.mpos + genomicReadOffset, alnend + genomicReadOffset);
+		  assignedTrack[seed] = trackIdx;
+		  // draw the paired-end connector line
+		  drawPELine(c, rg[rgIdx], bg, trackIdx, (alnend - rg[rgIdx].beg), (rec->core.mpos - rg[rgIdx].beg), readCol);
+		} else {
+		  // Treat like single-end
+		  taken[trackIdx] = alnend + genomicReadOffset;
+		}
+	      }
+	    } else {
+	      // Second observed read
+	      if (assignedTrack.find(seed) == assignedTrack.end()) {
+		// Mate outside window
+		trackIdx = firstEmptyTrack(taken, rec->core.pos);  
+		if (trackIdx != -1) taken[trackIdx] = alnend + genomicReadOffset;
+	      } else {
+		// Mate inside window
+		trackIdx = assignedTrack[seed];
+		assignedTrack.erase(seed);
+		taken[trackIdx] = std::max(alnend + genomicReadOffset, taken[trackIdx]);
+	      }
+	    }
+	  } else {
+	    trackIdx = firstEmptyTrack(taken, rec->core.pos);
+	    if (trackIdx != -1) taken[trackIdx] = alnend + genomicReadOffset;
+	  }
+
 	  // Parse CIGAR
-	  uint32_t alnend = rec->core.pos + alignmentLength(rec);
 	  uint32_t rp = rec->core.pos; // reference pointer
 	  uint32_t sp = 0; // sequence pointer
 	  bool firstBox = true;
@@ -237,7 +273,7 @@ namespace wallysworld
 		if (rec->core.flag & BAM_FREVERSE) drawTriangle = true;
 		firstBox = false;
 	      }
-	      if ((rp + bam_cigar_oplen(cigar[i]) == alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
+	      if ((rp + bam_cigar_oplen(cigar[i]) == (uint32_t) alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
 	      drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle, readCol);
 	      if (leadingSC > 0) {
 		drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
