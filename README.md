@@ -73,7 +73,7 @@ With `-p` you can switch on the paired-end view.
 The paired-end coloring highlights candidate structural variants. Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring.
 
 - ![#3fafaf](https://via.placeholder.com/15/3fafaf/000000?text=+) `inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
-- ![#c5f015](https://via.placeholder.com/15/c5f015/000000?text=+) `#c5f015`
+- ![#4e64d5](https://via.placeholder.com/15/4e64d5/000000?text=+) `inversion-type paired-end, <--R1--   <--R2--, INV:5to5`
 - ![#1589F0](https://via.placeholder.com/15/1589F0/000000?text=+) `#1589F0`
 
 For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
