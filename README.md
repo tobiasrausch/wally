@@ -72,7 +72,7 @@ With `-p` you can switch on the paired-end view.
 
 The paired-end coloring highlights candidate structural variants. Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring.
 
-- ![#f03c15](https://via.placeholder.com/15/f03c15/000000?text=+) `#f03c15`
+- ![#3fafaf](https://via.placeholder.com/15/f03c15/000000?text=+) `inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
 - ![#c5f015](https://via.placeholder.com/15/c5f015/000000?text=+) `#c5f015`
 - ![#1589F0](https://via.placeholder.com/15/1589F0/000000?text=+) `#1589F0`
 
