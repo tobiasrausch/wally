@@ -64,7 +64,7 @@ You can split horizontally and vertically at the same time to view, for instance
 
 If you specify the regions in a BED file using the `-R` option then the split parameter operates row-wise, e.g., for `-s 3` row 1-3 of the BED file make up the first image, row 4-6 the second image, and so on.
 
-# Paired-end view (work-in-progress)
+# Paired-end view
 
 With `-p` you can switch on the paired-end view. 
 
@@ -72,7 +72,7 @@ With `-p` you can switch on the paired-end view.
 
 The paired-end coloring highlights candidate structural variants. Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring.
 
-- ![#3fafaf](https://via.placeholder.com/15/f03c15/000000?text=+) `inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
+- ![#3fafaf](https://via.placeholder.com/15/3fafaf/000000?text=+) `inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
 - ![#c5f015](https://via.placeholder.com/15/c5f015/000000?text=+) `#c5f015`
 - ![#1589F0](https://via.placeholder.com/15/1589F0/000000?text=+) `#1589F0`
 
