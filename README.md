@@ -60,7 +60,7 @@ Wally allows concatenating images of different regions horizontally using the `-
 
 You can split horizontally and vertically at the same time to view, for instance, a somatic inter-chromosomal translocation.
 
-`wally region -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+`wally region -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
 If you specify the regions in a BED file using the `-R` option then the split parameter operates row-wise, e.g., for `-s 3` row 1-3 of the BED file make up the first image, row 4-6 the second image, and so on.
 
