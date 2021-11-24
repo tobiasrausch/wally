@@ -74,7 +74,7 @@ The paired-end coloring highlights candidate structural variants. Below is a map
 
 - ![#3fafaf](https://via.placeholder.com/15/3fafaf/000000?text=+) `inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
 - ![#4e64d5](https://via.placeholder.com/15/4e64d5/000000?text=+) `inversion-type paired-end, <--R1--   <--R2--, INV:5to5`
-- ![#1589F0](https://via.placeholder.com/15/1589F0/000000?text=+) `#1589F0`
+- ![#d53f3f](https://via.placeholder.com/15/d53f3f/000000?text=+) ` deletion-type paired-end, --R1-->   <--R2--, DEL:3to5`
 
 For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
 
