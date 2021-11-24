@@ -89,3 +89,7 @@ For large and complex structural variants, wally supports split views (as explai
 # License
 
 Wally is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/wally/blob/master/LICENSE) file for more details.
+
+# Credits
+
+Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and (OpenCV)[https://github.com/opencv/opencv]. The visualization of genomic alignments was heavily inspired by [IGV](https://github.com/igvteam/igv).
