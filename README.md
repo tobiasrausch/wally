@@ -77,7 +77,9 @@ The paired-end coloring highlights candidate structural variants supported by re
 - ![#d53f3f](https://via.placeholder.com/15/d53f3f/000000?text=+) `   deletion-type paired-end, --R1-->   <--R2--, DEL:3to5`
 - ![#3faf3f](https://via.placeholder.com/15/3faf3f/000000?text=+) `duplication-type paired-end, <--R1--   --R2-->, DUP:5to3`
 - ![#fb9a99](https://via.placeholder.com/15/fb9a99/000000?text=+) `inter-chr paired-end, A:--R1--> B:--R2--> leads to --A--> <--B-- junction, BND:3to3`
-
+- ![#fdbf6f](https://via.placeholder.com/15/fdbf6f/000000?text=+) `inter-chr paired-end, A:<--R1-- B:<--R2-- leads to <--A-- --B--> junction, BND:5to5`
+- ![#ff8000](https://via.placeholder.com/15/ff8000/000000?text=+) `inter-chr paired-end, A:--R1--> B:<--R2-- leads to --A--> --B--> junction, BND:3to5`
+- ![#cab2d6](https://via.placeholder.com/15/cab2d6/000000?text=+) `inter-chr paired-end, A:<--R1-- B:--R2--> leads to <--A-- <--B-- junction, BND:5to3`
 
 For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
 
