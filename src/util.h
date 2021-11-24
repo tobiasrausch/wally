@@ -328,10 +328,10 @@ namespace wallysworld
     return (rec->core.tid != rec->core.mtid);
   }
   
-  // F+ 0    --R1-->   --R2-->
-  // F- 1    --R2-->   --R1-->
-  // R+ 2    --R1-->   <--R2--
-  // R- 3    <--R1--   --R2-->
+  // 0:    --R1-->   --R2-->
+  // 1:    <--R1--   <--R2--
+  // 2:    --R1-->   <--R2--
+  // 3:    <--R1--   --R2-->
   //
   // Inter-chromosomal (R1 maps to chrA, R2 maps to chrB)
   // DELLY_SVT_TRANS + 0:  --R1--> --R2-->   leads to --A--> <--B--   (3to3)
