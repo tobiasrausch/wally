@@ -34,7 +34,7 @@ namespace wallysworld
 {
 
   // Config arguments
-  struct Config {
+  struct ConfigRegion {
     bool showWindow;
     bool showSoftClip;
     bool showSupplementary;
@@ -415,12 +415,11 @@ namespace wallysworld
 
 
   int region(int argc, char **argv) {
-    Config c;
+    ConfigRegion c;
     c.tlheight = 14;
     c.rdheight = 12;
     
     // Define generic options
-    std::string svtype;
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
