@@ -20,7 +20,6 @@ displayUsage() {
   std::cout << "Usage: wally <command> <arguments>" << std::endl;
   std::cout << std::endl;
   std::cout << "    region         plot genomic region" << std::endl;
-  std::cout << "    heatmap        plot shared fragments" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 }
@@ -54,7 +53,7 @@ int main(int argc, char **argv) {
     else if ((std::string(argv[1]) == "region")) {
       return region(argc-1,argv+1);
     }
-    else if ((std::string(argv[1]) == "heatmap")) {
+    else if ((std::string(argv[1]) == "shared")) {
       return heatmap(argc-1,argv+1);
     }
     std::cerr << "Unrecognized command " << std::string(argv[1]) << std::endl;

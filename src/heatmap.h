@@ -29,6 +29,7 @@
 #include "util.h"
 #include "draw.h"
 #include "bed.h"
+#include "dr2d.h"
 
 namespace wallysworld
 {
@@ -50,10 +51,10 @@ namespace wallysworld
 
   // Alignment
   struct Alignment {
-    uint32_t alnstart;
-    uint32_t alnend;
+    int32_t alnstart;
+    int32_t alnend;
     bool reverse;
-    Alignment(uint32_t const as, uint32_t const ae, bool const rev) : alnstart(as), alnend(ae), reverse(rev) {}
+    Alignment(int32_t const as, int32_t const ae, bool const rev) : alnstart(as), alnend(ae), reverse(rev) {}
   };
 		   
 
@@ -106,18 +107,21 @@ namespace wallysworld
 	if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;
 
 	unsigned seed = hash_string(bam_get_qname(rec));
-	if (rgIdx % 2 == 0) {
-	  bool reverse = rec->core.flag & BAM_FREVERSE;
-	  if (rec->core.flag & BAM_FREAD2) reverse = !reverse;  // Flip for read2
-	  rmap[seed].push_back(Alignment(rec->core.pos, rec->core.pos + alignmentLength(rec), reverse));
-	} else {
+	bool reverse = rec->core.flag & BAM_FREVERSE;
+	int32_t alnend = rec->core.pos + alignmentLength(rec);
+	if (rec->core.flag & BAM_FREAD2) reverse = !reverse;  // Flip for read2
+	if (rgIdx % 2 == 0) rmap[seed].push_back(Alignment(rec->core.pos, alnend, reverse));
+	else {
 	  if (rmap.find(seed) != rmap.end()) {
 	    // Common fragment
-	    uint32_t alnend = rec->core.pos + alignmentLength(rec);
-	    bool reverse = (rec->core.flag & BAM_FREVERSE);
-	    if (rec->core.flag & BAM_FREAD2) reverse = !reverse;  // Flip for read2
 	    for(uint32_t i = 0; i < rmap[seed].size(); ++i) {
-	      std::cout << hdr->target_name[rg[rgIdx-1].tid] << ',' << rmap[seed][i].alnstart << ',' << rmap[seed][i].alnend << '-' << hdr->target_name[rg[rgIdx].tid] << ',' << rec->core.pos << ',' <<  alnend << std::endl;
+	      bool forward = (reverse == rmap[seed][i].reverse);
+	      int32_t xcenter = (rmap[seed][i].alnstart + rmap[seed][i].alnend) / 2;
+	      int32_t ycenter = (rec->core.pos + alnend) / 2;
+	      int32_t matchlen = std::min(rmap[seed][i].alnend - rmap[seed][i].alnstart, alnend - (int32_t) rec->core.pos);
+	      drawMatch(c, rg[rgIdx-1], rg[rgIdx], hm, (xcenter - matchlen / 2 - rg[rgIdx-1].beg), (xcenter + matchlen / 2 - rg[rgIdx-1].beg), (ycenter - matchlen / 2 - rg[rgIdx].beg), (ycenter + matchlen / 2 - rg[rgIdx].beg), forward);
+	      
+	      //std::cout << hdr->target_name[rg[rgIdx-1].tid] << ',' << rmap[seed][i].alnstart << ',' << rmap[seed][i].alnend << '-' << hdr->target_name[rg[rgIdx].tid] << ',' << rec->core.pos << ',' <<  alnend << std::endl;
 	    }
 	  }
 	}
@@ -126,37 +130,15 @@ namespace wallysworld
       hts_itr_destroy(iter);
 
       // Store image (comment this for valgrind, png encoder seems leaky)
-      /*
-      if (c.splits == 1) {
+      if (rgIdx % 2 == 1)  {
 	std::string outfile = rg[rgIdx].id;
 	outfile += ".png";
-	cv::imwrite(outfile.c_str(), bg);
+	cv::imwrite(outfile.c_str(), hm);
 	if (c.showWindow) {
-	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
+	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), hm);
 	  cv::waitKey(0);
 	}
-      } else {
-	imageStore.push_back(bg);
-	// Concatenate
-	if (imageStore.size() == c.splits) {
-	  cv::Mat dst;
-	  cv::hconcat(imageStore[0], imageStore[1], dst);
-	  for(uint32_t i = 2; i < imageStore.size(); ++i) {
-	    cv::Mat tdst;
-	    cv::hconcat(dst, imageStore[i], tdst);
-	    dst = tdst;
-	  }
-	  std::string outfile = rg[rgIdx].id;
-	  outfile += ".png";
-	  cv::imwrite(outfile.c_str(), dst);
-	  if (c.showWindow) {
-	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
-	    cv::waitKey(0);
-	  }
-	  imageStore.clear();
-	}
       }
-      */
     }
 
     // Clean-up
