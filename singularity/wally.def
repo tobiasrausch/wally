@@ -17,7 +17,7 @@ Stage: build
 
 # Final image
 BootStrap: library
-From: alpine:3.9
+From: alpine:latest
 Stage: final
 
 %files from build
@@ -40,4 +40,5 @@ Stage: final
 
 %help
 	This is a container running wally.
-	singularity exec wally.sif wally --help
+	You can run wally on files inside the directory where you start
+	the container, i.e.: singularity exec wally.sif wally region -r chrA:35-80 -g genome.fa input.bam
