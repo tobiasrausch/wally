@@ -18,13 +18,20 @@ CXXFLAGS += -std=c++11 -isystem ${EBROOTHTSLIB} -pedantic -W -Wall -Wno-unknown-
 LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time
 
 # Submodules
+ifeq (${STATIC}, 1)
+	OPENCVSTATIC = --static
+	CVSHARED = "OFF"
+else
+	OPENCVSTATIC = ""
+	CVSHARED = "ON"
+endif
 ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
 	SUBMODULES += .htslib
 endif
 ifeq (${OPENCVSRC}, ${PWD}/src/opencv/)
 	SUBMODULES += .opencv
 	CXXFLAGS += $(shell pkg-config --cflags opencv4)
-	LDFLAGS += $(shell pkg-config --libs opencv4)
+	LDFLAGS += $(shell pkg-config --libs ${OPENCVSTATIC} opencv4)
 else
 	CXXFLAGS += -isystem ${OPENCV}/include/opencv4
 	LDFLAGS += -L${OPENCV}/lib -L${OPENCV}/lib/opencv4/3rdparty -lopencv_gapi -lopencv_highgui -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_video -lopencv_calib3d -lopencv_features2d -lopencv_dnn -lopencv_flann -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc -lopencv_core
@@ -32,13 +39,9 @@ endif
 
 # Flags for static compile
 ifeq (${STATIC}, 1)
-	OPENCVSTATIC += --static
 	LDFLAGS += -llibprotobuf -lade -littnotify -llibpng -llibopenjp2 -lzlib -lquirc -ldl -lm -lpthread -lrt -static -static-libgcc -pthread -lhts -lz -llzma -lbz2
-	LDOCV += -D BUILD_SHARED_LIBS=OFF -DOPENCV_GENERATE_PKGCONFIG=ON -D BUILD_ZLIB=ON -D BUILD_PNG=ON -D WITH_OPENEXR=OFF -D WITH_JPEG=OFF -D WITH_JASPER=OFF -D WITH_TIFF=OFF -D WITH_WEBP=OFF -D WITH_OPENCL=OFF -D WITH_GTK=OFF -D WITH_FFMPEG=OFF -D WITH_1394=OFF -D WITH_IPP=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_apps=OFF 
 else
-	OPENCVSTATIC += ""
 	LDFLAGS += -pthread -lhts -lz -llzma -lbz2 -Wl,-rpath,${EBROOTHTSLIB} -Wl,-rpath,${OPENCV}/lib/ -Wl,-rpath,${OPENCV}/lib64/
-	LDOCV += -D BUILD_SHARED_LIBS=ON -DOPENCV_GENERATE_PKGCONFIG=ON -D BUILD_ZLIB=ON -D BUILD_PNG=ON -D WITH_OPENEXR=OFF -D WITH_JPEG=OFF -D WITH_JASPER=OFF -D WITH_TIFF=OFF -D WITH_WEBP=OFF -D WITH_OPENCL=OFF -D WITH_GTK=ON -D WITH_FFMPEG=OFF -D WITH_1394=OFF -D WITH_IPP=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_apps=OFF 
 endif
 
 # Flags for debugging, profiling and releases
@@ -66,7 +69,7 @@ all:   	$(TARGETS)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoheader && autoconf && ./configure --disable-s3 --disable-gcs --disable-libcurl --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
 .opencv: $(OPENCVSOURCES)
-	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv ${LDOCV} .. &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv -D BUILD_SHARED_LIBS=${CVSHARED} -DOPENCV_GENERATE_PKGCONFIG=ON -D BUILD_ZLIB=ON -D BUILD_PNG=ON -D WITH_OPENEXR=OFF -D WITH_JPEG=OFF -D WITH_JASPER=OFF -D WITH_TIFF=OFF -D WITH_WEBP=OFF -D WITH_OPENCL=OFF -D WITH_GTK=${CVSHARED} -D WITH_FFMPEG=OFF -D WITH_1394=OFF -D WITH_IPP=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_apps=OFF .. &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
 
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(LDFLAGS)
