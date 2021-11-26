@@ -30,11 +30,11 @@ ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
 endif
 ifeq (${OPENCVSRC}, ${PWD}/src/opencv/)
 	SUBMODULES += .opencv
-	CXXFLAGS += $(shell pkg-config --cflags opencv4)
-	LDFLAGS += $(shell pkg-config --libs ${OPENCVSTATIC} opencv4)
-else
 	CXXFLAGS += -isystem ${OPENCV}/include/opencv4
 	LDFLAGS += -L${OPENCV}/lib -L${OPENCV}/lib/opencv4/3rdparty -lopencv_gapi -lopencv_highgui -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_video -lopencv_calib3d -lopencv_features2d -lopencv_dnn -lopencv_flann -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc -lopencv_core
+else
+	CXXFLAGS += $(shell pkg-config --cflags opencv4)
+	LDFLAGS += $(shell pkg-config --libs ${OPENCVSTATIC} opencv4)
 endif
 
 # Flags for static compile
