@@ -42,6 +42,7 @@ namespace wallysworld
     uint32_t minMapQual;
     uint32_t width;
     uint32_t height;
+    uint32_t tlheight;  // pixel height of a track line
     double pxoffset; // 1bp in pixel    
     std::string regionStr;
     boost::filesystem::path genome;
@@ -129,8 +130,9 @@ namespace wallysworld
       bam_destroy1(rec);
       hts_itr_destroy(iter);
 
-      // Store image (comment this for valgrind, png encoder seems leaky)
+
       if (rgIdx % 2 == 1)  {
+	// Store image (comment this for valgrind, png encoder seems leaky)	
 	std::string outfile = rg[rgIdx].id;
 	outfile += ".png";
 	cv::imwrite(outfile.c_str(), hm);
@@ -159,6 +161,7 @@ namespace wallysworld
 
   int heatmap(int argc, char **argv) {
     ConfigHeatmap c;
+    c.tlheight = 14;
     
     // Define generic options
     boost::program_options::options_description generic("Generic options");
