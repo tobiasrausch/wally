@@ -48,6 +48,15 @@ namespace wallysworld
     boost::filesystem::path file;
   };
 
+  // Alignment
+  struct Alignment {
+    uint32_t alnstart;
+    uint32_t alnend;
+    bool reverse;
+    Alignment(uint32_t const as, uint32_t const ae, bool const rev) : alnstart(as), alnend(ae), reverse(rev) {}
+  };
+		   
+
   template<typename TConfigStruct>
   inline int heatmapRun(TConfigStruct& c) {
 #ifdef PROFILE
@@ -60,11 +69,22 @@ namespace wallysworld
     hts_idx_t* idx = sam_index_load(samfile, c.file.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
+    // Read alignments
+    typedef std::vector<Alignment> TAlignments;
+    typedef std::map<unsigned, TAlignments> TReadAlign;
+    TReadAlign rmap;	
+    
     // Process regions
     std::vector<Region> rg;
     if (!parseRegions(hdr, c, rg)) return 1;
+    if (rg.size() % 2 != 0) {
+      std::cerr << "Number of regions needs to be an even number!" << std::endl;
+      return 1;
+    }
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
-
+      // Clear up map
+      if (rgIdx % 2 == 0) rmap.clear();
+      
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
@@ -78,13 +98,29 @@ namespace wallysworld
       // Coverage
       uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
 
-      // Read alignments
       hts_itr_t* iter = sam_itr_queryi(idx, rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
       bam1_t* rec = bam_init1();
       while (sam_itr_next(samfile, iter, rec) >= 0) {
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
 	if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
-	if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;	  
+	if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;
+
+	unsigned seed = hash_string(bam_get_qname(rec));
+	if (rgIdx % 2 == 0) {
+	  bool reverse = rec->core.flag & BAM_FREVERSE;
+	  if (rec->core.flag & BAM_FREAD2) reverse = !reverse;  // Flip for read2
+	  rmap[seed].push_back(Alignment(rec->core.pos, rec->core.pos + alignmentLength(rec), reverse));
+	} else {
+	  if (rmap.find(seed) != rmap.end()) {
+	    // Common fragment
+	    uint32_t alnend = rec->core.pos + alignmentLength(rec);
+	    bool reverse = (rec->core.flag & BAM_FREVERSE);
+	    if (rec->core.flag & BAM_FREAD2) reverse = !reverse;  // Flip for read2
+	    for(uint32_t i = 0; i < rmap[seed].size(); ++i) {
+	      std::cout << hdr->target_name[rg[rgIdx-1].tid] << ',' << rmap[seed][i].alnstart << ',' << rmap[seed][i].alnend << '-' << hdr->target_name[rg[rgIdx].tid] << ',' << rec->core.pos << ',' <<  alnend << std::endl;
+	    }
+	  }
+	}
       }
       bam_destroy1(rec);
       hts_itr_destroy(iter);
@@ -152,7 +188,7 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
+      ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78,chrB:40-80"), "region to display (at least 2)")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("supplementary,u", "show supplementary alignments")
       ;
