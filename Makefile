@@ -14,8 +14,21 @@ bindir ?= $(exec_prefix)/bin
 
 # Flags
 CXX=g++
-CXXFLAGS += -std=c++11 -isystem ${EBROOTHTSLIB} -isystem ${OPENCV}/include/opencv4 -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
-LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -L${OPENCV}/lib -L${OPENCV}/lib/opencv4/3rdparty -lopencv_gapi -lopencv_highgui -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_video -lopencv_calib3d -lopencv_features2d -lopencv_dnn -lopencv_flann -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc -lopencv_core -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time
+CXXFLAGS += -std=c++11 -isystem ${EBROOTHTSLIB} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
+LDFLAGS += -L${EBROOTHTSLIB} -L${EBROOTHTSLIB}/lib -lboost_iostreams -lboost_filesystem -lboost_system -lboost_program_options -lboost_date_time
+
+# Submodules
+ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
+	SUBMODULES += .htslib
+endif
+ifeq (${OPENCVSRC}, ${PWD}/src/opencv/)
+	SUBMODULES += .opencv
+	CXXFLAGS += $(shell pkg-config --cflags opencv4)
+	LDFLAGS += $(shell pkg-config --libs opencv4)
+else
+	CXXFLAGS += -isystem ${OPENCV}/include/opencv4
+	LDFLAGS += -L${OPENCV}/lib -L${OPENCV}/lib/opencv4/3rdparty -lopencv_gapi -lopencv_highgui -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_video -lopencv_calib3d -lopencv_features2d -lopencv_dnn -lopencv_flann -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc -lopencv_core
+endif
 
 # Flags for static compile
 ifeq (${STATIC}, 1)
@@ -37,13 +50,6 @@ else ifeq (${DEBUG}, 2)
 else
 	CXXFLAGS += -O3 -fno-tree-vectorize -DNDEBUG
 endif
-ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
-	SUBMODULES += .htslib
-endif
-ifeq (${OPENCVSRC}, ${PWD}/src/opencv/)
-	SUBMODULES += .opencv
-endif
-
 
 # External sources
 HTSLIBSOURCES = $(wildcard src/htslib/*.c) $(wildcard src/htslib/*.h)
