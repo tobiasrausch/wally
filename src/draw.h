@@ -347,6 +347,8 @@ namespace wallysworld
       }
       else if ((nuc == 't') or (nuc == 'T')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness);
+      } else {  // n or N most likely
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_N, font_thickness);
       }
     } else {
       int32_t pxw = w;

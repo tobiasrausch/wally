@@ -37,6 +37,10 @@ namespace wallysworld
   #define WALLY_T cv::Scalar(0,0,255)
   #endif
 
+  #ifndef WALLY_N
+  #define WALLY_N cv::Scalar(120,120,120)
+  #endif
+
   #ifndef WALLY_BORDER
   #define WALLY_BORDER cv::Scalar(120,120,120)
   #endif

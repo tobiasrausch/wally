@@ -98,7 +98,7 @@ namespace wallysworld
       std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << std::endl;
 	
       // Coverage
-      uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
+      //uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
 
       hts_itr_t* iter = sam_itr_queryi(idx, rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
       bam1_t* rec = bam_init1();
