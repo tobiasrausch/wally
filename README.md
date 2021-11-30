@@ -9,7 +9,7 @@ Plotting of aligned sequencing reads in BAM/CRAM format and visualization of gen
 
 # Installing Wally
 
-The easiest way to get Wally is to download the statically linked binary from the [Wally github release page](https://github.com/tobiasrausch/wally/releases/). You can also build Wally from source using a recursive clone and make. 
+Wally is available as a pre-compiled static binary from the [release page](https://github.com/tobiasrausch/wally/releases/), as a singularity container [SIF file](https://github.com/tobiasrausch/wally/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/wally/). You can also build Wally from source using a recursive clone and make. 
 
 `git clone --recursive https://github.com/tobiasrausch/wally.git`
 
