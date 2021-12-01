@@ -42,6 +42,8 @@ namespace wallysworld
     uint32_t order;
     uint32_t width;
     uint32_t height;
+    uint32_t snvcov;
+    float snvvaf;
     std::string regionStr;
     boost::filesystem::path genome;
     boost::filesystem::path regionFile;
@@ -73,42 +75,137 @@ namespace wallysworld
     hts_idx_t* idx = sam_index_load(samfile, c.file.string().c_str());
     bam_hdr_t* hdr = sam_hdr_read(samfile);
 
+    // Load genome
+    faidx_t* fai = fai_load(c.genome.string().c_str());
+    int32_t seqlen;
+    std::string oldchr("None");
+    char* seq = NULL;
+    
     // Process regions
     std::vector<Region> rg;
     if (!parseRegions(hdr, c, rg)) return 1;
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
       // Generate image
-      cv::Mat hm( c.width, c.height, CV_8UC3, cv::Scalar(255, 255, 255));
+      cv::Mat hbt( c.width, c.height, CV_8UC3, cv::Scalar(0, 0, 0));
 
+      // Lazy loading of genome
+      std::string chrName = hdr->target_name[rg[rgIdx].tid];
+      if (chrName != oldchr) {
+	if (seq != NULL) free(seq);
+	seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], 0, hdr->target_len[rg[rgIdx].tid], &seqlen);
+	oldchr = chrName;
+      }
+      
       // Parse BAM files
       boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
       std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << std::endl;
 	
       // Coverage
-      //uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
-
+      uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
+      std::vector<uint16_t> covA(rg[rgIdx].size, 0);
+      std::vector<uint16_t> covC(rg[rgIdx].size, 0);
+      std::vector<uint16_t> covG(rg[rgIdx].size, 0);
+      std::vector<uint16_t> covT(rg[rgIdx].size, 0);
       hts_itr_t* iter = sam_itr_queryi(idx, rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
       bam1_t* rec = bam_init1();
       while (sam_itr_next(samfile, iter, rec) >= 0) {
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
 	if ((rec->core.qual < c.minMapQual) || (rec->core.tid<0)) continue;
 	if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;
+
+	// Load sequence
+	std::string sequence;
+	sequence.resize(rec->core.l_qseq);
+	uint8_t* seqptr = bam_get_seq(rec);
+	for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+
+	// Parse CIGAR
+	uint32_t rp = rec->core.pos; // reference pointer
+	uint32_t sp = 0; // sequence pointer
+	uint32_t* cigar = bam_get_cigar(rec);
+	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
+	  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
+	    // match or mismatch
+	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+	      // Increase coverage
+	      int32_t rpadj = (int32_t) rp - (int32_t) rg[rgIdx].beg;
+	      if ((rpadj >= 0) && (rpadj < (int32_t) rg[rgIdx].size)) {
+		if (sequence[sp] == 'A') {
+		  if (covA[rpadj] < maxCoverage) ++covA[rpadj];
+		} else if (sequence[sp] == 'C') {
+		  if (covC[rpadj] < maxCoverage) ++covC[rpadj];
+		} else if (sequence[sp] == 'G') {
+		  if (covG[rpadj] < maxCoverage) ++covG[rpadj];
+		} else if (sequence[sp] == 'T') {
+		  if (covT[rpadj] < maxCoverage) ++covT[rpadj];
+		}
+	      }
+	      ++sp;
+	      ++rp;
+	    }
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
+	    rp += bam_cigar_oplen(cigar[i]);
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
+	    sp += bam_cigar_oplen(cigar[i]);
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
+	    sp += bam_cigar_oplen(cigar[i]);
+	  } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
+	  } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	    rp += bam_cigar_oplen(cigar[i]);
+	  } else {
+	    std::cerr << "Unknown Cigar options" << std::endl;
+	    return 1;
+	  }
+	}
       }
       bam_destroy1(rec);
       hts_itr_destroy(iter);
 
+      // Call SNPs
+      std::vector<bool> snp(rg[rgIdx].size, false);
+      for(int32_t rp = rg[rgIdx].beg; rp < rg[rgIdx].end; ++rp) {
+	int32_t rpadj = (int32_t) rp - (int32_t) rg[rgIdx].beg;
+	uint32_t cumsum = covA[rpadj];
+	cumsum += covC[rpadj];
+	cumsum += covG[rpadj];
+	cumsum += covT[rpadj];
+	if (cumsum >= c.snvcov) {
+	  if ((seq[rp] == 'a') || (seq[rp] == 'A')) {
+	    if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 'c') || (seq[rp] == 'C')) {
+	    if (((double) covC[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 'g') || (seq[rp] == 'G')) {
+	    if (((double) covG[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  } else if ((seq[rp] == 't') || (seq[rp] == 'T')) {
+	    if (((double) covT[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
+	      snp[rpadj] = true;
+	    }
+	  }
+	}
+      }
 
+      // Convert to hilbert curve
+      drawHilbert(c, rg[rgIdx], hbt, covA, covC, covG, covT, snp);
+      
       // Store image (comment this for valgrind, png encoder seems leaky)	
       std::string outfile = rg[rgIdx].id;
       outfile += ".png";
-      cv::imwrite(outfile.c_str(), hm);
+      cv::imwrite(outfile.c_str(), hbt);
       if (c.showWindow) {
-	cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), hm);
+	cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), hbt);
 	cv::waitKey(0);
       }
     }
 
     // Clean-up
+    if (seq != NULL) free(seq);
+    fai_destroy(fai);
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
@@ -137,6 +234,8 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
+      ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
+      ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78,chrB:40-80"), "region to display (at least 2)")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("supplementary,u", "show supplementary alignments")
