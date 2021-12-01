@@ -106,6 +106,7 @@ namespace wallysworld
       std::vector<uint16_t> covC(rg[rgIdx].size, 0);
       std::vector<uint16_t> covG(rg[rgIdx].size, 0);
       std::vector<uint16_t> covT(rg[rgIdx].size, 0);
+      std::vector<uint16_t> del(rg[rgIdx].size, 0);
       hts_itr_t* iter = sam_itr_queryi(idx, rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
       bam1_t* rec = bam_init1();
       while (sam_itr_next(samfile, iter, rec) >= 0) {
@@ -144,7 +145,13 @@ namespace wallysworld
 	      ++rp;
 	    }
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	    rp += bam_cigar_oplen(cigar[i]);
+	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
+	      int32_t rpadj = (int32_t) rp - (int32_t) rg[rgIdx].beg;
+	      if ((rpadj >= 0) && (rpadj < (int32_t) rg[rgIdx].size)) {
+		if (del[rpadj] < maxCoverage) ++del[rpadj];
+	      }
+	      ++rp;
+	    }
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
 	    sp += bam_cigar_oplen(cigar[i]);
 	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
@@ -161,7 +168,7 @@ namespace wallysworld
       bam_destroy1(rec);
       hts_itr_destroy(iter);
 
-      // Call SNPs
+      // Call variants
       std::vector<bool> snp(rg[rgIdx].size, false);
       for(int32_t rp = rg[rgIdx].beg; rp < rg[rgIdx].end; ++rp) {
 	int32_t rpadj = (int32_t) rp - (int32_t) rg[rgIdx].beg;
@@ -169,6 +176,8 @@ namespace wallysworld
 	cumsum += covC[rpadj];
 	cumsum += covG[rpadj];
 	cumsum += covT[rpadj];
+	uint32_t snpcov = cumsum;
+	cumsum += del[rpadj];
 	if (cumsum >= c.snvcov) {
 	  if ((seq[rp] == 'a') || (seq[rp] == 'A')) {
 	    if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
@@ -187,11 +196,15 @@ namespace wallysworld
 	      snp[rpadj] = true;
 	    }
 	  }
+	  if (((double) snpcov / (double) cumsum) < (1 - c.snvvaf)) {
+	    // Deletion
+	    snp[rpadj] = true;
+	  }
 	}
       }
 
       // Convert to hilbert curve
-      drawHilbert(c, rg[rgIdx], hbt, covA, covC, covG, covT, snp);
+      drawHilbert(c, rg[rgIdx], hbt, covA, covC, covG, covT, del, snp);
       
       // Store image (comment this for valgrind, png encoder seems leaky)	
       std::string outfile = rg[rgIdx].id;
@@ -234,8 +247,8 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
-      ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
+      ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. variant allele frequency")
+      ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. variant coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78,chrB:40-80"), "region to display (at least 2)")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("supplementary,u", "show supplementary alignments")

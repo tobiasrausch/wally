@@ -192,8 +192,9 @@ namespace wallysworld
 	  for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 
 	  // Find out layout
-	  cv::Scalar readCol(200, 200, 200);
+	  cv::Scalar readCol = WALLY_READ1;
 	  if (c.showPairs) {
+	    if (rec->core.flag & BAM_FREAD2) readCol = WALLY_READ2;
 	    uint8_t pl = layout(rec);
 	    uint32_t minSep = 50;
 	    if (pl == 0) {
@@ -297,7 +298,7 @@ namespace wallysworld
 		// Draw nucleotide for mismatches
 		if (rec->core.l_qseq) {
 		  if (sequence[sp] != seq[rp]) {
-		    drawNuc(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp]);
+		    drawNuc(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
 		  }
 		}
 		++sp;

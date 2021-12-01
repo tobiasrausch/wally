@@ -324,7 +324,7 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
-  drawNuc(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc) {
+  drawNuc(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, char const nuc, cv::Scalar const& clr) {
     // Font
     std::string text(1, nuc);
     double font_scale = 0.4;
@@ -335,7 +335,7 @@ namespace wallysworld
     // Put nucleotide if there is space
     if (c.pxoffset >= WALLY_PX) {
       cv::Rect rect(x, y, w, h);
-      cv::rectangle(img, rect, cv::Scalar(200, 200, 200), -1);
+      cv::rectangle(img, rect, clr, -1);
       if ((nuc == 'a') or (nuc == 'A')) {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness);
       }
@@ -371,11 +371,11 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  drawNuc(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, char const nuc) {
+  drawNuc(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int32_t const gend, char const nuc, cv::Scalar const& clr) {
     if (track == -1) return;
     int32_t px = pixelX(c.width, rg.size, gstart);
     int32_t pxend = pixelX(c.width, rg.size, gend);
-    drawNuc(c, img, px, track * c.tlheight, pxend - px, c.rdheight, nuc);
+    drawNuc(c, img, px, track * c.tlheight, pxend - px, c.rdheight, nuc, clr);
   }
 
   inline void

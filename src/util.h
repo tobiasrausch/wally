@@ -41,6 +41,18 @@ namespace wallysworld
   #define WALLY_N cv::Scalar(120,120,120)
   #endif
 
+  #ifndef WALLY_READ1
+  #define WALLY_READ1 cv::Scalar(200,200,200)
+  #endif
+
+  #ifndef WALLY_READ2
+  #define WALLY_READ2 cv::Scalar(180,180,180)
+  #endif
+
+  #ifndef WALLY_INDEL
+  #define WALLY_INDEL cv::Scalar(209,113,5)
+  #endif
+
   #ifndef WALLY_BORDER
   #define WALLY_BORDER cv::Scalar(120,120,120)
   #endif
