@@ -1,3 +1,5 @@
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/wally/README.html)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/wally/badges/downloads.svg)](https://anaconda.org/bioconda/wally)
 [![C/C++ CI](https://github.com/tobiasrausch/wally/workflows/C/C++%20CI/badge.svg)](https://github.com/tobiasrausch/wally/actions)
 [![Docker CI](https://github.com/tobiasrausch/wally/workflows/Docker%20CI/badge.svg)](https://hub.docker.com/r/trausch/wally/)
 [![GitHub license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/tobiasrausch/wally/blob/master/LICENSE)
@@ -9,7 +11,7 @@ Plotting of aligned sequencing reads in BAM/CRAM format and visualization of gen
 
 # Installing Wally
 
-Wally is available as a pre-compiled static binary from the [release page](https://github.com/tobiasrausch/wally/releases/), as a singularity container [SIF file](https://github.com/tobiasrausch/wally/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/wally/). You can also build Wally from source using a recursive clone and make. 
+Wally is available as a [Bioconda package](https://anaconda.org/bioconda/wally), as a pre-compiled static binary from the [release page](https://github.com/tobiasrausch/wally/releases/), as a singularity container [SIF file](https://github.com/tobiasrausch/wally/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/wally/). You can also build Wally from source using a recursive clone and make. 
 
 `git clone --recursive https://github.com/tobiasrausch/wally.git`
 
