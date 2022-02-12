@@ -77,6 +77,7 @@ namespace wallysworld
     std::string id;
     
     Region() : tid(0), beg(0), end(0), size(0), id("") {}
+    Region(int32_t const t, int32_t const b, int32_t const e) : tid(t), beg(b), end(e), size(e-b), id("") {}
   };
 
 
