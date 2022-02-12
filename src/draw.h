@@ -465,10 +465,12 @@ namespace wallysworld
     drawIns(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len);
   }
 
+  template<typename TConfig>
   inline void
-  drawSC(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len, bool const leading) {
-    if (w < 1) return; // Do nothing
+  drawSC(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len, bool const leading) {
+    if (c.pxoffset < 0.1) return; // Do nothing
     cv::line(img, cv::Point(x + w - 1, y), cv::Point(x + w - 1, y+h), cv::Scalar(0, 0, 0), 2);
+    if (w < 1) return; // Just draw the soft-clipping line
     std::string text = boost::lexical_cast<std::string>(len);
     double font_scale = 0.4;
     double font_thickness = 1.5;
@@ -490,7 +492,7 @@ namespace wallysworld
     if (track == -1) return;
     if (c.showSoftClip) {
       int32_t px = pixelX(c.width, rg.size, gstart - 1);
-      drawSC(img, px, track * c.tlheight, c.pxoffset, c.rdheight, len, leading);
+      drawSC(c, img, px, track * c.tlheight, c.pxoffset, c.rdheight, len, leading);
     }
   }
   
