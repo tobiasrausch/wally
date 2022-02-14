@@ -28,7 +28,7 @@
 
 #include "version.h"
 #include "util.h"
-#include "draw.h"
+#include "matchdraw.h"
 #include "bed.h"
 
 namespace wallysworld
@@ -45,35 +45,13 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
-    double pxoffset; // 1bp in pixel    
+    double pxoffset; // 1bp in pixel
+    double bpoffset; // 1pixel in bp
     boost::filesystem::path bedFile;
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
     boost::filesystem::path file;
   };
-
-
-  struct Mapping {
-    int32_t tid;
-    int32_t gstart;
-    int32_t gend;
-    int32_t rstart;
-    int32_t rend;
-    bool fwd;
-    uint16_t qual;
-
-    Mapping(int32_t const t, int32_t const gs, int32_t const ge, int32_t const rs, int32_t const re, bool const val, uint16_t const qval) : tid(t), gstart(gs), gend(ge), rstart(rs), rend(re), fwd(val), qual(qval) {}
-  };
-
-  template<typename TMapping>
-  struct SortMappings : public std::binary_function<TMapping, TMapping, bool>
-  {
-    inline bool operator()(TMapping const& mp1, TMapping const& mp2) {
-      return ((mp1.rstart < mp2.rstart) || ((mp1.rstart == mp2.rstart) && (mp1.rend < mp2.rend)));
-    }
-  };
-
-  
 
   template<typename TConfig, typename TReads>
   inline void
@@ -102,31 +80,38 @@ namespace wallysworld
     for(int32_t refIndex = 0; refIndex < nchr; ++refIndex) {
 
       // Collect intervals for this chromosomes
-      typedef boost::icl::interval_set<uint32_t> TChrIntervals;
+      typedef boost::icl::interval_set<int32_t> TChrIntervals;
       typedef typename TChrIntervals::interval_type TIVal;
       TChrIntervals cint;
       for(typename TReadMappings::const_iterator it = mp.begin(); it != mp.end(); ++it) {
 	for(uint32_t i = 0; i < it->second.size(); ++i) {
 	  if (it->second[i].tid == refIndex) {
-	    int32_t gstart = 0;
-	    if (c.winsize < it->second[i].gstart) gstart = it->second[i].gstart - c.winsize;
+	    int32_t gstart = it->second[i].gstart - c.winsize;
 	    int32_t gend = it->second[i].gend + c.winsize;
 	    cint.insert(TIVal::right_open(gstart, gend));
 	  }
 	}
       }
 
-      // Keep clustered interval
+      // Keep clustered interval with 10% buffer space
       for(typename TChrIntervals::iterator it = cint.begin(); it != cint.end(); ++it) {
-	rg.push_back(Region(refIndex, it->lower(), it->upper()));
+	int32_t realstart = it->lower() + c.winsize;
+	int32_t realend = it->upper() - c.winsize;
+	int32_t offset = (int32_t) (0.1 * (double) (realend - realstart));
+	int32_t rgStart = 0;
+	if (offset < realstart) rgStart = realstart - offset;
+	int32_t rgEnd = realend + offset;
+	rg.push_back(Region(refIndex, rgStart, rgEnd));
       }
     }
   }
   
 
   template<typename TConfig>
-  inline void
+  inline int32_t
   mappings(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::vector<Mapping> >& mp) {
+    uint32_t matchCount = 0;
+    
     // Open file handles
     samFile* samfile = sam_open(c.file.string().c_str(), "r");
     hts_set_fai_filename(samfile, c.genome.string().c_str());
@@ -206,6 +191,7 @@ namespace wallysworld
 	  if (gpStart < gpEnd) {
 	    if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
 	    mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, seqStart, seqEnd, dir, rec->core.qual));
+	    ++matchCount;
 	  }
 	}
       }
@@ -217,6 +203,8 @@ namespace wallysworld
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
+
+    return matchCount;
   }
 
   
@@ -237,10 +225,18 @@ namespace wallysworld
     typedef std::vector<Mapping> TMappings;
     typedef std::map<std::string, TMappings > TReadMappings;
     TReadMappings mp;
-    mappings(c, reads, mp);
-    if (mp.empty()) {
+    int32_t matchCount = mappings(c, reads, mp);
+    if (!matchCount) {
       std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
       return 1;
+    }
+    
+    // Check image height
+    int32_t headerTracks = 4;
+    if ((matchCount + headerTracks) * c.tlheight > c.height) {
+      std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
+      c.height = (matchCount + headerTracks) * c.tlheight;
+      std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
     }
 
     // Open file handles
@@ -277,47 +273,28 @@ namespace wallysworld
 
     // Check image width
     c.width /= c.splits;
-    if (c.width < 10) {
-      std::cerr << "Image width is too small to display all matches, please increase!" << std::endl;
-      return 1;
+    if (c.width < 20) {
+      std::cerr << "Warning: Image width is too small to display all matches!" << std::endl;
+      c.width = c.splits * 20;
+      std::cerr << "Warning: Adjusting image width to " << c.width << std::endl;
     }
     std::vector<cv::Mat> imageStore;
 
     // Split region
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
-      // Parse annotation
-      std::vector<Transcript> tr;
-      std::vector<Region> anno;
-      if (!parseAnnotation(hdr, c, rg[rgIdx], tr, anno)) return 1;
-
-      // Debug code
-      //for(uint32_t i = 0; i < tr.size(); ++i) std::cerr << hdr->target_name[tr[i].rg.tid] << ':' << tr[i].rg.beg << '-' << tr[i].rg.end << '\t' << tr[i].rg.id << "\t" << tr[i].forward << std::endl;
-      //for(uint32_t i = 0; i < anno.size(); ++i) std::cerr << hdr->target_name[anno[i].tid] << ':' << anno[i].beg << '-' << anno[i].end << '\t' << anno[i].id << std::endl;
-      
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
-
+      // Get bp of 1 pixel
+      c.bpoffset = (1.0 / (double) c.width) * (double) rg[rgIdx].size;
+      
       // Generate image
       cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
-      // Tracks
-      int32_t headerTracks = 4;
-      int32_t maxTracks = c.height / c.tlheight;
-      //if (maxTracks < headerTracks + 10 * (int32_t) c.files.size()) {
-      if (maxTracks < headerTracks + 10) {
-	std::cerr << "Image height is too small!" << std::endl;
-	return 1;
-      }
-
       // Block header tracks
+      int32_t maxTracks = c.height / c.tlheight;
       std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
       for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
       
-      // Split by number of BAMs
-      //int32_t bamTrackSize = (int32_t) ((maxTracks - headerTracks) / c.files.size());
-      int32_t file_c = 0;
-      int32_t bamTrackSize = (int32_t) (maxTracks - headerTracks);
-          
       // Lazy loading of genome
       std::string chrName = hdr->target_name[rg[rgIdx].tid];
       if (chrName != oldchr) {
@@ -327,133 +304,46 @@ namespace wallysworld
       }
 
       // Header
-      drawGenome(c, rg[rgIdx], bg, 1);
+      drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg, 1);
 
       // Reference
       drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
 
-      // Genes/Annotation
-      drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
+      // Draw split border
+      drawSplitBorder(c, bg);
       
-      // Read offset
-      int32_t genomicReadOffset  = (2.0 / (double) c.width) * (double) rg[rgIdx].size;
-      
-      // Parse BAM file
+      // Parse mappings
       boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << "; File " << c.file.stem().string() << std::endl;
-	
-      // Reserve tracks for other BAM files
-      int32_t lowerBound = file_c * bamTrackSize + headerTracks;
-      int32_t upperBound = (file_c + 1) * bamTrackSize + headerTracks;
-      for(int32_t i = headerTracks; i < maxTracks; ++i) {
-	if (i < lowerBound) taken[i] = WALLY_BLOCKED;
-	else if (i >= upperBound) taken[i] = WALLY_BLOCKED;
-	else taken[i] = WALLY_UNBLOCK;
-      }
-      // Reserve coverage track
-      for(int32_t i = lowerBound; i < lowerBound + 2; ++i) taken[i] = WALLY_BLOCKED;
-      
-      // Coverage
-      uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
-      std::vector<uint16_t> covA(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covC(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covG(rg[rgIdx].size, 0);
-      std::vector<uint16_t> covT(rg[rgIdx].size, 0);
-      
-      // Read alignments
-      int32_t lastAlignedPos = 0;
-      std::set<std::size_t> lastAlignedPosReads;
-      std::map<std::size_t, int32_t> assignedTrack;
-      hts_itr_t* iter = sam_itr_queryi(idx, rg[rgIdx].tid, rg[rgIdx].beg, rg[rgIdx].end);	
-      bam1_t* rec = bam_init1();
-      while (sam_itr_next(samfile, iter, rec) >= 0) {
-	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
-	
-	// Load sequence
-	std::string sequence;
-	sequence.resize(rec->core.l_qseq);
-	uint8_t* seqptr = bam_get_seq(rec);
-	for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
-	
-	// Find out layout
-	cv::Scalar readCol = WALLY_READ1;
-	
-	// Search empty track
-	int32_t trackIdx = -1;
-	int32_t alnend = rec->core.pos + alignmentLength(rec);
-	trackIdx = firstEmptyTrack(taken, rec->core.pos);
-	if (trackIdx != -1) taken[trackIdx] = alnend + genomicReadOffset;
-	
-	// Parse CIGAR
-	uint32_t rp = rec->core.pos; // reference pointer
-	uint32_t sp = 0; // sequence pointer
-	bool firstBox = true;
-	uint32_t leadingSC = 0;
-	// Parse the CIGAR
-	uint32_t* cigar = bam_get_cigar(rec);
-	for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
-	  if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
-	    bool drawTriangle = false;
-	    if (firstBox) {
-	      if (rec->core.flag & BAM_FREVERSE) drawTriangle = true;
-	      firstBox = false;
-	    }
-	    if ((rp + bam_cigar_oplen(cigar[i]) == (uint32_t) alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
-	    drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle, readCol);
-	    if (leadingSC > 0) {
-	      drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
-	      leadingSC = 0;
-	    }
-	    // match or mismatch
-	    for(std::size_t k = 0; k<bam_cigar_oplen(cigar[i]);++k) {
-	      // Increase coverage
-	      int32_t rpadj = (int32_t) rp - (int32_t) rg[rgIdx].beg;
-	      if ((rpadj >= 0) && (rpadj < (int32_t) rg[rgIdx].size)) {
-		if (sequence[sp] == 'A') {
-		  if (covA[rpadj] < maxCoverage) ++covA[rpadj];
-		} else if (sequence[sp] == 'C') {
-		  if (covC[rpadj] < maxCoverage) ++covC[rpadj];
-		} else if (sequence[sp] == 'G') {
-		  if (covG[rpadj] < maxCoverage) ++covG[rpadj];
-		} else if (sequence[sp] == 'T') {
-		  if (covT[rpadj] < maxCoverage) ++covT[rpadj];
-		}
-	      }
-	      // Draw nucleotide for mismatches
-	      if (rec->core.l_qseq) {
-		if (sequence[sp] != seq[rp]) {
-		  drawNuc(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
-		}
-	      }
-	      ++sp;
-	      ++rp;
-	    }
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	    drawDel(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
-	    rp += bam_cigar_oplen(cigar[i]);
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-	    drawIns(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
-	    sp += bam_cigar_oplen(cigar[i]);
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
-	    if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
-	    else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
-	    sp += bam_cigar_oplen(cigar[i]);
-	  } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
-	    if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
-	    else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
-	  } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
-	    drawRefSkip(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg));
-	    rp += bam_cigar_oplen(cigar[i]);
-	  } else {
-	    std::cerr << "Unknown Cigar options" << std::endl;
-	    return 1;
-	  }
-	}
-      }
-      bam_destroy1(rec);
-      hts_itr_destroy(iter);	
-      drawBorder(c, bg);
+      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << hdr->target_name[rg[rgIdx].tid] << ':' << rg[rgIdx].beg << '-' << rg[rgIdx].end << std::endl;
 
+      // Iterate all reads
+      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
+	int32_t trackIdx = headerTracks;
+	bool prevDraw = false;
+	for(uint32_t i = 0; i < it->second.size(); ++i) {
+	  if ((it->second[i].tid == rg[rgIdx].tid) && (it->second[i].gstart >= rg[rgIdx].beg) && (it->second[i].gend <= rg[rgIdx].end)) {
+	    // Draw match in the current region
+	    if ((i > 0) && (i + 1 < it->second.size())) {
+	      drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], it->second[i+1]);
+	    } else {
+	      if ((i == 0) && (it->second.size() == 1)) {
+		drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], Mapping());
+	      } else {
+		if (i == 0) drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], it->second[i+1]);
+		else drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], Mapping());
+	      }
+	    }
+	    prevDraw = true;
+	  } else {
+	    // This match is outside but the connection might go through
+	    if ((i > 0) && (!prevDraw)) drawCrossConnect(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i]);
+	    prevDraw = false;
+	  }	  
+	  ++trackIdx;
+	}
+	// Draw read name
+	if (rgIdx == 0) drawSampleLabel(c, headerTracks, it->first, bg);
+      }
       
       // Store image (comment this for valgrind, png encoder seems leaky)
       if (c.splits == 1) {
@@ -505,7 +395,7 @@ namespace wallysworld
 
   int matches(int argc, char **argv) {
     ConfigMatches c;
-    c.tlheight = 14;
+    c.tlheight = 15;
     c.rdheight = 12;
     c.showSoftClip = true;
     
