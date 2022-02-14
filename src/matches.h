@@ -37,8 +37,7 @@ namespace wallysworld
   // Config arguments
   struct ConfigMatches {
     bool showWindow;
-    bool hasAnnotationFile;
-    bool showSoftClip;
+    bool hasReadFile;
     uint16_t splits;
     int32_t winsize;
     uint32_t width;
@@ -47,7 +46,8 @@ namespace wallysworld
     uint32_t rdheight;  // pixel height of a single read
     double pxoffset; // 1bp in pixel
     double bpoffset; // 1pixel in bp
-    boost::filesystem::path bedFile;
+    std::string readStr;
+    boost::filesystem::path outfile;
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
     boost::filesystem::path file;
@@ -218,7 +218,8 @@ namespace wallysworld
     // Parse reads
     std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
     std::set<std::string> reads;
-    _parseReads(c, reads);
+    if (c.hasReadFile) _parseReads(c, reads);
+    else reads.insert(c.readStr);
     
     // Get read mappings
     std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
@@ -232,10 +233,11 @@ namespace wallysworld
     }
     
     // Check image height
-    int32_t headerTracks = 4;
-    if ((matchCount + headerTracks) * c.tlheight > c.height) {
+    int32_t headerTracks = 3;
+    if (c.height == 0) c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
+    else if ((matchCount + headerTracks + reads.size()) * c.tlheight > c.height) {
       std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
-      c.height = (matchCount + headerTracks) * c.tlheight;
+      c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
       std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
     }
 
@@ -273,7 +275,8 @@ namespace wallysworld
 
     // Check image width
     uint32_t estwidth = minPixelWidth(c, rg);
-    if (c.width < estwidth) {
+    if (c.width == 0) c.width = estwidth;
+    else if (c.width < estwidth) {
       std::cerr << "Warning: Image width is too small to display all matches!" << std::endl;
       c.width = estwidth;
       std::cerr << "Warning: Adjusting image width to " << c.width << std::endl;
@@ -307,11 +310,11 @@ namespace wallysworld
       }
 
       // Header
-      drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg, 1);
+      drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg);
 
-      // Reference
-      drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
-
+      // Split line
+      drawSplitLine(c, bg, 3);
+       
       // Draw split border
       drawSplitBorder(c, bg);
       
@@ -320,8 +323,10 @@ namespace wallysworld
       std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << hdr->target_name[rg[rgIdx].tid] << ':' << rg[rgIdx].beg << '-' << rg[rgIdx].end << std::endl;
 
       // Iterate all reads
+      int32_t prevReadOffset = headerTracks;
       for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
-	int32_t trackIdx = headerTracks;
+	int32_t trackIdx = prevReadOffset;
+	++trackIdx; // Space for read name
 	bool prevDraw = false;
 	for(uint32_t i = 0; i < it->second.size(); ++i) {
 	  if ((it->second[i].tid == rg[rgIdx].tid) && (it->second[i].gstart >= rg[rgIdx].beg) && (it->second[i].gend <= rg[rgIdx].end)) {
@@ -343,15 +348,17 @@ namespace wallysworld
 	    prevDraw = false;
 	  }	  
 	  ++trackIdx;
-	}
+	}	
 	// Draw read name
-	if (rgIdx == 0) drawSampleLabel(c, headerTracks, it->first, bg);
+	if (rgIdx == 0) drawSampleLabel(c, prevReadOffset + 1, it->first, bg);
+	// Draw split line
+	drawSplitLine(c, bg, trackIdx);
+	prevReadOffset = trackIdx;
       }
-      
+          
       // Store image (comment this for valgrind, png encoder seems leaky)
       if (c.splits == 1) {
-	std::string outfile = "test.png";
-	cv::imwrite(outfile.c_str(), bg);
+	cv::imwrite(c.outfile.string().c_str(), bg);
 	if (c.showWindow) {
 	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
 	  cv::waitKey(0);
@@ -367,8 +374,7 @@ namespace wallysworld
 	    cv::hconcat(dst, imageStore[i], tdst);
 	    dst = tdst;
 	  }
-	  std::string outfile = "test.png";
-	  cv::imwrite(outfile.c_str(), dst);
+	  cv::imwrite(c.outfile.string().c_str(), dst);
 	  if (c.showWindow) {
 	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
 	    cv::waitKey(0);
@@ -400,28 +406,24 @@ namespace wallysworld
     ConfigMatches c;
     c.tlheight = 15;
     c.rdheight = 12;
-    c.showSoftClip = true;
     
     // Define generic options
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
-      ("bed,b", boost::program_options::value<boost::filesystem::path>(&c.bedFile), "BED annotation file (optional)")
+      ("read,r", boost::program_options::value<std::string>(&c.readStr)->default_value("read_name"), "read to display")
+      ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output file")
       ;
     
-    boost::program_options::options_description disc("Graphics options");
+    boost::program_options::options_description disc("Display options");
     disc.add_options()
-      ("reads,r", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
       ("winsize,w", boost::program_options::value<int32_t>(&c.winsize)->default_value(10000), "window size to cluster nearby matches")
+      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
+      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
       ;
     
-    boost::program_options::options_description geno("Display options");
-    geno.add_options()
-      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
-      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
-      ;
-
     // Define hidden options
     boost::program_options::options_description hidden("Hidden options");
     hidden.add_options()
@@ -434,9 +436,9 @@ namespace wallysworld
     
     // Set the visibility
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(disc).add(geno).add(hidden);
+    cmdline_options.add(generic).add(disc).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic).add(disc).add(geno);
+    visible_options.add(generic).add(disc);
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(cmdline_options).positional(pos_args).run(), vm);
     boost::program_options::notify(vm);
@@ -454,15 +456,15 @@ namespace wallysworld
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
 
-    // BED file
-    if (vm.count("bed")) {
-      if (!(boost::filesystem::exists(c.bedFile) && boost::filesystem::is_regular_file(c.bedFile) && boost::filesystem::file_size(c.bedFile))) {
-	std::cerr << "Genome annotation BED file is missing: " << c.bedFile.string() << std::endl;
+    // Read file
+    if (vm.count("rfile")) {
+      if (!(boost::filesystem::exists(c.readFile) && boost::filesystem::is_regular_file(c.readFile) && boost::filesystem::file_size(c.readFile))) {
+	std::cerr << "File with list of reads is missing: " << c.readFile.string() << std::endl;
 	return 1;
       }
-      c.hasAnnotationFile = true;
-    } else c.hasAnnotationFile = false;
-    
+      c.hasReadFile = true;
+    } else c.hasReadFile = false;
+
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";

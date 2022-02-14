@@ -23,6 +23,13 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
+  drawSplitLine(TConfig const& c, cv::Mat& img, uint32_t const track) {
+    // Draw line
+    cv::line(img, cv::Point(0, track * c.tlheight), cv::Point(c.width, track * c.tlheight), WALLY_SPLITBORDER, 1);
+  }
+  
+  template<typename TConfig>
+  inline void
   drawSplitBorder(TConfig const& c, cv::Mat& img) {
     cv::line(img, cv::Point(0, 0), cv::Point(0, c.height), WALLY_SPLITBORDER, 3);
     cv::line(img, cv::Point(c.width - 1, 0), cv::Point(c.width - 1, c.height), WALLY_SPLITBORDER, 3);
@@ -42,14 +49,14 @@ namespace wallysworld
       double font_thickness = 1.5;
       int32_t baseline = 0;
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-      if (textSize.width > maxsize) maxsize = textSize.width;
+      if (textSize.width > (int32_t) maxsize) maxsize = textSize.width;
     }
     return maxsize * c.splits;
   }
   
   template<typename TConfig>
   inline void
-  drawCoordinates(TConfig const& c, Region const& rg, std::string const& chr, cv::Mat& img, int32_t const track) {
+  drawCoordinates(TConfig const& c, Region const& rg, std::string const& chr, cv::Mat& img) {
     std::string textBeg(boost::lexical_cast<std::string>(rg.beg));
     insertComma(textBeg);
     std::string textEnd(boost::lexical_cast<std::string>(rg.end));
@@ -64,7 +71,7 @@ namespace wallysworld
     textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
     cv::putText(img, text, cv::Point(c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
 
-    // Set scale
+    // Draw scale
     int32_t bpscale = 0.5 * c.width * c.bpoffset;
     int32_t mult = 1;
     while (bpscale > 10) {
@@ -120,7 +127,11 @@ namespace wallysworld
     else cv::rectangle(img, rect, WALLY_REVMATCH, -1);
 
     // Draw read positions
-    std::string readcoord = boost::lexical_cast<std::string>(mp.rstart) + " - " + boost::lexical_cast<std::string>(mp.rend);
+    std::string rsta = boost::lexical_cast<std::string>(mp.rstart);
+    insertComma(rsta);
+    std::string	rend = boost::lexical_cast<std::string>(mp.rend);
+    insertComma(rend);
+    std::string readcoord = rsta + " - " + rend;
     double font_scale = 0.4;
     double font_thickness = 1.5;
     int32_t baseline = 0;
