@@ -38,6 +38,7 @@ namespace wallysworld
   struct ConfigMatches {
     bool showWindow;
     bool hasReadFile;
+    bool separatePlots;
     uint16_t splits;
     int32_t winsize;
     uint32_t width;
@@ -120,8 +121,7 @@ namespace wallysworld
     
     // Parse BAM
     for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
-      boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Processing... " << hdr->target_name[refIndex] << std::endl;
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Processing... " << hdr->target_name[refIndex] << std::endl;
 
       // Iterate alignments 
       hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
@@ -217,7 +217,8 @@ namespace wallysworld
 
     // Parse reads
     std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
-    std::set<std::string> reads;
+    typedef std::set<std::string> TReadSet;
+    TReadSet reads;
     if (c.hasReadFile) _parseReads(c, reads);
     else reads.insert(c.readStr);
     
@@ -226,27 +227,8 @@ namespace wallysworld
     typedef std::vector<Mapping> TMappings;
     typedef std::map<std::string, TMappings > TReadMappings;
     TReadMappings mp;
-    int32_t matchCount = mappings(c, reads, mp);
-    if (!matchCount) {
-      std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
-      return 1;
-    }
-    
-    // Check image height
-    int32_t headerTracks = 3;
-    if (c.height == 0) c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
-    else if ((matchCount + headerTracks + reads.size()) * c.tlheight > c.height) {
-      std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
-      c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
-      std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
-    }
+    int32_t sourceMatchCount = mappings(c, reads, mp);
 
-    // Open file handles
-    samFile* samfile = sam_open(c.file.string().c_str(), "r");
-    hts_set_fai_filename(samfile, c.genome.string().c_str());
-    hts_idx_t* idx = sam_index_load(samfile, c.file.string().c_str());
-    bam_hdr_t* hdr = sam_hdr_read(samfile);
-    
     // Sort mappings
     for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
       std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
@@ -255,140 +237,182 @@ namespace wallysworld
       //for(uint32_t i = 0; i < it->second.size(); ++i) std::cerr << hdr->target_name[it->second[i].tid] << ':' << it->second[i].gstart << '-' << it->second[i].gend << '\t' << it->second[i].rstart << '-' << it->second[i].rend << '(' << (int) it->second[i].fwd << ')' << '\t' << it->first << std::endl;
     }
 
-    // Determine regions
-    std::vector<Region> rg;
-    std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Cluster nearby matches." << std::endl;
-    clusterRegions(c, hdr->n_targets, mp, rg);
-    if (rg.empty()) {
-      std::cerr << "Error: No regions to display!" << std::endl;
-      return 1;
+    // Number of plots
+    uint32_t numPlots = 1;
+    uint32_t source_c_width = c.width;
+    uint32_t source_c_height = c.height;
+    TReadMappings source_mp;
+    TReadSet source_reads;
+    if (c.separatePlots) {
+      numPlots = reads.size();
+      source_mp = mp;
+      source_reads = reads;
+      mp.clear();
+      reads.clear();
     }
-    c.splits = rg.size();
-    // Debug
-    //for(uint32_t i = 0; i < rg.size(); ++i) std::cerr << hdr->target_name[rg[i].tid] << ':' << rg[i].beg << '-' << rg[i].end << std::endl;
 
-    // Load genome
-    faidx_t* fai = fai_load(c.genome.string().c_str());
-    int32_t seqlen;
-    std::string oldchr("None");
-    char* seq = NULL;
+    // Open file handles
+    samFile* samfile = sam_open(c.file.string().c_str(), "r");
+    hts_set_fai_filename(samfile, c.genome.string().c_str());
+    bam_hdr_t* hdr = sam_hdr_read(samfile);
 
-    // Check image width
-    uint32_t estwidth = minPixelWidth(c, rg);
-    if (c.width == 0) c.width = estwidth;
-    else if (c.width < estwidth) {
-      std::cerr << "Warning: Image width is too small to display all matches!" << std::endl;
-      c.width = estwidth;
-      std::cerr << "Warning: Adjusting image width to " << c.width << std::endl;
-    }
-    c.width /= c.splits;
-
-    // Store images
-    std::vector<cv::Mat> imageStore;
-
-    // Split region
-    for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
-      // Get pixel width of 1bp
-      c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
-      // Get bp of 1 pixel
-      c.bpoffset = (1.0 / (double) c.width) * (double) rg[rgIdx].size;
-      
-      // Generate image
-      cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
-
-      // Block header tracks
-      int32_t maxTracks = c.height / c.tlheight;
-      std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
-      for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
-      
-      // Lazy loading of genome
-      std::string chrName = hdr->target_name[rg[rgIdx].tid];
-      if (chrName != oldchr) {
-	if (seq != NULL) free(seq);
-	seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], 0, hdr->target_len[rg[rgIdx].tid], &seqlen);
-	oldchr = chrName;
-      }
-
-      // Header
-      drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg);
-
-      // Split line
-      drawSplitLine(c, bg, 3);
-       
-      // Draw split border
-      drawSplitBorder(c, bg);
-      
-      // Parse mappings
-      boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-      std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << hdr->target_name[rg[rgIdx].tid] << ':' << rg[rgIdx].beg << '-' << rg[rgIdx].end << std::endl;
-
-      // Iterate all reads
-      int32_t prevReadOffset = headerTracks;
-      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
-	int32_t trackIdx = prevReadOffset;
-	++trackIdx; // Space for read name
-	bool prevDraw = false;
-	for(uint32_t i = 0; i < it->second.size(); ++i) {
-	  if ((it->second[i].tid == rg[rgIdx].tid) && (it->second[i].gstart >= rg[rgIdx].beg) && (it->second[i].gend <= rg[rgIdx].end)) {
-	    // Draw match in the current region
-	    if ((i > 0) && (i + 1 < it->second.size())) {
-	      drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], it->second[i+1]);
-	    } else {
-	      if ((i == 0) && (it->second.size() == 1)) {
-		drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], Mapping());
-	      } else {
-		if (i == 0) drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], it->second[i+1]);
-		else drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], Mapping());
-	      }
-	    }
-	    prevDraw = true;
-	  } else {
-	    // This match is outside but the connection might go through
-	    if ((i > 0) && (!prevDraw)) drawCrossConnect(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i]);
-	    prevDraw = false;
-	  }	  
-	  ++trackIdx;
-	}	
-	// Draw read name
-	if (rgIdx == 0) drawSampleLabel(c, prevReadOffset + 1, it->first, bg);
-	// Draw split line
-	drawSplitLine(c, bg, trackIdx);
-	prevReadOffset = trackIdx;
-      }
-          
-      // Store image (comment this for valgrind, png encoder seems leaky)
-      if (c.splits == 1) {
-	cv::imwrite(c.outfile.string().c_str(), bg);
-	if (c.showWindow) {
-	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
-	  cv::waitKey(0);
+    // Iterate reads
+    typename TReadSet::iterator itread = source_reads.begin();
+    for(uint32_t plotk = 0; plotk < numPlots; ++plotk) {
+      int32_t matchCount = 0;
+      if (c.separatePlots) {
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << *itread << std::endl;
+	if (source_mp.find(*itread) != source_mp.end()) {
+	  mp.insert(std::make_pair(*itread, source_mp[*itread]));
+	  matchCount = mp[*itread].size();
+	  reads.insert(*itread);
+	  c.width = source_c_width;
+	  c.height = source_c_height;
 	}
       } else {
-	imageStore.push_back(bg);
-	// Concatenate
-	if (imageStore.size() == c.splits) {
-	  cv::Mat dst;
-	  cv::hconcat(imageStore[0], imageStore[1], dst);
-	  for(uint32_t i = 2; i < imageStore.size(); ++i) {
-	    cv::Mat tdst;
-	    cv::hconcat(dst, imageStore[i], tdst);
-	    dst = tdst;
-	  }
-	  cv::imwrite(c.outfile.string().c_str(), dst);
+	matchCount = sourceMatchCount;
+      }
+
+      // Check matches
+      if (!matchCount) {
+	std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
+	return 1;
+      }
+
+      // Check image height
+      int32_t headerTracks = 3;
+      if (c.height == 0) c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
+      else if ((matchCount + headerTracks + reads.size()) * c.tlheight > c.height) {
+	std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
+	c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
+	std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
+      }
+
+      // Determine regions
+      std::vector<Region> rg;
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Cluster nearby matches." << std::endl;
+      clusterRegions(c, hdr->n_targets, mp, rg);
+      if (rg.empty()) {
+	std::cerr << "Error: No regions to display!" << std::endl;
+	return 1;
+      }
+      c.splits = rg.size();
+      // Debug
+      //for(uint32_t i = 0; i < rg.size(); ++i) std::cerr << hdr->target_name[rg[i].tid] << ':' << rg[i].beg << '-' << rg[i].end << std::endl;
+
+      // Check image width
+      uint32_t estwidth = minPixelWidth(c, rg);
+      if (c.width == 0) c.width = estwidth;
+      else if (c.width < estwidth) {
+	std::cerr << "Warning: Image width is too small to display all matches!" << std::endl;
+	c.width = estwidth;
+	std::cerr << "Warning: Adjusting image width to " << c.width << std::endl;
+      }
+      c.width /= c.splits;
+
+      // Store images
+      std::vector<cv::Mat> imageStore;
+
+      // Split region
+      for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
+	// Get pixel width of 1bp
+	c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
+	// Get bp of 1 pixel
+	c.bpoffset = (1.0 / (double) c.width) * (double) rg[rgIdx].size;
+      
+	// Generate image
+	cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
+      
+	// Block header tracks
+	int32_t maxTracks = c.height / c.tlheight;
+	std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
+	for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
+	
+	// Header
+	drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg);
+	
+	// Split line
+	drawSplitLine(c, bg, 3);
+	
+	// Draw split border
+	drawSplitBorder(c, bg);
+      
+	// Parse mappings
+	boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+	std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << hdr->target_name[rg[rgIdx].tid] << ':' << rg[rgIdx].beg << '-' << rg[rgIdx].end << std::endl;
+
+	// Iterate all reads
+	int32_t prevReadOffset = headerTracks;
+	for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
+	  int32_t trackIdx = prevReadOffset;
+	  ++trackIdx; // Space for read name
+	  bool prevDraw = false;
+	  for(uint32_t i = 0; i < it->second.size(); ++i) {
+	    if ((it->second[i].tid == rg[rgIdx].tid) && (it->second[i].gstart >= rg[rgIdx].beg) && (it->second[i].gend <= rg[rgIdx].end)) {
+	      // Draw match in the current region
+	      if ((i > 0) && (i + 1 < it->second.size())) {
+		drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], it->second[i+1]);
+	      } else {
+		if ((i == 0) && (it->second.size() == 1)) {
+		  drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], Mapping());
+		} else {
+		  if (i == 0) drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], it->second[i+1]);
+		  else drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], Mapping());
+		}
+	      }
+	      prevDraw = true;
+	    } else {
+	      // This match is outside but the connection might go through
+	      if ((i > 0) && (!prevDraw)) drawCrossConnect(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i]);
+	      prevDraw = false;
+	    }	  
+	    ++trackIdx;
+	  }	
+	  // Draw read name
+	  if (rgIdx == 0) drawSampleLabel(c, prevReadOffset + 1, it->first, bg);
+	  // Draw split line
+	  drawSplitLine(c, bg, trackIdx);
+	  prevReadOffset = trackIdx;
+	}
+          
+	// Store image (comment this for valgrind, png encoder seems leaky)
+	if (c.splits == 1) {
+	  std::string outfile = c.outfile.string();
+	  if (c.separatePlots) outfile = (*itread) + ".png";
+	  cv::imwrite(outfile.c_str(), bg);
 	  if (c.showWindow) {
-	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
+	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
 	    cv::waitKey(0);
 	  }
-	  imageStore.clear();
+	} else {
+	  imageStore.push_back(bg);
+	  // Concatenate
+	  if (imageStore.size() == c.splits) {
+	    cv::Mat dst;
+	    cv::hconcat(imageStore[0], imageStore[1], dst);
+	    for(uint32_t i = 2; i < imageStore.size(); ++i) {
+	      cv::Mat tdst;
+	      cv::hconcat(dst, imageStore[i], tdst);
+	      dst = tdst;
+	    }
+	    std::string outfile = c.outfile.string();
+	    if (c.separatePlots) outfile = (*itread) + ".png";
+	    cv::imwrite(outfile.c_str(), dst);
+	    if (c.showWindow) {
+	      cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
+	      cv::waitKey(0);
+	    }
+	    imageStore.clear();
+	  }
 	}
       }
+
+      // Next read
+      if (c.separatePlots) ++itread;
     }
 
     // Clean-up
-    if (seq != NULL) free(seq);
-    fai_destroy(fai);
     bam_hdr_destroy(hdr);
-    hts_idx_destroy(idx);
     sam_close(samfile);
 
 #ifdef PROFILE
@@ -415,6 +439,7 @@ namespace wallysworld
       ("read,r", boost::program_options::value<std::string>(&c.readStr)->default_value("read_name"), "read to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output file")
+      ("separate,s", "create one plot for each read (requires -R option)")
       ;
     
     boost::program_options::options_description disc("Display options");
@@ -455,6 +480,10 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Separate plots?
+    if (vm.count("separate")) c.separatePlots = true;
+    else c.separatePlots = false;
 
     // Read file
     if (vm.count("rfile")) {

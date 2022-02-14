@@ -22,7 +22,7 @@ displayUsage() {
   std::cout << "Usage: wally <command> <arguments>" << std::endl;
   std::cout << std::endl;
   std::cout << "    region         plot genomic region" << std::endl;
-  //std::cout << "    matches        plot read or contig alignments" << std::endl; 
+  std::cout << "    matches        plot read or contig alignments" << std::endl; 
   std::cout << std::endl;
   std::cout << std::endl;
 }
