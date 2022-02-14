@@ -49,6 +49,14 @@ namespace wallysworld
   #define WALLY_READ2 cv::Scalar(180,180,180)
   #endif
 
+  #ifndef WALLY_FWDMATCH
+  #define WALLY_FWDMATCH cv::Scalar(233,217,171)
+  #endif
+
+  #ifndef WALLY_REVMATCH
+  #define WALLY_REVMATCH cv::Scalar(97,174,253)
+  #endif
+
   #ifndef WALLY_INDEL
   #define WALLY_INDEL cv::Scalar(209,113,5)
   #endif
@@ -116,6 +124,16 @@ namespace wallysworld
     LibraryInfo() : rs(0), median(0), mad(0) {}
   };
 
+
+  inline void
+  insertComma(std::string& text) {
+    int32_t n = text.length() - 3;
+    while (n > 0) {
+      text.insert(n, ",");
+      n -= 3;
+    }
+  }
+  
   template<typename TConfig, typename TSampleLibrary>
   inline void
   getLibraryParams(TConfig const& c, TSampleLibrary& sampleLib) {

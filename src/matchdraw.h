@@ -27,22 +27,33 @@ namespace wallysworld
     cv::line(img, cv::Point(0, 0), cv::Point(0, c.height), WALLY_SPLITBORDER, 3);
     cv::line(img, cv::Point(c.width - 1, 0), cv::Point(c.width - 1, c.height), WALLY_SPLITBORDER, 3);
   }
+
+  template<typename TConfig>
+  inline uint32_t
+  minPixelWidth(TConfig const& c, std::vector<Region> const& rg) {
+    uint32_t maxsize = 0;
+    for(uint32_t i = 0; i < rg.size(); ++i) {
+      std::string textBeg(boost::lexical_cast<std::string>(rg[i].beg));
+      insertComma(textBeg);
+      std::string textEnd(boost::lexical_cast<std::string>(rg[i].end));
+      insertComma(textEnd);
+      std::string text = "##" + textBeg + "-" + textEnd + "##";
+      double font_scale = 0.4;
+      double font_thickness = 1.5;
+      int32_t baseline = 0;
+      cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+      if (textSize.width > maxsize) maxsize = textSize.width;
+    }
+    return maxsize * c.splits;
+  }
   
   template<typename TConfig>
   inline void
   drawCoordinates(TConfig const& c, Region const& rg, std::string const& chr, cv::Mat& img, int32_t const track) {
     std::string textBeg(boost::lexical_cast<std::string>(rg.beg));
-    int32_t n = textBeg.length() - 3;
-    while (n > 0) {
-      textBeg.insert(n, ",");
-      n -= 3;
-    }
+    insertComma(textBeg);
     std::string textEnd(boost::lexical_cast<std::string>(rg.end));
-    n = textEnd.length() - 3;
-    while (n > 0) {
-      textEnd.insert(n, ",");
-      n -= 3;
-    }
+    insertComma(textEnd);
     std::string text = textBeg + "-" + textEnd;
 
     double font_scale = 0.4;
@@ -52,6 +63,27 @@ namespace wallysworld
     cv::putText(img, chr, cv::Point(c.width / 2 - textSize.width / 2, 0 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
     textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
     cv::putText(img, text, cv::Point(c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+
+    // Set scale
+    int32_t bpscale = 0.5 * c.width * c.bpoffset;
+    int32_t mult = 1;
+    while (bpscale > 10) {
+      bpscale /= 10;
+      mult *= 10;
+    }
+    bpscale *= mult;
+    int32_t sep = 5;
+    int32_t px = sep;
+    int32_t pxend = sep + c.pxoffset * bpscale;
+    cv::line(img, cv::Point(px, 2 * c.tlheight + c.tlheight / 2), cv::Point(pxend, 2 * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), 2);
+    cv::line(img, cv::Point(px, 2 * c.tlheight + 1), cv::Point(px, 3 * c.tlheight - 1), cv::Scalar(0, 0, 0), 2);
+    cv::line(img, cv::Point(pxend, 2 * c.tlheight + 1), cv::Point(pxend, 3 * c.tlheight - 1), cv::Scalar(0, 0, 0), 2);
+
+    std::string scaletxt(boost::lexical_cast<std::string>(bpscale));
+    insertComma(scaletxt);
+    scaletxt += "bp";
+    textSize = cv::getTextSize(scaletxt, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    cv::putText(img, scaletxt, cv::Point(pxend + sep, 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
   }
 
   template<typename TConfig>
@@ -74,6 +106,8 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawBlock(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, Mapping const& prev, Mapping const& mp, Mapping const& succ) {
+
+    // Draw rectangle
     int32_t px = pixelX(c.width, rg.size, mp.gstart - rg.beg);
     int32_t pxend = pixelX(c.width, rg.size, mp.gend - rg.beg);
     int32_t x = px;
@@ -82,8 +116,20 @@ namespace wallysworld
     int32_t y = track * c.tlheight;
     int32_t h = c.rdheight;
     cv::Rect rect(x, y, w, h);
-    if (mp.fwd) cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
-    else cv::rectangle(img, rect, cv::Scalar(0, 0, 255), -1);
+    if (mp.fwd) cv::rectangle(img, rect, WALLY_FWDMATCH, -1);
+    else cv::rectangle(img, rect, WALLY_REVMATCH, -1);
+
+    // Draw read positions
+    std::string readcoord = boost::lexical_cast<std::string>(mp.rstart) + " - " + boost::lexical_cast<std::string>(mp.rend);
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(readcoord, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+    if (textSize.width < w) {
+      cv::putText(img, readcoord, cv::Point(x + w / 2 - textSize.width / 2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    }
+
+    // Draw connectors
     double lw = 1.8;
     if (mp.fwd) {
       if (prev.tid != -1) {

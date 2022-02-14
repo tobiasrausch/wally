@@ -272,12 +272,15 @@ namespace wallysworld
     char* seq = NULL;
 
     // Check image width
-    c.width /= c.splits;
-    if (c.width < 20) {
+    uint32_t estwidth = minPixelWidth(c, rg);
+    if (c.width < estwidth) {
       std::cerr << "Warning: Image width is too small to display all matches!" << std::endl;
-      c.width = c.splits * 20;
+      c.width = estwidth;
       std::cerr << "Warning: Adjusting image width to " << c.width << std::endl;
     }
+    c.width /= c.splits;
+
+    // Store images
     std::vector<cv::Mat> imageStore;
 
     // Split region
