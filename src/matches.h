@@ -439,7 +439,7 @@ namespace wallysworld
       ("read,r", boost::program_options::value<std::string>(&c.readStr)->default_value("read_name"), "read to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output file")
-      ("separate,s", "create one plot for each read (requires -R option)")
+      ("separate,s", "create one plot for each input read")
       ;
     
     boost::program_options::options_description disc("Display options");

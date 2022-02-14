@@ -9,7 +9,7 @@
 
 Plotting of aligned sequencing reads in BAM/CRAM format and visualization of genomic variants.
 
-# Installing Wally
+## Installing Wally
 
 Wally is available as a [Bioconda package](https://anaconda.org/bioconda/wally), as a pre-compiled static binary from the [release page](https://github.com/tobiasrausch/wally/releases/), as a singularity container [SIF file](https://github.com/tobiasrausch/wally/releases/) or as a minimal [Docker container](https://hub.docker.com/r/trausch/wally/). You can also build Wally from source using a recursive clone and make. 
 
@@ -20,7 +20,11 @@ Wally is available as a [Bioconda package](https://anaconda.org/bioconda/wally),
 `make all`
 
 
-# Running Wally
+## Running Wally
+
+Wally uses subcommands for different visualization modes.
+
+## Subcommand `region`: Visualization of alignment regions
 
 Wally needs a sorted and indexed BAM/CRAM file and a reference genome. The output is a genomic alignment plot of the region specified on the command-line.
 
@@ -36,7 +40,7 @@ Most often you probably want to use a BED file with regions of interest and just
 
 `wally region -R regions.bed -g <genome> <input.bam>`
 
-# Gene annotations
+### Gene annotations
 
 Simple BED files are used to provide gene or other annotations. The BED file needs to be bgzipped and indexed via tabix (`tabix -p bed input.bed.gz`). The required columns are chromosome, start, end and an identifier which is displayed if there is sufficient space.
 
@@ -44,7 +48,7 @@ Simple BED files are used to provide gene or other annotations. The BED file nee
 
 The chromosome names of the genome FASTA file, BAM file and BED annotation file need to match, "chr11" and "11" are not considered identical.
 
-# Multiple BAM files
+### Multiple BAM files
 
 You can include multiple BAM files in a plot such as a tumor genome and a matched control in cancer genomics.
 
@@ -54,7 +58,7 @@ In fact, wally can be used to create "wallpapers" of genomes which gave rise to 
 
 `wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
 
-# Aligning multiple regions horizontally (split view)
+### Aligning multiple regions horizontally (split view)
 
 Wally allows concatenating images of different regions horizontally using the `--split` option. This can be used, for instance, to zoom into a specific variant. On the command line the regions need to be separated by `,` without spaces. As an example, you can zoom into the N501Y variant of the alpha SARS-CoV-2 lineage using 
 
@@ -66,7 +70,7 @@ You can split horizontally and vertically at the same time to view, for instance
 
 If you specify the regions in a BED file using the `-R` option then the split parameter operates row-wise, e.g., for `-s 3` row 1-3 of the BED file make up the first image, row 4-6 the second image, and so on.
 
-# Paired-end view
+### Paired-end view
 
 With `-p` you can switch on the paired-end view. 
 
@@ -87,11 +91,24 @@ For large and complex structural variants, wally supports split views (as explai
 
 `wally region -up -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
+## Subcommand `matches`: Visualization of alignment matches
 
-# License
+For long read alignments or mappings of entire contigs, one often wants to explore all matches of a long input sequence with respect to the reference to visualize, for instance, complex rearrangements. For a single read or contig, you need a sorted and indexed BAM file and the reference genome.
+
+`wally matches -r <read_name> -g <genome> <input.bam>`
+
+Forward matches are colored in blue, reverse matches in orange and the black line traces all alignment matches along the input read sequence. You can also plot multiple reads to inspect, for instance, alignment concordance or heterogeneity using a list of reads as an input file.
+
+`wally matches -R <read.lst> -g <genome> <input.bam>`
+
+For many reads, this quickly leads to "wall(y)papers". With `-s` you get a separate plot for each read.
+
+`wally matches -s -R <read.lst> -g <genome> <input.bam>`
+
+## License
 
 Wally is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/wally/blob/master/LICENSE) file for more details.
 
-# Credits
+## Credits
 
 Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and [OpenCV](https://github.com/opencv/opencv). The visualization of genomic alignments was heavily inspired by [IGV](https://github.com/igvteam/igv).
