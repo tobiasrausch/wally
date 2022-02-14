@@ -105,6 +105,14 @@ For many reads, this quickly leads to "wall(y)papers". With `-s` you get a separ
 
 `wally matches -s -R <read.lst> -g <genome> <input.bam>`
 
+You can also compare assemblies or align contigs to a reference genome using a workflow like this:
+
+`minimap2 -ax asm5 ref.fa asm.fa | samtools sort -o assembly.bam -`
+
+`samtools index assembly.bam`
+
+`wally matches -r <contig_name> -g <genome> <input.bam>`
+
 ## License
 
 Wally is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/wally/blob/master/LICENSE) file for more details.
