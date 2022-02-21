@@ -113,6 +113,12 @@ You can also compare assemblies or align contigs to a reference genome using a w
 
 `wally matches -r <contig_name> -g <genome> <input.bam>`
 
+## Citation
+
+Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel.          
+Long-read sequencing of diagnosis and post-therapy medulloblastoma reveals complex rearrangement patterns and epigenetic signatures.            
+[bioRxiv 2022.02.20.480758](https://doi.org/10.1101/2022.02.20.480758)
+
 ## License
 
 Wally is distributed under the BSD 3-Clause license. Consult the accompanying [LICENSE](https://github.com/tobiasrausch/wally/blob/master/LICENSE) file for more details.

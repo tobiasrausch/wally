@@ -41,6 +41,7 @@ namespace wallysworld
     bool separatePlots;
     uint16_t splits;
     int32_t winsize;
+    uint32_t minMatches;
     uint32_t width;
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
@@ -77,7 +78,7 @@ namespace wallysworld
 
   template<typename TConfig, typename TReadMappings>
   inline void
-  clusterRegions(TConfig const& c, int32_t const nchr, TReadMappings const& mp, std::vector<Region>& rg) {
+  clusterRegions(TConfig const& c, int32_t const nchr, TReadMappings& mp, std::vector<Region>& rg) {
     for(int32_t refIndex = 0; refIndex < nchr; ++refIndex) {
 
       // Collect intervals for this chromosomes
@@ -102,16 +103,51 @@ namespace wallysworld
 	int32_t rgStart = 0;
 	if (offset < realstart) rgStart = realstart - offset;
 	int32_t rgEnd = realend + offset;
-	rg.push_back(Region(refIndex, rgStart, rgEnd));
+	if (c.minMatches > 1) {
+	  uint32_t matchCount = 0;
+	  for(typename TReadMappings::const_iterator it = mp.begin(); it != mp.end(); ++it) {
+	    for(uint32_t i = 0; i < it->second.size(); ++i) {
+	      if (it->second[i].tid == refIndex) {
+		if ((it->second[i].gstart >= rgStart) && (it->second[i].gend <= rgEnd)) ++matchCount;
+	      }
+	    }
+	  }
+	  if (matchCount >= c.minMatches) rg.push_back(Region(refIndex, rgStart, rgEnd));
+	} else {
+	  rg.push_back(Region(refIndex, rgStart, rgEnd));
+	}
+      }
+    }
+
+    // Remove mappings if min. matches is used
+    if (c.minMatches > 1) {
+      for(typename TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
+	bool rerun = true;
+	while (rerun) {
+	  rerun = false;
+	  for(uint32_t i = 0; i < it->second.size(); ++i) {
+	    bool found = false;
+	    for(uint32_t k = 0; k < rg.size(); ++k) {
+	      if ((it->second[i].tid == rg[k].tid) && (it->second[i].gstart >= rg[k].beg) && (it->second[i].gend <= rg[k].end)) {
+		found = true;
+		break;
+	      }
+	    }
+	    if (!found) {
+	      it->second.erase(it->second.begin() + i);
+	      rerun = true;
+	      break;
+	    }
+	  }
+	}
       }
     }
   }
   
 
   template<typename TConfig>
-  inline int32_t
+  inline void
   mappings(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::vector<Mapping> >& mp) {
-    uint32_t matchCount = 0;
     
     // Open file handles
     samFile* samfile = sam_open(c.file.string().c_str(), "r");
@@ -191,7 +227,6 @@ namespace wallysworld
 	  if (gpStart < gpEnd) {
 	    if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
 	    mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, seqStart, seqEnd, dir, rec->core.qual));
-	    ++matchCount;
 	  }
 	}
       }
@@ -203,8 +238,6 @@ namespace wallysworld
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
-
-    return matchCount;
   }
 
   
@@ -227,7 +260,7 @@ namespace wallysworld
     typedef std::vector<Mapping> TMappings;
     typedef std::map<std::string, TMappings > TReadMappings;
     TReadMappings mp;
-    int32_t sourceMatchCount = mappings(c, reads, mp);
+    mappings(c, reads, mp);
 
     // Sort mappings
     for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
@@ -259,33 +292,14 @@ namespace wallysworld
     // Iterate reads
     typename TReadSet::iterator itread = source_reads.begin();
     for(uint32_t plotk = 0; plotk < numPlots; ++plotk) {
-      int32_t matchCount = 0;
       if (c.separatePlots) {
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << *itread << std::endl;
 	if (source_mp.find(*itread) != source_mp.end()) {
 	  mp.insert(std::make_pair(*itread, source_mp[*itread]));
-	  matchCount = mp[*itread].size();
 	  reads.insert(*itread);
 	  c.width = source_c_width;
 	  c.height = source_c_height;
 	}
-      } else {
-	matchCount = sourceMatchCount;
-      }
-
-      // Check matches
-      if (!matchCount) {
-	std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
-	return 1;
-      }
-
-      // Check image height
-      int32_t headerTracks = 3;
-      if (c.height == 0) c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
-      else if ((matchCount + headerTracks + reads.size()) * c.tlheight > c.height) {
-	std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
-	c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
-	std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
       }
 
       // Determine regions
@@ -300,6 +314,28 @@ namespace wallysworld
       // Debug
       //for(uint32_t i = 0; i < rg.size(); ++i) std::cerr << hdr->target_name[rg[i].tid] << ':' << rg[i].beg << '-' << rg[i].end << std::endl;
 
+      // Count number of matches
+      int32_t matchCount = 0;
+      if (c.separatePlots) matchCount = mp[*itread].size();
+      else {
+	for(typename TReadMappings::const_iterator it = mp.begin(); it != mp.end(); ++it) matchCount += it->second.size();
+      }	
+      if (!matchCount) {
+	std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
+	return 1;
+      }      
+
+      // Check image height
+      int32_t headerTracks = 3;
+      if (c.height == 0) c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
+      else if ((matchCount + headerTracks + reads.size()) * c.tlheight > c.height) {
+	std::cerr << "Warning: Image height is too small to display all matches!" << std::endl;
+	c.height = (matchCount + headerTracks + reads.size()) * c.tlheight;
+	std::cerr << "Warning: Adjusting image height to " << c.height << std::endl;
+      }
+
+
+      
       // Check image width
       uint32_t estwidth = minPixelWidth(c, rg);
       if (c.width == 0) c.width = estwidth;
@@ -444,7 +480,8 @@ namespace wallysworld
     
     boost::program_options::options_description disc("Display options");
     disc.add_options()
-      ("winsize,w", boost::program_options::value<int32_t>(&c.winsize)->default_value(10000), "window size to cluster nearby matches")
+      ("winsize,n", boost::program_options::value<int32_t>(&c.winsize)->default_value(10000), "window size to cluster nearby matches")
+      ("matches,m", boost::program_options::value<uint32_t>(&c.minMatches)->default_value(1), "min. number of matches per region")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
       ;
