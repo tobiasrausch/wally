@@ -13,6 +13,7 @@
 #include "region.h"
 #include "matches.h"
 #include "heatmap.h"
+#include "hilbert.h"
 
 using namespace wallysworld;
 
