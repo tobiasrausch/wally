@@ -13,7 +13,6 @@
 #include "region.h"
 #include "matches.h"
 #include "heatmap.h"
-#include "hilbert.h"
 
 using namespace wallysworld;
 
@@ -61,9 +60,6 @@ int main(int argc, char **argv) {
     }
     else if ((std::string(argv[1]) == "shared")) {
       return heatmap(argc-1,argv+1);
-    }
-    else if ((std::string(argv[1]) == "hilbert")) {
-      return hilbert(argc-1,argv+1);
     }
     std::cerr << "Unrecognized command " << std::string(argv[1]) << std::endl;
     return 1;
