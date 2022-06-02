@@ -115,6 +115,8 @@ You can also compare assemblies or align contigs to a reference genome using a w
 
 ## Citation
 
+Wally is currently unpublished but has been applied in this study:
+
 Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel.          
 Long-read sequencing of diagnosis and post-therapy medulloblastoma reveals complex rearrangement patterns and epigenetic signatures.            
 [bioRxiv 2022.02.20.480758](https://doi.org/10.1101/2022.02.20.480758)
