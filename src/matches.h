@@ -210,7 +210,23 @@ namespace wallysworld
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
+	      bool dir = true;
+	      if (rec->core.flag & BAM_FREVERSE) {
+		dir = false;
+		int32_t seqTmp = seqStart;
+		seqStart = sp - seqEnd;
+		seqEnd = sp - seqTmp;
+	      }
+	      if (gpStart < gpEnd) {
+		if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
+		mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, seqStart, seqEnd, dir, rec->core.qual));
+	      }
 	      gp += bam_cigar_oplen(cigar[i]);
+	      // Reset match
+	      gpStart = -1;
+	      gpEnd = -1;
+	      seqStart = -1;
+	      seqEnd = -1;
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else {
