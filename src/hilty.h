@@ -113,8 +113,7 @@ namespace wallysworld
 	  int32_t x = 0;
 	  int32_t y = 0;
 	  posToHilbert(c.width, pos, x, y);
-	  cv::Rect rect(x, y, 1, 1);
-	  cv::rectangle(img, rect, cv::Scalar(newB, newG, newR), -1);
+	  cv::circle(img, cv::Point(x, y), 5, cv::Scalar(newB, newG, newR), -1);
 	}
       }
     }
