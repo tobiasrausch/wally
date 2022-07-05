@@ -139,7 +139,7 @@ namespace wallysworld
       }
 
       // Header
-      drawGenome(c, rg[rgIdx], bg, 1);
+      drawGenome(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg, 1);
 
       // Reference
       drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);

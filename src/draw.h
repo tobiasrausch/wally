@@ -46,7 +46,7 @@ namespace wallysworld
     
   template<typename TConfig>
   inline void
-  drawGenome(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track) {
+  drawGenome(TConfig const& c, Region const& rg, std::string const& refname, cv::Mat& img, int32_t const track) {
     std::string text(boost::lexical_cast<std::string>(rg.end));
     int32_t n = text.length() - 3;
     while (n > 0) {
@@ -62,9 +62,20 @@ namespace wallysworld
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
     cv::line(img, cv::Point(0, track * c.tlheight + c.tlheight), cv::Point(c.width, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
     double px = 0;
+    int32_t prevTick = -1;
+    int32_t lastTick = -1;
     for(int32_t i = rg.beg; i < rg.end; ++i) {
       if (i % modval == 0) {
 	cv::line(img, cv::Point(px - c.pxoffset/2, track * c.tlheight), cv::Point(px - c.pxoffset/2, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+	if (prevTick == -1) prevTick = px;
+	else {
+	  if (lastTick == -1) {
+	    lastTick = px;
+	    int32_t midpoint = (prevTick + lastTick) / 2;
+	    cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	    cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  }
+	}
       }
       if (i % modval == 0) {
 	// Font
