@@ -296,8 +296,6 @@ namespace wallysworld
       numPlots = reads.size();
       source_mp = mp;
       source_reads = reads;
-      mp.clear();
-      reads.clear();
     }
 
     // Open file handles
@@ -311,6 +309,8 @@ namespace wallysworld
       if (c.separatePlots) {
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << *itread << std::endl;
 	if (source_mp.find(*itread) != source_mp.end()) {
+	  mp.clear();
+	  reads.clear();
 	  mp.insert(std::make_pair(*itread, source_mp[*itread]));
 	  reads.insert(*itread);
 	  c.width = source_c_width;
