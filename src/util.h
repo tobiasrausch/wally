@@ -126,6 +126,23 @@ namespace wallysworld
 
 
   inline void
+  reverseComplement(std::string& sequence) {
+    std::string rev = boost::to_upper_copy(std::string(sequence.rbegin(), sequence.rend()));
+    std::size_t i = 0;
+    for(std::string::iterator revIt = rev.begin(); revIt != rev.end(); ++revIt, ++i) {
+      switch (*revIt) {
+      case 'A': sequence[i]='T'; break;
+      case 'C': sequence[i]='G'; break;
+      case 'G': sequence[i]='C'; break;
+      case 'T': sequence[i]='A'; break;
+      case 'N': sequence[i]='N'; break;
+      default: break;
+      }
+    }
+  }
+
+  
+  inline void
   insertComma(std::string& text) {
     int32_t n = text.length() - 3;
     while (n > 0) {
@@ -200,6 +217,21 @@ namespace wallysworld
     }
   }
 
+  inline int32_t     // -1: failure, 0: bam, 1: fasta
+  inputType(std::string const& path) {
+    htsFile *hts_fp = hts_open(path.c_str(), "r");
+    if (hts_fp == NULL) return -1;
+    else {
+      std::string ext = std::string(hts_format_file_extension(hts_get_format(hts_fp)));
+      if (ext == "bam") return 0;
+      else if (ext == "fa") return 1;
+      else {
+	return -1;
+      }
+    }
+    hts_close(hts_fp);
+  }
+  
   inline int32_t
   firstEmptyTrack(std::vector<int32_t> const& taken, int32_t const pos) {
     for(uint32_t i = 0; i < taken.size(); ++i) {
