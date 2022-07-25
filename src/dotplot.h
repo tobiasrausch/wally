@@ -43,6 +43,8 @@ namespace wallysworld
     uint32_t matchlen;
     uint32_t width;
     uint32_t height;
+    uint32_t usedwidth;
+    uint32_t usedheight;
     int32_t format;
     float lw;
     boost::filesystem::path readFile;
@@ -144,6 +146,68 @@ namespace wallysworld
     sfile.close();
   }
 
+
+  template<typename TConfig>
+  inline void
+  wordMatchShort(TConfig const& c, char* seq1, char* seq2, int32_t const xlen, int32_t const ylen, cv::Mat& img) {
+    // Forward words
+    typedef std::vector<uint32_t> TPosVec;
+    typedef std::map<uint64_t, TPosVec> TMatchMap;
+    TMatchMap fwd;	
+    uint64_t h = 0;
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+      if (k) {
+	h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
+	h *= 4;
+	h += nuc(seq2[k+c.matchlen-1]);
+      } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
+      if (fwd.find(h) == fwd.end()) fwd.insert(std::make_pair(h, TPosVec()));
+      fwd[h].push_back(k);
+    }
+    // Reverse words
+    revcomplement(seq2);
+    TMatchMap rev;
+    h = 0;
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+      if (k) {
+	h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
+	h *= 4;
+	h += nuc(seq2[k+c.matchlen-1]);
+      } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
+      if (rev.find(h) == rev.end()) rev.insert(std::make_pair(h, TPosVec()));
+      rev[h].push_back(ylen - k - c.matchlen);
+    }
+    
+    // Find word matches
+    h = 0;
+    for(int32_t k = 0; k < (int32_t) xlen - (int32_t) c.matchlen; ++k) {
+      if (k) {
+	h -= nuc(seq1[k - 1]) * std::pow(4, c.matchlen - 1);
+	h *= 4;
+	h += nuc(seq1[k+c.matchlen-1]);
+      } else h = hashword(std::string(seq1 + k, seq1 + k + c.matchlen));
+      // Forward matches
+      if (fwd.find(h) != fwd.end()) {
+	for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	  int32_t px = pixelX(c.usedwidth, xlen, k);
+	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
+	  int32_t py = pixelX(c.usedheight, ylen, fwd[h][idx]);
+	  int32_t pyend = pixelX(c.usedheight, ylen, fwd[h][idx] + c.matchlen);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(195, 142, 153), c.lw);
+	}
+      }
+      // Reverse matches
+      if (rev.find(h) != rev.end()) {
+	for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	  int32_t px = pixelX(c.usedwidth, xlen, k);
+	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
+	  int32_t py = pixelX(c.usedheight, ylen, rev[h][idx] + c.matchlen);
+	  int32_t pyend = pixelX(c.usedheight, ylen, rev[h][idx]);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(64, 163, 241), c.lw);
+	}
+      }
+    }
+  }
   
 
   template<typename TConfigStruct>
@@ -186,78 +250,20 @@ namespace wallysworld
 	// Next plot
 	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << seqname1 << " and " << seqname2 << std::endl;
 
-	// Generate image
-	int32_t usedwidth = c.width;
-	int32_t usedheight = c.height;
+	// Estimate image size
 	if ((c.width == 0) && (c.height == 0)) {
 	  int32_t maxlen = std::max(xlen, ylen);
-	  usedwidth = (int32_t) ((double) xlen / (double) maxlen * 1024.0);
-	  usedheight = (int32_t) ((double) ylen / (double) maxlen * 1024.0);
+	  c.usedwidth = (int32_t) ((double) xlen / (double) maxlen * 1024.0);
+	  c.usedheight = (int32_t) ((double) ylen / (double) maxlen * 1024.0);
 	} else if (c.width == 0) {
-	  usedwidth = (int32_t) ((double) xlen / (double) ylen * c.height);
+	  c.usedwidth = (int32_t) ((double) xlen / (double) ylen * c.height);
 	} else if (c.height == 0) {
-	  usedheight = (int32_t) ((double) ylen / (double) xlen * c.width);
+	  c.usedheight = (int32_t) ((double) ylen / (double) xlen * c.width);
 	}
-	cv::Mat img(usedheight, usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
+	cv::Mat img(c.usedheight, c.usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
 
-	// Forward words
-	typedef std::vector<uint32_t> TPosVec;
-	typedef std::map<uint64_t, TPosVec> TMatchMap;
-	TMatchMap fwd;
-	uint64_t h = 0;
-	for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
-	  if (k) {
-	    h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
-	    h *= 4;
-	    h += nuc(seq2[k+c.matchlen-1]);
-	  } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
-	  if (fwd.find(h) == fwd.end()) fwd.insert(std::make_pair(h, TPosVec()));
-	  fwd[h].push_back(k);
-	}
-	// Reverse words
-	revcomplement(seq2);
-	TMatchMap rev;
-	h = 0;
-	for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
-	  if (k) {
-	    h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
-	    h *= 4;
-	    h += nuc(seq2[k+c.matchlen-1]);
-	  } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
-	  if (rev.find(h) == rev.end()) rev.insert(std::make_pair(h, TPosVec()));
-	  rev[h].push_back(ylen - k - c.matchlen);
-	}
-
-	// Find word matches
-	h = 0;
-	for(int32_t k = 0; k < (int32_t) xlen - (int32_t) c.matchlen; ++k) {
-	  if (k) {
-	    h -= nuc(seq1[k - 1]) * std::pow(4, c.matchlen - 1);
-	    h *= 4;
-	    h += nuc(seq1[k+c.matchlen-1]);
-	  } else h = hashword(std::string(seq1 + k, seq1 + k + c.matchlen));
-	  // Forward matches
-	  if (fwd.find(h) != fwd.end()) {
-	    for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
-	      int32_t px = pixelX(usedwidth, xlen, k);
-	      int32_t pxend = pixelX(usedwidth, xlen, k + c.matchlen);
-	      int32_t py = pixelX(usedheight, ylen, fwd[h][idx]);
-	      int32_t pyend = pixelX(usedheight, ylen, fwd[h][idx] + c.matchlen);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(195, 142, 153), c.lw);
-	    }
-	  }
-	  // Reverse matches
-	  if (rev.find(h) != rev.end()) {
-	    for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
-	      int32_t px = pixelX(usedwidth, xlen, k);
-	      int32_t pxend = pixelX(usedwidth, xlen, k + c.matchlen);
-	      int32_t py = pixelX(usedheight, ylen, rev[h][idx] + c.matchlen);
-	      int32_t pyend = pixelX(usedheight, ylen, rev[h][idx]);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(64, 163, 241), c.lw);
-	    }
-	  }
-	}
-
+	// Compute word matches
+	wordMatchShort(c, seq1, seq2, xlen, ylen, img);
 	
 	// Store image (comment this for valgrind, png encoder seems leaky)
 	std::string outfile = seqname1;
@@ -363,6 +369,10 @@ namespace wallysworld
       }
     }
 
+    // In case of no automatic estimation
+    c.usedwidth = c.width;
+    c.usedheight = c.height;
+    
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] ";
