@@ -206,13 +206,13 @@ namespace wallysworld
     if (hts_fp == NULL) return -1;
     else {
       std::string ext = std::string(hts_format_file_extension(hts_get_format(hts_fp)));
+      hts_close(hts_fp);
       if (ext == "bam") return 0;
       else if (ext == "fa") return 1;
       else {
 	return -1;
       }
     }
-    hts_close(hts_fp);
   }
   
   inline int32_t
