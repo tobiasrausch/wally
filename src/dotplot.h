@@ -47,6 +47,8 @@ namespace wallysworld
     uint32_t usedheight;
     int32_t format;
     float lw;
+    double pxoffset; // 1bp in pixel
+    double pyoffset; // 1bp in pixel
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
     boost::filesystem::path file;
@@ -160,12 +162,13 @@ namespace wallysworld
   hashShort(TConfig const& c, char* seq, int32_t const len, THashMap& hmap, bool forward) {
     typedef typename THashMap::mapped_type TPosVec;
     uint64_t h = 0;
-    for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen; ++k) {
+    for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
       if (k) {
 	h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
 	h *= 4;
 	h += nuc(seq[k+c.matchlen-1]);
       } else h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
+      //std::cerr << forward << ',' << h << ',' << k << ',' << std::string(seq + k, seq + k + c.matchlen) << std::endl;
       if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
       if (forward) hmap[h].push_back(k);
       else hmap[h].push_back(len - k - c.matchlen);
@@ -176,7 +179,7 @@ namespace wallysworld
   inline void
   hashLong(TConfig const& c, char* seq, int32_t const len, THashMap& hmap, bool forward) {
     typedef typename THashMap::mapped_type TPosVec;
-    for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen; ++k) {
+    for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
       uint64_t h = hashwordLong(std::string(seq + k, seq + k + c.matchlen));
       if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
       if (forward) hmap[h].push_back(k);
@@ -189,7 +192,7 @@ namespace wallysworld
   wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
     // Find word matches
     uint64_t h = 0;
-    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
       if (k) {
 	h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
 	h *= 4;
@@ -223,7 +226,7 @@ namespace wallysworld
   inline void
   wordMatchLong(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
     // Find word matches
-    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
       uint64_t h = hashwordLong(std::string(seq + k, seq + k + c.matchlen));
       // Forward matches
       if (fwd.find(h) != fwd.end()) {
@@ -247,6 +250,61 @@ namespace wallysworld
       }
     }
   }
+
+
+  template<typename TConfig>
+  inline void
+  drawXScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
+    uint32_t spacer = 5;
+    
+    std::string text(boost::lexical_cast<std::string>(len));
+    int32_t n = text.length() - 3;
+    while (n > 0) {
+      text.insert(n, ",");
+      n -= 3;
+    }
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+
+    // Find suitable tick size
+    uint32_t modval = findTicks(c.pxoffset, textSize.width);
+
+    // Scale line
+    cv::line(img, cv::Point(0, c.usedheight + spacer), cv::Point(c.usedwidth, c.usedheight + spacer), cv::Scalar(255, 0, 0), 2);
+
+    // Ticks
+    double px = 0;
+    for(uint32_t i = 0; i < len; ++i) {
+      if (i % modval == 0) {
+	cv::line(img, cv::Point(px - c.pxoffset/2, c.usedheight + spacer), cv::Point(px - c.pxoffset/2, c.usedheight + 2*spacer), cv::Scalar(255, 0, 0), 2);
+      }
+      if (i % modval == 0) {
+	// Font
+	text = boost::lexical_cast<std::string>(i);
+	n = text.length() - 3;
+	while (n > 0) {
+	  text.insert(n, ",");
+	  n -= 3;
+	}
+	baseline = 0;
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.usedwidth)) {
+	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, c.usedheight + 3 * spacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	}
+      }
+      px += c.pxoffset;
+    }
+
+    // Contig name
+    if (true) {
+      int32_t midpoint = c.usedwidth / 2;
+      cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+      cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, c.usedheight + 4 * spacer + 2 * textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    }
+  }
+
   
   template<typename TConfigStruct>
   inline int dotplotRun(TConfigStruct& c) {
@@ -274,7 +332,7 @@ namespace wallysworld
 
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(filename.c_str());
-    for(int32_t idx1 = 0; idx1 < faidx_nseq(fai); ++idx1) {
+    for(int32_t idx1 = 0; idx1 < faidx_nseq(fai) - 1; ++idx1) {
       std::string seqname1(faidx_iseq(fai, idx1));
       int32_t xlen = faidx_seq_len(fai, seqname1.c_str());
       int32_t sl = 0;
@@ -311,12 +369,21 @@ namespace wallysworld
 	} else if (c.height == 0) {
 	  c.usedheight = (int32_t) ((double) ylen / (double) xlen * c.width);
 	}
-	cv::Mat img(c.usedheight, c.usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
+
+	// Create image
+	uint32_t scalewidth = 50;
+	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
+	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
+	cv::Mat img(c.usedheight + scalewidth, c.usedwidth + scalewidth, CV_8UC3, cv::Scalar(255, 255, 255));
 
 	// Compute word matches
 	if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, img);
 	else wordMatchLong(c, seq2, xlen, ylen, fwd, rev, img);
-	
+
+	// Scales
+	drawXScaleDotplot(c, seqname1, xlen, img);
+	//drawYScaleDotplot(c, seqname2, ylen, img);
+
 	// Store image (comment this for valgrind, png encoder seems leaky)
 	std::string outfile = seqname1;
 	outfile += "_";
