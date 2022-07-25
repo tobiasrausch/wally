@@ -78,7 +78,7 @@ With `-p` you can switch on the paired-end view.
 
 The paired-end coloring highlights candidate structural variants supported by read1 (R1) and read2 (R2). Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring. For inter-chromosomal translocations I assumed for this illustration that R1 maps to chromosome A and R2 maps to chromosome B.
 
-- ![#3fafaf](https://via.placeholder.com/15/3fafaf.png) `  inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
+- ![#3fafaf](https://via.placeholder.com/15/3fafaf/3fafaf.png) `  inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
 - ![#4e64d5](https://via.placeholder.com/15/4e64d5/000000?text=+) `  inversion-type paired-end, <--R1--   <--R2--, INV:5to5`
 - ![#d53f3f](https://via.placeholder.com/15/d53f3f/000000?text=+) `   deletion-type paired-end, --R1-->   <--R2--, DEL:3to5`
 - ![#3faf3f](https://via.placeholder.com/15/3faf3f/000000?text=+) `duplication-type paired-end, <--R1--   --R2-->, DUP:5to3`
