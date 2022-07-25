@@ -91,13 +91,21 @@ namespace wallysworld
   }
 
   inline uint64_t
-  hashword(std::string const& word) {
+  hashwordShort(std::string const& word) {
     uint32_t j = 0;
     uint64_t h = 0;
     for(int32_t i = word.size() - 1; i>=0; --i, ++j) h += nuc(word[i]) * std::pow(4, j);
     return h;
   }
-  
+
+  inline uint64_t
+  hashwordLong(std::string const& word) {
+    boost::hash<std::string> string_hash;
+    uint64_t seed = hash_string(word.c_str());
+    boost::hash_combine(seed, string_hash(word));
+    return seed;
+  }
+
   template<typename TConfig>
   inline void
   sequences(TConfig const& c, std::string const& filename, std::set<std::string> const& reads) {
@@ -160,7 +168,7 @@ namespace wallysworld
 	h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
 	h *= 4;
 	h += nuc(seq2[k+c.matchlen-1]);
-      } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
+      } else h = hashwordShort(std::string(seq2 + k, seq2 + k + c.matchlen));
       if (fwd.find(h) == fwd.end()) fwd.insert(std::make_pair(h, TPosVec()));
       fwd[h].push_back(k);
     }
@@ -173,7 +181,7 @@ namespace wallysworld
 	h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
 	h *= 4;
 	h += nuc(seq2[k+c.matchlen-1]);
-      } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
+      } else h = hashwordShort(std::string(seq2 + k, seq2 + k + c.matchlen));
       if (rev.find(h) == rev.end()) rev.insert(std::make_pair(h, TPosVec()));
       rev[h].push_back(ylen - k - c.matchlen);
     }
@@ -185,7 +193,7 @@ namespace wallysworld
 	h -= nuc(seq1[k - 1]) * std::pow(4, c.matchlen - 1);
 	h *= 4;
 	h += nuc(seq1[k+c.matchlen-1]);
-      } else h = hashword(std::string(seq1 + k, seq1 + k + c.matchlen));
+      } else h = hashwordShort(std::string(seq1 + k, seq1 + k + c.matchlen));
       // Forward matches
       if (fwd.find(h) != fwd.end()) {
 	for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
@@ -193,7 +201,7 @@ namespace wallysworld
 	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
 	  int32_t py = pixelX(c.usedheight, ylen, fwd[h][idx]);
 	  int32_t pyend = pixelX(c.usedheight, ylen, fwd[h][idx] + c.matchlen);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(195, 142, 153), c.lw);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
 	}
       }
       // Reverse matches
@@ -203,13 +211,60 @@ namespace wallysworld
 	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
 	  int32_t py = pixelX(c.usedheight, ylen, rev[h][idx] + c.matchlen);
 	  int32_t pyend = pixelX(c.usedheight, ylen, rev[h][idx]);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(64, 163, 241), c.lw);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
 	}
       }
     }
   }
   
 
+  template<typename TConfig>
+  inline void
+  wordMatchLong(TConfig const& c, char* seq1, char* seq2, int32_t const xlen, int32_t const ylen, cv::Mat& img) {
+    // Forward words
+    typedef std::vector<uint32_t> TPosVec;
+    typedef std::map<uint64_t, TPosVec> TMatchMap;
+    TMatchMap fwd;
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+      uint64_t h = hashwordLong(std::string(seq2 + k, seq2 + k + c.matchlen));
+      if (fwd.find(h) == fwd.end()) fwd.insert(std::make_pair(h, TPosVec()));
+      fwd[h].push_back(k);
+    }
+    // Reverse words
+    revcomplement(seq2);
+    TMatchMap rev;
+    for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
+      uint64_t h = hashwordLong(std::string(seq2 + k, seq2 + k + c.matchlen));
+      if (rev.find(h) == rev.end()) rev.insert(std::make_pair(h, TPosVec()));
+      rev[h].push_back(ylen - k - c.matchlen);
+    }
+    
+    // Find word matches
+    for(int32_t k = 0; k < (int32_t) xlen - (int32_t) c.matchlen; ++k) {
+      uint64_t h = hashwordLong(std::string(seq1 + k, seq1 + k + c.matchlen));
+      // Forward matches
+      if (fwd.find(h) != fwd.end()) {
+	for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	  int32_t px = pixelX(c.usedwidth, xlen, k);
+	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
+	  int32_t py = pixelX(c.usedheight, ylen, fwd[h][idx]);
+	  int32_t pyend = pixelX(c.usedheight, ylen, fwd[h][idx] + c.matchlen);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+	}
+      }
+      // Reverse matches
+      if (rev.find(h) != rev.end()) {
+	for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	  int32_t px = pixelX(c.usedwidth, xlen, k);
+	  int32_t pxend = pixelX(c.usedwidth, xlen, k + c.matchlen);
+	  int32_t py = pixelX(c.usedheight, ylen, rev[h][idx] + c.matchlen);
+	  int32_t pyend = pixelX(c.usedheight, ylen, rev[h][idx]);
+	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	}
+      }
+    }
+  }
+  
   template<typename TConfigStruct>
   inline int dotplotRun(TConfigStruct& c) {
 #ifdef PROFILE
@@ -263,7 +318,8 @@ namespace wallysworld
 	cv::Mat img(c.usedheight, c.usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
 
 	// Compute word matches
-	wordMatchShort(c, seq1, seq2, xlen, ylen, img);
+	if (c.matchlen < 32) wordMatchShort(c, seq1, seq2, xlen, ylen, img);
+	else wordMatchLong(c, seq1, seq2, xlen, ylen, img);
 	
 	// Store image (comment this for valgrind, png encoder seems leaky)
 	std::string outfile = seqname1;
@@ -314,7 +370,7 @@ namespace wallysworld
     
     boost::program_options::options_description disc("Display options");
     disc.add_options()
-      ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(10), "default match length")
+      ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("linewidth,l", boost::program_options::value<float>(&c.lw)->default_value(1.5), "match line width")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
