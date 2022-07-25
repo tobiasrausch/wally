@@ -113,6 +113,16 @@ You can also compare assemblies or align contigs to a reference genome using a w
 
 `wally matches -r <contig_name> -g <genome> <input.bam>`
 
+## Subcommand `dotplot`: Pairwise sequence dotplots (work-in-progress)
+
+All pairwise dotplots of a FASTA file can be generated using
+
+`wally dotplot sequences.fa`
+
+You can also extract reads directly from the BAM file.
+
+`wally dotplot -R reads -g hg38.fa input.bam`
+
 ## Citation
 
 Wally is currently unpublished but has been applied in this study:
