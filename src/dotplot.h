@@ -50,6 +50,39 @@ namespace wallysworld
     boost::filesystem::path file;
   };
 
+  inline char
+  complement(char n) {
+    switch(n) {
+    case 'A':
+      return 'T';
+    case 'T':
+      return 'A';
+    case 'G':
+      return 'C';
+    case 'C':
+      return 'G';
+    case 'N':
+      return 'N';
+    case 'a':
+      return 'T';
+    case 't':
+      return 'A';
+    case 'g':
+      return 'C';
+    case 'c':
+      return 'G';
+    case 'n':
+      return 'N';
+    }   
+    return 'N';
+  }   
+
+  inline void
+  revcomplement(char* nucs) {
+    for(uint32_t i = 0; i < strlen(nucs); ++i) nucs[i] = complement(nucs[i]);
+    std::reverse(nucs, nucs + strlen(nucs));
+  }
+
   inline uint32_t
   nuc(char const base) {
     return (int(base) & 6) >> 1;
@@ -137,28 +170,23 @@ namespace wallysworld
       sequences(c, filename, reads);
     } else if (c.format == 1) filename = c.file.string();
 
-    // Load sequneces
+    // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(filename.c_str());
-    for(int32_t refIndex = 0; refIndex < faidx_nseq(fai); ++refIndex) {
-      std::string seqname(faidx_iseq(fai, refIndex));
-      uint32_t seqlen = faidx_seq_len(fai, seqname.c_str());
+    for(int32_t idx1 = 0; idx1 < faidx_nseq(fai); ++idx1) {
+      std::string seqname1(faidx_iseq(fai, idx1));
+      int32_t xlen = faidx_seq_len(fai, seqname1.c_str());
       int32_t sl = 0;
-      char* seq = faidx_fetch_seq(fai, seqname.c_str(), 0, seqlen, &sl);
-      seqmap.insert(std::make_pair(seqname, std::string(seq)));
-      free(seq);
-    }
-    fai_destroy(fai);
-      
-    // Find word matches
-    for(typename TSequences::const_iterator it = seqmap.begin(); it != seqmap.end(); ++it) {
-      int32_t xlen = it->second.size();
-      typename TSequences::const_iterator itNext = it;
-      ++itNext;
-      for(;itNext != seqmap.end(); ++itNext) {
-	int32_t ylen = itNext->second.size();
-	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << it->first << " and " << itNext->first << std::endl;
+      char* seq1 = faidx_fetch_seq(fai, seqname1.c_str(), 0, xlen, &sl);
+      for(int32_t idx2 = idx1 + 1; idx2 < faidx_nseq(fai); ++idx2) {
+	std::string seqname2(faidx_iseq(fai, idx2));
+	int32_t ylen = faidx_seq_len(fai, seqname2.c_str());
+	sl = 0;
+	char* seq2 = faidx_fetch_seq(fai, seqname2.c_str(), 0, ylen, &sl);
 
-	// Generate image, y-axis: itNext, x-axis: it
+	// Next plot
+	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << seqname1 << " and " << seqname2 << std::endl;
+
+	// Generate image
 	int32_t usedwidth = c.width;
 	int32_t usedheight = c.height;
 	if ((c.width == 0) && (c.height == 0)) {
@@ -179,24 +207,23 @@ namespace wallysworld
 	uint64_t h = 0;
 	for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
 	  if (k) {
-	    h -= nuc(itNext->second[k - 1]) * std::pow(4, c.matchlen - 1);
+	    h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
 	    h *= 4;
-	    h += nuc(itNext->second[k+c.matchlen-1]);
-	  } else h = hashword(itNext->second.substr(k, c.matchlen));
+	    h += nuc(seq2[k+c.matchlen-1]);
+	  } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
 	  if (fwd.find(h) == fwd.end()) fwd.insert(std::make_pair(h, TPosVec()));
 	  fwd[h].push_back(k);
 	}
 	// Reverse words
-	std::string rc = itNext->second;
-	reverseComplement(rc);
+	revcomplement(seq2);
 	TMatchMap rev;
 	h = 0;
 	for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen; ++k) {
 	  if (k) {
-	    h -= nuc(rc[k - 1]) * std::pow(4, c.matchlen - 1);
+	    h -= nuc(seq2[k - 1]) * std::pow(4, c.matchlen - 1);
 	    h *= 4;
-	    h += nuc(rc[k+c.matchlen-1]);
-	  } else h = hashword(rc.substr(k, c.matchlen));
+	    h += nuc(seq2[k+c.matchlen-1]);
+	  } else h = hashword(std::string(seq2 + k, seq2 + k + c.matchlen));
 	  if (rev.find(h) == rev.end()) rev.insert(std::make_pair(h, TPosVec()));
 	  rev[h].push_back(ylen - k - c.matchlen);
 	}
@@ -205,10 +232,10 @@ namespace wallysworld
 	h = 0;
 	for(int32_t k = 0; k < (int32_t) xlen - (int32_t) c.matchlen; ++k) {
 	  if (k) {
-	    h -= nuc(it->second[k - 1]) * std::pow(4, c.matchlen - 1);
+	    h -= nuc(seq1[k - 1]) * std::pow(4, c.matchlen - 1);
 	    h *= 4;
-	    h += nuc(it->second[k+c.matchlen-1]);
-	  } else h = hashword(it->second.substr(k, c.matchlen));
+	    h += nuc(seq1[k+c.matchlen-1]);
+	  } else h = hashword(std::string(seq1 + k, seq1 + k + c.matchlen));
 	  // Forward matches
 	  if (fwd.find(h) != fwd.end()) {
 	    for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
@@ -233,24 +260,32 @@ namespace wallysworld
 
 	
 	// Store image (comment this for valgrind, png encoder seems leaky)
-	std::string outfile = it->first;
+	std::string outfile = seqname1;
 	outfile += "_";
-	outfile += itNext->first;
+	outfile += seqname2;
 	outfile	+= ".png";
 	cv::imwrite(outfile.c_str(), img);
 	if (c.showWindow) {
 	  cv::imshow(outfile.c_str(), img);
 	  cv::waitKey(0);
 	}
-      }
-    }
 
+	// Clean-up
+	free(seq2);
+      }
+      free(seq1);
+    }
+    fai_destroy(fai);
+    
 #ifdef PROFILE
     ProfilerStop();
 #endif
 
     // Remove temporary file
-    if (c.format == 0) boost::filesystem::remove(filename);
+    if (c.format == 0) {
+      boost::filesystem::remove(filename);
+      boost::filesystem::remove(filename + ".fai");
+    }
     
     // End
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -260,6 +295,7 @@ namespace wallysworld
 
 
   int dotplot(int argc, char **argv) {
+
     ConfigDotplot c;
 
     // Define generic options

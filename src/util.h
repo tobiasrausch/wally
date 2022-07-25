@@ -126,23 +126,6 @@ namespace wallysworld
 
 
   inline void
-  reverseComplement(std::string& sequence) {
-    std::string rev = boost::to_upper_copy(std::string(sequence.rbegin(), sequence.rend()));
-    std::size_t i = 0;
-    for(std::string::iterator revIt = rev.begin(); revIt != rev.end(); ++revIt, ++i) {
-      switch (*revIt) {
-      case 'A': sequence[i]='T'; break;
-      case 'C': sequence[i]='G'; break;
-      case 'G': sequence[i]='C'; break;
-      case 'T': sequence[i]='A'; break;
-      case 'N': sequence[i]='N'; break;
-      default: break;
-      }
-    }
-  }
-
-  
-  inline void
   insertComma(std::string& text) {
     int32_t n = text.length() - 3;
     while (n > 0) {
