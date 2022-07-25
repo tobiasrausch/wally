@@ -5,6 +5,9 @@
 #include <iostream>
 #include <fstream>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/timer/timer.hpp>
@@ -62,7 +65,9 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  sequences(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::string>& seqmap) {
+  sequences(TConfig const& c, std::string const& filename, std::set<std::string> const& reads) {
+
+    std::ofstream sfile(filename.c_str());
     
     // Open file handles
     samFile* samfile = sam_open(c.file.string().c_str(), "r");
@@ -88,8 +93,9 @@ namespace wallysworld
 	  uint8_t* seqptr = bam_get_seq(rec);
 	  for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 
-	  // Store
-	  seqmap.insert(std::make_pair(qname, sequence));
+	  // Write to tmp file
+	  sfile << ">" << qname << std::endl;
+	  sfile << sequence << std::endl;
 	}
       }
       bam_destroy1(rec);
@@ -100,6 +106,9 @@ namespace wallysworld
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
+
+    // Close file
+    sfile.close();
   }
 
   
@@ -113,6 +122,9 @@ namespace wallysworld
     typedef std::map<std::string, std::string> TSequences;
     TSequences seqmap;
 
+    // Sequences
+    boost::uuids::uuid uuid = boost::uuids::random_generator()();
+    std::string filename = "sequences." + boost::lexical_cast<std::string>(uuid) + ".fa";
     if (c.format == 0) {
       // Parse reads
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
@@ -122,19 +134,20 @@ namespace wallysworld
     
       // Get read mappings
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract reads." << std::endl;
-      sequences(c, reads, seqmap);
-    } else if (c.format == 1) {
-      faidx_t* fai = fai_load(c.file.string().c_str());
-      for(int32_t refIndex = 0; refIndex < faidx_nseq(fai); ++refIndex) {
-	std::string seqname(faidx_iseq(fai, refIndex));
-	uint32_t seqlen = faidx_seq_len(fai, seqname.c_str());
-	int32_t sl = 0;
-	char* seq = faidx_fetch_seq(fai, seqname.c_str(), 0, seqlen, &sl);
-	seqmap.insert(std::make_pair(seqname, std::string(seq)));
-	free(seq);
-      }
-      fai_destroy(fai);
+      sequences(c, filename, reads);
+    } else if (c.format == 1) filename = c.file.string();
+
+    // Load sequneces
+    faidx_t* fai = fai_load(filename.c_str());
+    for(int32_t refIndex = 0; refIndex < faidx_nseq(fai); ++refIndex) {
+      std::string seqname(faidx_iseq(fai, refIndex));
+      uint32_t seqlen = faidx_seq_len(fai, seqname.c_str());
+      int32_t sl = 0;
+      char* seq = faidx_fetch_seq(fai, seqname.c_str(), 0, seqlen, &sl);
+      seqmap.insert(std::make_pair(seqname, std::string(seq)));
+      free(seq);
     }
+    fai_destroy(fai);
       
     // Find word matches
     for(typename TSequences::const_iterator it = seqmap.begin(); it != seqmap.end(); ++it) {
@@ -235,7 +248,10 @@ namespace wallysworld
 #ifdef PROFILE
     ProfilerStop();
 #endif
-  
+
+    // Remove temporary file
+    if (c.format == 0) boost::filesystem::remove(filename);
+    
     // End
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;;
