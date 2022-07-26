@@ -93,8 +93,6 @@ namespace wallysworld
     Region(int32_t const t, int32_t const b, int32_t const e) : tid(t), beg(b), end(e), size(e-b), id("") {}
   };
 
-
-
   struct Mapping {
     int32_t tid;
     int32_t gstart;

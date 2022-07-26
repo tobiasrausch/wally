@@ -31,6 +31,7 @@
 
 #include "version.h"
 #include "util.h"
+#include "mapping.h"
 #include "matchdraw.h"
 #include "bed.h"
 
@@ -40,6 +41,7 @@ namespace wallysworld
   // Config arguments
   struct ConfigDotplot {
     bool showWindow;
+    bool storeSequences;
     uint32_t matchlen;
     uint32_t width;
     uint32_t height;
@@ -49,6 +51,7 @@ namespace wallysworld
     float lw;
     double pxoffset; // 1bp in pixel
     double pyoffset; // 1bp in pixel
+    boost::filesystem::path seqfile;
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
     boost::filesystem::path file;
@@ -342,9 +345,8 @@ namespace wallysworld
     typedef std::map<std::string, std::string> TSequences;
     TSequences seqmap;
 
-    // Sequences
-    boost::uuids::uuid uuid = boost::uuids::random_generator()();
-    std::string filename = "sequences." + boost::lexical_cast<std::string>(uuid) + ".fa";
+    // Parse BAM
+    std::string filename = c.seqfile.string();
     if (c.format == 0) {
       // Parse reads
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
@@ -353,8 +355,11 @@ namespace wallysworld
       _parseReads(c, reads);
     
       // Get read mappings
-      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract reads." << std::endl;
-      sequences(c, filename, reads);
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
+      typedef std::vector<Mapping> TMappings;
+      typedef std::map<std::string, TMappings > TReadMappings;
+      TReadMappings mp;
+      mappings(c, reads, mp);
     } else if (c.format == 1) filename = c.file.string();
 
     // Load sequences from disk for large contigs
@@ -447,7 +452,6 @@ namespace wallysworld
 
 
   int dotplot(int argc, char **argv) {
-
     ConfigDotplot c;
 
     // Define generic options
@@ -455,6 +459,7 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
+      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file in BAM mode")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
       ;
     
@@ -504,6 +509,20 @@ namespace wallysworld
     if (c.format == -1) {
       std::cerr << "Unknown input file format!" << std::endl;
     } else if (c.format == 0) {
+      // BAM format
+      
+      // Genome check
+      if (vm.count("genome")) {
+	if (!(boost::filesystem::exists(c.genome) && boost::filesystem::is_regular_file(c.genome) && boost::filesystem::file_size(c.genome))) {
+	  std::cerr << "Genome file is missing: " << c.genome.string() << std::endl;
+	  return 1;
+	}
+      } else {
+	std::cerr << "BAM input requires -g and -R command-line options." << std::endl;
+	return 1;
+      }
+
+      // Read file check
       if (vm.count("rfile")) {
 	if (!(boost::filesystem::exists(c.readFile) && boost::filesystem::is_regular_file(c.readFile) && boost::filesystem::file_size(c.readFile))) {
 	  std::cerr << "File with list of reads is missing: " << c.readFile.string() << std::endl;
@@ -513,6 +532,12 @@ namespace wallysworld
 	std::cerr << "BAM input requires -g and -R command-line options." << std::endl;
 	return 1;
       }
+
+      // Store sequences
+      c.storeSequences = true;
+    } else {
+      // Store sequences
+      c.storeSequences = false;
     }
 
     // In case of no automatic estimation
