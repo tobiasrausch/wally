@@ -123,7 +123,16 @@ namespace wallysworld
     LibraryInfo() : rs(0), median(0), mad(0) {}
   };
 
-
+  inline uint32_t
+  textSize() {
+    std::string text = "Test";
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    return (uint32_t) textSize.height;
+  }
+  
   inline void
   insertComma(std::string& text) {
     int32_t n = text.length() - 3;
@@ -326,6 +335,22 @@ namespace wallysworld
     return true;
   }
 
+  inline void
+  reverseComplement(std::string& sequence) {
+    std::string rev = boost::to_upper_copy(std::string(sequence.rbegin(), sequence.rend()));
+    std::size_t i = 0;
+    for(std::string::iterator revIt = rev.begin(); revIt != rev.end(); ++revIt, ++i) {
+      switch (*revIt) {
+      case 'A': sequence[i]='T'; break;
+      case 'C': sequence[i]='G'; break;
+      case 'G': sequence[i]='C'; break;
+      case 'T': sequence[i]='A'; break;
+      case 'N': sequence[i]='N'; break;
+      default: break;
+      }
+    }
+  }
+  
   inline unsigned hash_string(const char *s) {
     unsigned h = 37;
     while (*s) {

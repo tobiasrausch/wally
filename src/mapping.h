@@ -79,16 +79,16 @@ namespace wallysworld
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
 	std::string qname = bam_get_qname(rec);
 	if (reads.find(qname) != reads.end()) {
-      
 	  // Get read sequence
-	  std::string sequence;
-	  sequence.resize(rec->core.l_qseq);
-	  uint8_t* seqptr = bam_get_seq(rec);
-	  for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
-
-	  // Store primary sequence?
 	  if (c.storeSequences) {
 	    if (!(rec->core.flag & (BAM_FSUPPLEMENTARY))) {
+	      std::string sequence;
+	      sequence.resize(rec->core.l_qseq);
+	      uint8_t* seqptr = bam_get_seq(rec);
+	      for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
+
+	      // Reverse?
+	      if (rec->core.flag & BAM_FREVERSE) reverseComplement(sequence);
 	      sfile << ">" << qname << std::endl;
 	      sfile << sequence << std::endl;
 	    }

@@ -47,6 +47,7 @@ namespace wallysworld
     uint32_t height;
     uint32_t usedwidth;
     uint32_t usedheight;
+    uint32_t tlheight;  // pixel height of a track line
     int32_t format;
     float lw;
     double pxoffset; // 1bp in pixel
@@ -113,55 +114,6 @@ namespace wallysworld
     //std::cerr << seed << '\t' << word << std::endl;
     return seed;
   }
-
-  template<typename TConfig>
-  inline void
-  sequences(TConfig const& c, std::string const& filename, std::set<std::string> const& reads) {
-
-    std::ofstream sfile(filename.c_str());
-    
-    // Open file handles
-    samFile* samfile = sam_open(c.file.string().c_str(), "r");
-    hts_set_fai_filename(samfile, c.genome.string().c_str());
-    hts_idx_t* idx = sam_index_load(samfile, c.file.string().c_str());
-    bam_hdr_t* hdr = sam_hdr_read(samfile);
-    
-    // Parse BAM
-    for(int32_t refIndex = 0; refIndex < hdr->n_targets; ++refIndex) {
-      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Processing... " << hdr->target_name[refIndex] << std::endl;
-
-      // Iterate alignments 
-      hts_itr_t* iter = sam_itr_queryi(idx, refIndex, 0, hdr->target_len[refIndex]);
-      bam1_t* rec = bam_init1();
-      while (sam_itr_next(samfile, iter, rec) >= 0) {
-	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
-	std::string qname = bam_get_qname(rec);
-	if (reads.find(qname) != reads.end()) {
-      
-	  // Get read sequence
-	  std::string sequence;
-	  sequence.resize(rec->core.l_qseq);
-	  uint8_t* seqptr = bam_get_seq(rec);
-	  for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
-
-	  // Write to tmp file
-	  sfile << ">" << qname << std::endl;
-	  sfile << sequence << std::endl;
-	}
-      }
-      bam_destroy1(rec);
-      hts_itr_destroy(iter);
-    }
-    
-    // Clean-up
-    bam_hdr_destroy(hdr);
-    hts_idx_destroy(idx);
-    sam_close(samfile);
-
-    // Close file
-    sfile.close();
-  }
-
 
   template<typename TConfig, typename THashMap>
   inline void
@@ -281,12 +233,32 @@ namespace wallysworld
     }
   }
 
+  template<typename TConfig, typename TReadMapping>
+  inline void
+  drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
+    if (mp.find(refname) != mp.end()) {
+      uint32_t runspacer = 5 * c.tlheight;
+      for(uint32_t k = 0; k < mp[refname].size(); ++k, runspacer += c.tlheight) {
+	int32_t px = pixelX(c.usedwidth, len, mp[refname][k].rstart);
+	int32_t pxend = pixelX(c.usedwidth, len, mp[refname][k].rend);
+	cv::Rect rect(px, c.usedheight + runspacer, pxend - px, c.tlheight);
+	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
 
+	std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
+	text += ":" + boost::lexical_cast<std::string>(mp[refname][k].gstart) + "-" + boost::lexical_cast<std::string>(mp[refname][k].gend);
+	double font_scale = 0.4;
+	double font_thickness = 1.5;
+	int32_t baseline = 0;
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	cv::putText(img, text, cv::Point(pxend, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      }
+    }
+  }
+
+  
   template<typename TConfig>
   inline void
   drawXScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
-    uint32_t spacer = 5;
-    
     std::string text(boost::lexical_cast<std::string>(len));
     int32_t n = text.length() - 3;
     while (n > 0) {
@@ -302,13 +274,13 @@ namespace wallysworld
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
 
     // Scale line
-    cv::line(img, cv::Point(0, c.usedheight + spacer), cv::Point(c.usedwidth, c.usedheight + spacer), cv::Scalar(255, 0, 0), 2);
+    cv::line(img, cv::Point(0, c.usedheight), cv::Point(c.usedwidth, c.usedheight), cv::Scalar(255, 0, 0), 2);
 
     // Ticks
     double px = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	cv::line(img, cv::Point(px - c.pxoffset/2, c.usedheight + spacer), cv::Point(px - c.pxoffset/2, c.usedheight + 2*spacer), cv::Scalar(255, 0, 0), 2);
+	cv::line(img, cv::Point(px - c.pxoffset/2, c.usedheight), cv::Point(px - c.pxoffset/2, c.usedheight + 0.75 * c.tlheight), cv::Scalar(255, 0, 0), 2);
       }
       if (i % modval == 0) {
 	// Font
@@ -321,7 +293,7 @@ namespace wallysworld
 	baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.usedwidth)) {
-	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, c.usedheight + 3 * spacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, c.usedheight + c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
 	}
       }
       px += c.pxoffset;
@@ -331,7 +303,7 @@ namespace wallysworld
     if (true) {
       int32_t midpoint = c.usedwidth / 2;
       cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-      cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, c.usedheight + 4 * spacer + 2 * textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
     }
   }
 
@@ -341,7 +313,10 @@ namespace wallysworld
 #ifdef PROFILE
     ProfilerStart("wally.prof");
 #endif
+    // Chromosome colors
+    cv::Scalar colors[12] = { cv::Scalar(180,120,31), cv::Scalar(44,160,51), cv::Scalar(28,26,227), cv::Scalar(153,255,255), cv::Scalar(227,206,166), cv::Scalar(138,223,178), cv::Scalar(153,154,251), cv::Scalar(111,191,253), cv::Scalar(0,127,255), cv::Scalar(214,178,202), cv::Scalar(154,61,106), cv::Scalar(40,89,177) };
 
+    
     // Read mappings
     typedef std::vector<Mapping> TMappings;
     typedef std::map<std::string, TMappings > TReadMappings;
@@ -359,8 +334,23 @@ namespace wallysworld
       // Get read mappings
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
       mappings(c, reads, mp);
+
+      // Sort mappings
+      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
+	std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
+      }
     } else if (c.format == 1) filename = c.file.string();
 
+
+    // Open file handles
+    samFile* samfile = NULL;
+    bam_hdr_t* hdr = NULL;
+    if (c.format == 0) {
+      samfile = sam_open(c.file.string().c_str(), "r");
+      hts_set_fai_filename(samfile, c.genome.string().c_str());
+      hdr = sam_hdr_read(samfile);
+    }
+    
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(filename.c_str());
     for(int32_t idx1 = 0; idx1 < faidx_nseq(fai) - 1; ++idx1) {
@@ -402,10 +392,14 @@ namespace wallysworld
 	}
 
 	// Create image
-	uint32_t scalewidth = 50;
+	uint32_t footer = 4 * c.tlheight;
+	if (c.format == 0) {
+	  if (mp.find(seqname1) != mp.end()) footer += (c.tlheight * (mp[seqname1].size() + 1));
+	}
+	
 	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
 	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
-	cv::Mat img(c.usedheight + scalewidth, c.usedwidth + scalewidth, CV_8UC3, cv::Scalar(255, 255, 255));
+	cv::Mat img(c.usedheight + footer, c.usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
 
 	// Compute word matches
 	if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, img);
@@ -414,6 +408,34 @@ namespace wallysworld
 	// Scales
 	drawXScaleDotplot(c, seqname1, xlen, img);
 	//drawYScaleDotplot(c, seqname2, ylen, img);
+	
+
+	// Mappings
+	if (c.format == 0) {
+	  // Assign colors to chromosomes
+	  typedef std::map<uint32_t, cv::Scalar> TColorMap;
+	  TColorMap cm;
+	  uint32_t cidx = 0;
+	  if (mp.find(seqname1) != mp.end()) {
+	    for(uint32_t k = 0; k < mp[seqname1].size(); ++k) {
+	      if (cm.find(mp[seqname1][k].tid) == cm.end()) {
+		cm[mp[seqname1][k].tid] = colors[cidx];
+		cidx = ((cidx + 1) % 12);
+	      }
+	    }
+	  }
+	  if (mp.find(seqname2) != mp.end()) {
+	    for(uint32_t k = 0; k < mp[seqname2].size(); ++k) {
+	      if (cm.find(mp[seqname2][k].tid) == cm.end()) {
+		cm[mp[seqname2][k].tid] = colors[cidx];
+		cidx = ((cidx + 1) % 12);
+	      }
+	    }
+	  }
+
+	  // Draw mappings
+	  drawXMappings(c, hdr, seqname1, xlen, cm, mp, img);
+	}
 
 	// Store image (comment this for valgrind, png encoder seems leaky)
 	std::string outfile = seqname1;
@@ -432,6 +454,10 @@ namespace wallysworld
       free(seq1);
     }
     fai_destroy(fai);
+    if (c.format == 0) {
+      bam_hdr_destroy(hdr);
+      sam_close(samfile);
+    }
     
 #ifdef PROFILE
     ProfilerStop();
@@ -446,6 +472,7 @@ namespace wallysworld
 
   int dotplot(int argc, char **argv) {
     ConfigDotplot c;
+    c.tlheight = textSize() + 2;
 
     // Define generic options
     boost::program_options::options_description generic("Generic options");
