@@ -39,6 +39,7 @@ namespace wallysworld
     bool showWindow;
     bool hasReadFile;
     bool separatePlots;
+    bool storeSequences;
     uint16_t splits;
     int32_t winsize;
     uint32_t minMatches;
@@ -50,6 +51,7 @@ namespace wallysworld
     double bpoffset; // 1pixel in bp
     std::string readStr;
     boost::filesystem::path outfile;
+    boost::filesystem::path seqfile;
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
     boost::filesystem::path file;
@@ -148,6 +150,9 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   mappings(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::vector<Mapping> >& mp) {
+    // Sequence file
+    std::ofstream sfile;
+    if (c.storeSequences) sfile.open(c.seqfile.string().c_str());
     
     // Open file handles
     samFile* samfile = sam_open(c.file.string().c_str(), "r");
@@ -172,7 +177,15 @@ namespace wallysworld
 	  sequence.resize(rec->core.l_qseq);
 	  uint8_t* seqptr = bam_get_seq(rec);
 	  for (int32_t i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
-	
+
+	  // Store primary sequence?
+	  if (c.storeSequences) {
+	    if (!(rec->core.flag & (BAM_FSUPPLEMENTARY))) {
+	      sfile << ">" << qname << std::endl;
+	      sfile << sequence << std::endl;
+	    }
+	  }
+	  
 	  // Parse CIGAR
 	  uint32_t* cigar = bam_get_cigar(rec);
 	  int32_t gp = rec->core.pos; // Genomic position
@@ -254,8 +267,10 @@ namespace wallysworld
     bam_hdr_destroy(hdr);
     hts_idx_destroy(idx);
     sam_close(samfile);
-  }
 
+    // Close sequence file
+    if (c.storeSequences) sfile.close();
+  }
   
 
   template<typename TConfigStruct>
@@ -490,7 +505,8 @@ namespace wallysworld
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("read,r", boost::program_options::value<std::string>(&c.readStr)->default_value("read_name"), "read to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
-      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output file")
+      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile), "sequence output file [optional]")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "plot output file")
       ("separate,s", "create one plot for each input read")
       ;
     
@@ -525,7 +541,7 @@ namespace wallysworld
     // Check command line arguments
     if ((vm.count("help")) || (!vm.count("input-file")) || (!vm.count("genome"))) { 
       std::cout << std::endl;
-      std::cout << "Usage: wally " << argv[0] << " [OPTIONS] -g <ref.fa> <sample1.sort.bam> <sample2.sort.bam> ..." << std::endl;
+      std::cout << "Usage: wally " << argv[0] << " [OPTIONS] -g <ref.fa> <input.bam>" << std::endl;
       std::cout << visible_options << "\n";
       return 0;
     }
@@ -537,6 +553,10 @@ namespace wallysworld
     // Separate plots?
     if (vm.count("separate")) c.separatePlots = true;
     else c.separatePlots = false;
+
+    // Store sequences
+    if (vm.count("seqfile")) c.storeSequences = true;
+    else c.storeSequences = false;
 
     // Read file
     if (vm.count("rfile")) {
