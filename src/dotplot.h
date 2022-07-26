@@ -438,12 +438,6 @@ namespace wallysworld
     ProfilerStop();
 #endif
 
-    // Remove temporary file
-    if (c.format == 0) {
-      boost::filesystem::remove(filename);
-      boost::filesystem::remove(filename + ".fai");
-    }
-    
     // End
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
     std::cout << '[' << boost::posix_time::to_simple_string(now) << "] Done." << std::endl;;
