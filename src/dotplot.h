@@ -342,8 +342,10 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
-    typedef std::map<std::string, std::string> TSequences;
-    TSequences seqmap;
+    // Read mappings
+    typedef std::vector<Mapping> TMappings;
+    typedef std::map<std::string, TMappings > TReadMappings;
+    TReadMappings mp;
 
     // Parse BAM
     std::string filename = c.seqfile.string();
@@ -356,9 +358,6 @@ namespace wallysworld
     
       // Get read mappings
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
-      typedef std::vector<Mapping> TMappings;
-      typedef std::map<std::string, TMappings > TReadMappings;
-      TReadMappings mp;
       mappings(c, reads, mp);
     } else if (c.format == 1) filename = c.file.string();
 
