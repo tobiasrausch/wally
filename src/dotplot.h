@@ -96,7 +96,10 @@ namespace wallysworld
   hashwordShort(std::string const& word) {
     uint32_t j = 0;
     uint64_t h = 0;
-    for(int32_t i = word.size() - 1; i>=0; --i, ++j) h += nuc(word[i]) * std::pow(4, j);
+    for(int32_t i = word.size() - 1; i>=0; --i, ++j) {
+      if ((word[i] == 'n') || (word[i] == 'N')) return std::numeric_limits<uint64_t>::max();
+      h += nuc(word[i]) * std::pow(4, j);
+    }
     return h;
   }
 
@@ -104,6 +107,7 @@ namespace wallysworld
   hashwordLong(std::string const& word) {
     uint64_t seed = hash_string(word.c_str());
     boost::hash_combine(seed, std::hash<std::string>()(word));
+    //std::cerr << seed << '\t' << word << std::endl;
     return seed;
   }
 
@@ -161,16 +165,25 @@ namespace wallysworld
   hashShort(TConfig const& c, char* seq, int32_t const len, THashMap& hmap, bool forward) {
     typedef typename THashMap::mapped_type TPosVec;
     uint64_t h = 0;
+    bool rewind = true;
     for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
-      if (k) {
-	h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
-	h *= 4;
-	h += nuc(seq[k+c.matchlen-1]);
-      } else h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
-      //std::cerr << forward << ',' << h << ',' << k << ',' << std::string(seq + k, seq + k + c.matchlen) << std::endl;
-      if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
-      if (forward) hmap[h].push_back(k);
-      else hmap[h].push_back(len - k - c.matchlen);
+      if (rewind) {
+	h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
+	if (h != std::numeric_limits<uint64_t>::max()) rewind = false;
+      } else {
+	if ((seq[k+c.matchlen-1] == 'n') || (seq[k+c.matchlen-1] == 'N')) rewind = true;
+	else {
+	  h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
+	  h *= 4;
+	  h += nuc(seq[k+c.matchlen-1]);
+	}
+      }
+      if (!rewind) {
+	//std::cerr << forward << ',' << h << ',' << k << ',' << std::string(seq + k, seq + k + c.matchlen) << std::endl;
+	if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
+	if (forward) hmap[h].push_back(k);
+	else hmap[h].push_back(len - k - c.matchlen);
+      }
     }
   }
 
@@ -179,10 +192,13 @@ namespace wallysworld
   hashLong(TConfig const& c, char* seq, int32_t const len, THashMap& hmap, bool forward) {
     typedef typename THashMap::mapped_type TPosVec;
     for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
-      uint64_t h = hashwordLong(std::string(seq + k, seq + k + c.matchlen));
-      if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
-      if (forward) hmap[h].push_back(k);
-      else hmap[h].push_back(len - k - c.matchlen);
+      std::string word = std::string(seq + k, seq + k + c.matchlen);
+      if ((word.find('N') == std::string::npos) && (word.find('n') == std::string::npos)) {
+	uint64_t h = hashwordLong(word);
+	if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
+	if (forward) hmap[h].push_back(k);
+	else hmap[h].push_back(len - k - c.matchlen);
+      }
     }
   }
 
@@ -191,30 +207,39 @@ namespace wallysworld
   wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
     // Find word matches
     uint64_t h = 0;
+    bool rewind = true;
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
-      if (k) {
-	h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
-	h *= 4;
-	h += nuc(seq[k+c.matchlen-1]);
-      } else h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
-      // Forward matches
-      if (fwd.find(h) != fwd.end()) {
-	for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
-	  int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
-	  int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
-	  int32_t py = pixelX(c.usedheight, ylen, k);
-	  int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+      if (rewind) {
+	h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
+	if (h != std::numeric_limits<uint64_t>::max()) rewind = false;
+      } else {
+	if ((seq[k+c.matchlen-1] == 'n') || (seq[k+c.matchlen-1] == 'N')) rewind = true;
+	else {
+	  h -= nuc(seq[k - 1]) * std::pow(4, c.matchlen - 1);
+	  h *= 4;
+	  h += nuc(seq[k+c.matchlen-1]);
 	}
       }
-      // Reverse matches
-      if (rev.find(h) != rev.end()) {
-	for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
-	  int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
-	  int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
-	  int32_t py = pixelX(c.usedheight, ylen, k);
-	  int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+      if (!rewind) {
+	// Forward matches
+	if (fwd.find(h) != fwd.end()) {
+	  for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+	  }
+	}
+	// Reverse matches
+	if (rev.find(h) != rev.end()) {
+	  for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	  }
 	}
       }
     }
@@ -226,25 +251,28 @@ namespace wallysworld
   wordMatchLong(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
     // Find word matches
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
-      uint64_t h = hashwordLong(std::string(seq + k, seq + k + c.matchlen));
-      // Forward matches
-      if (fwd.find(h) != fwd.end()) {
-	for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
-	  int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
-	  int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
-	  int32_t py = pixelX(c.usedheight, ylen, k);
-	  int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+      std::string word = std::string(seq + k, seq + k + c.matchlen);
+      if ((word.find('N') == std::string::npos) && (word.find('n') == std::string::npos)) {
+	uint64_t h = hashwordLong(word);
+	// Forward matches
+	if (fwd.find(h) != fwd.end()) {
+	  for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+	  }
 	}
-      }
-      // Reverse matches
-      if (rev.find(h) != rev.end()) {
-	for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
-	  int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
-	  int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
-	  int32_t py = pixelX(c.usedheight, ylen, k);
-	  int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	  cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	// Reverse matches
+	if (rev.find(h) != rev.end()) {
+	  for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	  }
 	}
       }
     }
