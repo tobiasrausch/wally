@@ -250,6 +250,8 @@ namespace wallysworld
 	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	insertComma(gend);
 	text += ":" + gstart + "-" + gend;
+	if (mp[refname][k].fwd) text += " -->";
+	else text += " <--";
 	double font_scale = 0.4;
 	double font_thickness = 1.5;
 	int32_t baseline = 0;
@@ -281,6 +283,8 @@ namespace wallysworld
 	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	insertComma(gend);
 	text += ":" + gstart + "-" + gend;
+	if (mp[refname][k].fwd) text += " -->";
+	else text += " <--";
 	double font_scale = 0.4;
 	double font_thickness = 1.5;
 	int32_t baseline = 0;
