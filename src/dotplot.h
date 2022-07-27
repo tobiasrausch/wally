@@ -256,7 +256,9 @@ namespace wallysworld
 	double font_thickness = 1.5;
 	int32_t baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	if (px > (int32_t) c.usedwidth / 2) {
+	if ((pxend - px) > textSize.width + 10) {
+	  cv::putText(img, text, cv::Point((px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	} else if (px > (int32_t) c.usedwidth / 2) {
 	  cv::putText(img, text, cv::Point(px - textSize.width - 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
 	} else {
 	  cv::putText(img, text, cv::Point(pxend + 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
@@ -289,7 +291,10 @@ namespace wallysworld
 	double font_thickness = 1.5;
 	int32_t baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	if (py > (int32_t) c.usedheight / 2) {
+
+	if ((pyend - py) > textSize.width + 10) {
+	  cv::putText(textimg, text, cv::Point((py + pyend) / 2 - textSize.width / 2, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	} else if (py > (int32_t) c.usedheight / 2) {
 	  cv::putText(textimg, text, cv::Point(py - textSize.width - 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
 	} else {
 	  cv::putText(textimg, text, cv::Point(pyend + 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
@@ -402,7 +407,7 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
     // Chromosome colors
-    cv::Scalar colors[12] = { cv::Scalar(180,120,31), cv::Scalar(44,160,51), cv::Scalar(28,26,227), cv::Scalar(153,255,255), cv::Scalar(227,206,166), cv::Scalar(138,223,178), cv::Scalar(153,154,251), cv::Scalar(111,191,253), cv::Scalar(0,127,255), cv::Scalar(214,178,202), cv::Scalar(154,61,106), cv::Scalar(40,89,177) };
+    cv::Scalar colors[12] = { cv::Scalar(44,160,51), cv::Scalar(180,120,31), cv::Scalar(28,26,227), cv::Scalar(153,255,255), cv::Scalar(227,206,166), cv::Scalar(138,223,178), cv::Scalar(153,154,251), cv::Scalar(111,191,253), cv::Scalar(0,127,255), cv::Scalar(214,178,202), cv::Scalar(154,61,106), cv::Scalar(40,89,177) };
 
     
     // Read mappings
@@ -413,6 +418,10 @@ namespace wallysworld
     // Parse BAM
     std::string filename = c.seqfile.string();
     if (c.format == 0) {
+      // Make sure the FASTA index is gone
+      boost::filesystem::remove(c.seqfile.string());
+      boost::filesystem::remove(c.seqfile.string() + ".fai");
+
       // Parse reads
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
       typedef std::set<std::string> TReadSet;
