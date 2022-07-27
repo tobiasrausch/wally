@@ -237,7 +237,7 @@ namespace wallysworld
   inline void
   drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
     if (mp.find(refname) != mp.end()) {
-      uint32_t runspacer = 5 * c.tlheight;
+      uint32_t runspacer = 4 * c.tlheight;
       for(uint32_t k = 0; k < mp[refname].size(); ++k, runspacer += c.tlheight) {
 	int32_t px = pixelX(c.usedwidth, len, mp[refname][k].rstart);
 	int32_t pxend = pixelX(c.usedwidth, len, mp[refname][k].rend);
@@ -245,26 +245,30 @@ namespace wallysworld
 	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
 
 	std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
-	text += ":" + boost::lexical_cast<std::string>(mp[refname][k].gstart) + "-" + boost::lexical_cast<std::string>(mp[refname][k].gend);
+	std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
+	insertComma(gstart);
+	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
+	insertComma(gend);
+	text += ":" + gstart + "-" + gend;
 	double font_scale = 0.4;
 	double font_thickness = 1.5;
 	int32_t baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	cv::putText(img, text, cv::Point(pxend, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	if (px > (int32_t) c.usedwidth / 2) {
+	  cv::putText(img, text, cv::Point(px - textSize.width - 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	} else {
+	  cv::putText(img, text, cv::Point(pxend + 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	}
       }
     }
   }
 
-  
+
   template<typename TConfig>
   inline void
   drawXScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
     std::string text(boost::lexical_cast<std::string>(len));
-    int32_t n = text.length() - 3;
-    while (n > 0) {
-      text.insert(n, ",");
-      n -= 3;
-    }
+    insertComma(text);
     double font_scale = 0.4;
     double font_thickness = 1.5;
     int32_t baseline = 0;
@@ -285,11 +289,7 @@ namespace wallysworld
       if (i % modval == 0) {
 	// Font
 	text = boost::lexical_cast<std::string>(i);
-	n = text.length() - 3;
-	while (n > 0) {
-	  text.insert(n, ",");
-	  n -= 3;
-	}
+	insertComma(text);
 	baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.usedwidth)) {
@@ -305,6 +305,55 @@ namespace wallysworld
       cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
       cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
     }
+  }
+
+
+  template<typename TConfig>
+  inline void
+  drawYScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
+    std::string text(boost::lexical_cast<std::string>(len));
+    insertComma(text);
+    double font_scale = 0.4;
+    double font_thickness = 1.5;
+    int32_t baseline = 0;
+    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+
+    // Find suitable tick size
+    uint32_t modval = findTicks(c.pyoffset, textSize.width);
+
+    // Scale line
+    cv::line(img, cv::Point(c.usedwidth, 0), cv::Point(c.usedwidth, c.usedheight), cv::Scalar(255, 0, 0), 2);
+
+    // Ticks
+    cv::Mat textimg(img.cols, img.rows, img.type(), cv::Scalar(0, 0, 0, 0)); // rows/cols swapped because of rotation
+    double py = 0;
+    for(uint32_t i = 0; i < len; ++i) {
+      if (i % modval == 0) {
+	cv::line(img, cv::Point(c.usedwidth, py - c.pyoffset/2), cv::Point(c.usedwidth + 0.75 * c.tlheight, py - c.pyoffset/2), cv::Scalar(255, 0, 0), 2);
+      }
+      if (i % modval == 0) {
+	// Font
+	text = boost::lexical_cast<std::string>(i);
+	insertComma(text);
+	baseline = 0;
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	if ((py - c.pyoffset/2 - textSize.width/2 > 0) && (py - c.pyoffset/2 + textSize.width < c.usedheight)) {
+	  cv::putText(textimg, text, cv::Point(py - c.pyoffset/2 - textSize.width/2, img.cols - (c.usedwidth + c.tlheight + textSize.height)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	}
+      }
+      py += c.pyoffset;
+    }
+
+    // Contig name
+    if (true) {
+      cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+      int32_t midpoint = c.usedheight / 2;
+      cv::putText(textimg, refname, cv::Point(midpoint - textSize.width/2, img.cols - (c.usedwidth + 2 * c.tlheight + textSize.height)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+    }
+
+    // Incorporate text
+    cv::rotate(textimg, textimg, cv::ROTATE_90_CLOCKWISE);
+    img -= textimg;
   }
 
   
@@ -396,10 +445,11 @@ namespace wallysworld
 	if (c.format == 0) {
 	  if (mp.find(seqname1) != mp.end()) footer += (c.tlheight * (mp[seqname1].size() + 1));
 	}
+	uint32_t margin = textSize().width + 4 * c.tlheight;
 	
 	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
 	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
-	cv::Mat img(c.usedheight + footer, c.usedwidth, CV_8UC3, cv::Scalar(255, 255, 255));
+	cv::Mat img(c.usedheight + footer, c.usedwidth + margin, CV_8UC3, cv::Scalar(255, 255, 255));
 
 	// Compute word matches
 	if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, img);
@@ -407,8 +457,7 @@ namespace wallysworld
 
 	// Scales
 	drawXScaleDotplot(c, seqname1, xlen, img);
-	//drawYScaleDotplot(c, seqname2, ylen, img);
-	
+	drawYScaleDotplot(c, seqname2, ylen, img);
 
 	// Mappings
 	if (c.format == 0) {
@@ -472,7 +521,7 @@ namespace wallysworld
 
   int dotplot(int argc, char **argv) {
     ConfigDotplot c;
-    c.tlheight = textSize() + 2;
+    c.tlheight = textSize().height + 2;
 
     // Define generic options
     boost::program_options::options_description generic("Generic options");

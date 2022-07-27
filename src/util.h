@@ -123,14 +123,13 @@ namespace wallysworld
     LibraryInfo() : rs(0), median(0), mad(0) {}
   };
 
-  inline uint32_t
+  inline cv::Size
   textSize() {
-    std::string text = "Test";
+    std::string text = "240,000,000";
     double font_scale = 0.4;
     double font_thickness = 1.5;
     int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    return (uint32_t) textSize.height;
+    return cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
   }
   
   inline void
