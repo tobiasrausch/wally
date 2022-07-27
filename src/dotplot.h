@@ -263,6 +263,41 @@ namespace wallysworld
     }
   }
 
+  template<typename TConfig, typename TReadMapping>
+  inline void
+  drawYMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
+    if (mp.find(refname) != mp.end()) {
+      uint32_t runspacer = 4 * c.tlheight;
+      cv::Mat textimg(img.cols, img.rows, img.type(), cv::Scalar(0, 0, 0, 0)); // rows/cols swapped because of rotation
+      for(uint32_t k = 0; k < mp[refname].size(); ++k, runspacer += c.tlheight) {
+	int32_t py = pixelX(c.usedheight, len, mp[refname][k].rstart);
+	int32_t pyend = pixelX(c.usedheight, len, mp[refname][k].rend);
+	cv::Rect rect(c.usedwidth + runspacer, py, c.tlheight, pyend - py);
+	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
+
+	std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
+	std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
+	insertComma(gstart);
+	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
+	insertComma(gend);
+	text += ":" + gstart + "-" + gend;
+	double font_scale = 0.4;
+	double font_thickness = 1.5;
+	int32_t baseline = 0;
+	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	if (py > (int32_t) c.usedheight / 2) {
+	  cv::putText(textimg, text, cv::Point(py - textSize.width - 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	} else {
+	  cv::putText(textimg, text, cv::Point(pyend + 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	}
+      }
+
+      // Incorporate text
+      cv::rotate(textimg, textimg, cv::ROTATE_90_CLOCKWISE);
+      img -= textimg;
+    }
+  }
+
 
   template<typename TConfig>
   inline void
@@ -445,8 +480,10 @@ namespace wallysworld
 	if (c.format == 0) {
 	  if (mp.find(seqname1) != mp.end()) footer += (c.tlheight * (mp[seqname1].size() + 1));
 	}
-	uint32_t margin = textSize().width + 4 * c.tlheight;
-	
+	uint32_t margin = 4 * c.tlheight;
+	if (c.format == 0) {
+	  if (mp.find(seqname2) != mp.end()) margin += (c.tlheight * (mp[seqname2].size() + 1));
+	}
 	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
 	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
 	cv::Mat img(c.usedheight + footer, c.usedwidth + margin, CV_8UC3, cv::Scalar(255, 255, 255));
@@ -459,7 +496,7 @@ namespace wallysworld
 	drawXScaleDotplot(c, seqname1, xlen, img);
 	drawYScaleDotplot(c, seqname2, ylen, img);
 
-	// Mappings
+	// Include mappings
 	if (c.format == 0) {
 	  // Assign colors to chromosomes
 	  typedef std::map<uint32_t, cv::Scalar> TColorMap;
@@ -484,6 +521,7 @@ namespace wallysworld
 
 	  // Draw mappings
 	  drawXMappings(c, hdr, seqname1, xlen, cm, mp, img);
+	  drawYMappings(c, hdr, seqname2, ylen, cm, mp, img);
 	}
 
 	// Store image (comment this for valgrind, png encoder seems leaky)

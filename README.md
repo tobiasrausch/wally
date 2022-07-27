@@ -119,7 +119,7 @@ All pairwise dotplots of a FASTA file can be generated using
 
 `wally dotplot sequences.fa`
 
-You can also extract reads directly from the BAM file.
+You can also extract reads directly from the BAM file and generate a reference-independent dotplot that includes the genomic mapping locations of read segments.
 
 `wally dotplot -R reads -g hg38.fa input.bam`
 
