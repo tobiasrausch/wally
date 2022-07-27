@@ -123,6 +123,11 @@ You can also extract reads directly from the BAM file and generate a reference-i
 
 `wally dotplot -R reads -g hg38.fa input.bam`
 
+For instance, to inspect haplotype differences or tumor heterogeneity at a given genomic locus (e.g., `chrA:1000-2000`) one can use:
+
+`samtools view input.bam chrA:1000-2000 | cut -f 1 | sort | uniq > reads`
+`wally dotplot -R reads -g hg38.fa input.bam`
+
 ## Citation
 
 Wally is currently unpublished but has been applied in this study:
