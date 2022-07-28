@@ -129,6 +129,15 @@ For instance, to inspect haplotype differences or tumor heterogeneity at a given
 
 `wally dotplot -R reads -g hg38.fa input.bam`
 
+A minimum contig or read length can be specified using `-s`
+
+`wally dotplot -s 10000 -R reads -g hg38.fa input.bam`
+
+Lastly, you can flatten the genomic mappings into simple blocks using `-f`
+
+`wally dotplot -f -s 10000 -R reads -g hg38.fa input.bam`
+
+
 ## Citation
 
 Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel.          
