@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 
+#include <boost/functional/hash.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -109,8 +110,9 @@ namespace wallysworld
 
   inline uint64_t
   hashwordLong(std::string const& word) {
+    boost::hash<std::string> string_hash;
     uint64_t seed = hash_string(word.c_str());
-    boost::hash_combine(seed, std::hash<std::string>()(word));
+    boost::hash_combine(seed, string_hash(word));
     //std::cerr << seed << '\t' << word << std::endl;
     return seed;
   }
