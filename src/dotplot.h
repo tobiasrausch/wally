@@ -111,8 +111,8 @@ namespace wallysworld
 
   inline uint64_t
   hashwordLong(std::string const& word) {
+    std::size_t seed = hash_string(word.c_str());
     boost::hash<std::string> string_hash;
-    uint64_t seed = hash_string(word.c_str());
     boost::hash_combine(seed, string_hash(word));
     //std::cerr << seed << '\t' << word << std::endl;
     return seed;
