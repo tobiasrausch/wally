@@ -44,6 +44,7 @@ namespace wallysworld
     uint16_t splits;
     int32_t winsize;
     uint32_t minMatches;
+    uint32_t seqsize;
     uint32_t width;
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
@@ -358,6 +359,7 @@ namespace wallysworld
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("read,r", boost::program_options::value<std::string>(&c.readStr)->default_value("read_name"), "read to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
+      ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
       ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile), "sequence output file [optional]")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "plot output file")
       ("separate,s", "create one plot for each input read")

@@ -44,6 +44,7 @@ namespace wallysworld
     bool showWindow;
     bool storeSequences;
     uint32_t matchlen;
+    uint32_t seqsize;
     uint32_t width;
     uint32_t height;
     uint32_t usedwidth;
@@ -455,6 +456,7 @@ namespace wallysworld
     for(int32_t idx1 = 0; idx1 < faidx_nseq(fai) - 1; ++idx1) {
       std::string seqname1(faidx_iseq(fai, idx1));
       int32_t xlen = faidx_seq_len(fai, seqname1.c_str());
+      if (xlen < (int32_t) c.seqsize) continue;
       int32_t sl = 0;
       char* seq1 = faidx_fetch_seq(fai, seqname1.c_str(), 0, xlen, &sl);
 
@@ -473,6 +475,7 @@ namespace wallysworld
       for(int32_t idx2 = idx1 + 1; idx2 < faidx_nseq(fai); ++idx2) {
 	std::string seqname2(faidx_iseq(fai, idx2));
 	int32_t ylen = faidx_seq_len(fai, seqname2.c_str());
+	if (ylen < (int32_t) c.seqsize) continue;
 	sl = 0;
 	char* seq2 = faidx_fetch_seq(fai, seqname2.c_str(), 0, ylen, &sl);
 
@@ -581,13 +584,14 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
+      ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
+      ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
       ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file in BAM mode")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
       ;
     
     boost::program_options::options_description disc("Display options");
     disc.add_options()
-      ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("linewidth,l", boost::program_options::value<float>(&c.lw)->default_value(1.5), "match line width")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")

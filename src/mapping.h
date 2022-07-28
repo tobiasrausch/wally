@@ -79,6 +79,9 @@ namespace wallysworld
 	if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
 	std::string qname = bam_get_qname(rec);
 	if (reads.find(qname) != reads.end()) {
+	  // Size check
+	  if (sequenceLength(rec) < c.seqsize) continue;
+
 	  // Get read sequence
 	  if (c.storeSequences) {
 	    if (!(rec->core.flag & (BAM_FSUPPLEMENTARY))) {
