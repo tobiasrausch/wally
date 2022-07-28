@@ -43,6 +43,7 @@ namespace wallysworld
   struct ConfigDotplot {
     bool showWindow;
     bool storeSequences;
+    bool flatten;
     uint32_t matchlen;
     uint32_t seqsize;
     uint32_t width;
@@ -241,30 +242,38 @@ namespace wallysworld
   drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
     if (mp.find(refname) != mp.end()) {
       uint32_t runspacer = 4 * c.tlheight;
-      for(uint32_t k = 0; k < mp[refname].size(); ++k, runspacer += c.tlheight) {
+      for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t px = pixelX(c.usedwidth, len, mp[refname][k].rstart);
 	int32_t pxend = pixelX(c.usedwidth, len, mp[refname][k].rend);
 	cv::Rect rect(px, c.usedheight + runspacer, pxend - px, c.tlheight);
 	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
 
-	std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
-	std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
-	insertComma(gstart);
-	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
-	insertComma(gend);
-	text += ":" + gstart + "-" + gend;
-	if (mp[refname][k].fwd) text += " -->";
-	else text += " <--";
-	double font_scale = 0.4;
-	double font_thickness = 1.5;
-	int32_t baseline = 0;
-	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	if ((pxend - px) > textSize.width + 10) {
-	  cv::putText(img, text, cv::Point((px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
-	} else if (px > (int32_t) c.usedwidth / 2) {
-	  cv::putText(img, text, cv::Point(px - textSize.width - 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	if (c.flatten) {
+	  cv::line(img, cv::Point(px, c.usedheight + runspacer), cv::Point(px, c.usedheight + runspacer + c.tlheight), cv::Scalar(0, 0, 0), 1);
+	  cv::line(img, cv::Point(pxend, c.usedheight + runspacer), cv::Point(pxend, c.usedheight + runspacer + c.tlheight), cv::Scalar(0, 0, 0), 1);
 	} else {
-	  cv::putText(img, text, cv::Point(pxend + 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
+	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
+	  insertComma(gstart);
+	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
+	  insertComma(gend);
+	  text += ":" + gstart + "-" + gend;
+	  if (mp[refname][k].fwd) text += " -->";
+	  else text += " <--";
+	  double font_scale = 0.4;
+	  double font_thickness = 1.5;
+	  int32_t baseline = 0;
+	  cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	  if ((pxend - px) > textSize.width + 10) {
+	    cv::putText(img, text, cv::Point((px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  } else if (px > (int32_t) c.usedwidth / 2) {
+	    cv::putText(img, text, cv::Point(px - textSize.width - 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  } else {
+	    cv::putText(img, text, cv::Point(pxend + 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  }
+
+	  // Next mapping
+	  runspacer += c.tlheight;
 	}
       }
     }
@@ -276,31 +285,39 @@ namespace wallysworld
     if (mp.find(refname) != mp.end()) {
       uint32_t runspacer = 4 * c.tlheight;
       cv::Mat textimg(img.cols, img.rows, img.type(), cv::Scalar(0, 0, 0, 0)); // rows/cols swapped because of rotation
-      for(uint32_t k = 0; k < mp[refname].size(); ++k, runspacer += c.tlheight) {
+      for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t py = pixelX(c.usedheight, len, mp[refname][k].rstart);
 	int32_t pyend = pixelX(c.usedheight, len, mp[refname][k].rend);
 	cv::Rect rect(c.usedwidth + runspacer, py, c.tlheight, pyend - py);
 	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
 
-	std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
-	std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
-	insertComma(gstart);
-	std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
-	insertComma(gend);
-	text += ":" + gstart + "-" + gend;
-	if (mp[refname][k].fwd) text += " -->";
-	else text += " <--";
-	double font_scale = 0.4;
-	double font_thickness = 1.5;
-	int32_t baseline = 0;
-	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-
-	if ((pyend - py) > textSize.width + 10) {
-	  cv::putText(textimg, text, cv::Point((py + pyend) / 2 - textSize.width / 2, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
-	} else if (py > (int32_t) c.usedheight / 2) {
-	  cv::putText(textimg, text, cv::Point(py - textSize.width - 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	if (c.flatten) {
+	  cv::line(img, cv::Point(c.usedwidth + runspacer, py), cv::Point(c.usedwidth + runspacer + c.tlheight, py), cv::Scalar(0, 0, 0), 1);
+	  cv::line(img, cv::Point(c.usedwidth + runspacer, pyend), cv::Point(c.usedwidth + runspacer + c.tlheight, pyend), cv::Scalar(0, 0, 0), 1);
 	} else {
-	  cv::putText(textimg, text, cv::Point(pyend + 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
+	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
+	  insertComma(gstart);
+	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
+	  insertComma(gend);
+	  text += ":" + gstart + "-" + gend;
+	  if (mp[refname][k].fwd) text += " -->";
+	  else text += " <--";
+	  double font_scale = 0.4;
+	  double font_thickness = 1.5;
+	  int32_t baseline = 0;
+	  cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+
+	  if ((pyend - py) > textSize.width + 10) {
+	    cv::putText(textimg, text, cv::Point((py + pyend) / 2 - textSize.width / 2, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	  } else if (py > (int32_t) c.usedheight / 2) {
+	    cv::putText(textimg, text, cv::Point(py - textSize.width - 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	  } else {
+	    cv::putText(textimg, text, cv::Point(pyend + 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	  }
+
+	  // Next mapping
+	  runspacer += c.tlheight;
 	}
       }
 
@@ -496,11 +513,17 @@ namespace wallysworld
 	// Create image
 	uint32_t footer = 4 * c.tlheight;
 	if (c.format == 0) {
-	  if (mp.find(seqname1) != mp.end()) footer += (c.tlheight * (mp[seqname1].size() + 1));
+	  if (c.flatten) footer += c.tlheight;
+	  else {
+	    if (mp.find(seqname1) != mp.end()) footer += (c.tlheight * (mp[seqname1].size() + 1));
+	  }
 	}
 	uint32_t margin = 4 * c.tlheight;
 	if (c.format == 0) {
-	  if (mp.find(seqname2) != mp.end()) margin += (c.tlheight * (mp[seqname2].size() + 1));
+	  if (c.flatten) margin += c.tlheight;
+	  else {
+	    if (mp.find(seqname2) != mp.end()) margin += (c.tlheight * (mp[seqname2].size() + 1));
+	  }
 	}
 	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
 	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
@@ -595,6 +618,7 @@ namespace wallysworld
       ("linewidth,l", boost::program_options::value<float>(&c.lw)->default_value(1.5), "match line width")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
+      ("flatten,f", "flatten mapping segments")
       ;
     
     // Define hidden options
@@ -629,6 +653,10 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Flatten mappings
+    if (vm.count("flatten")) c.flatten = true;
+    else c.flatten = false;
 
     // Input format
     c.format = inputType(c.file.string());
