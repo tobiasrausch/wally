@@ -60,13 +60,13 @@ namespace wallysworld
 
     // Find suitable tick size
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
-    cv::line(img, cv::Point(0, track * c.tlheight + c.tlheight), cv::Point(c.width, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+    cv::line(img, cv::Point(0, track * c.tlheight + c.tlheight), cv::Point(c.width, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1);
     double px = 0;
     int32_t prevTick = -1;
     int32_t lastTick = -1;
     for(int32_t i = rg.beg; i < rg.end; ++i) {
       if (i % modval == 0) {
-	cv::line(img, cv::Point(px - c.pxoffset/2, track * c.tlheight), cv::Point(px - c.pxoffset/2, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1.8);
+	cv::line(img, cv::Point(px - c.pxoffset/2, track * c.tlheight), cv::Point(px - c.pxoffset/2, track * c.tlheight + c.tlheight), cv::Scalar(0, 0, 0), 1);
 	if (prevTick == -1) prevTick = px;
 	else {
 	  if (lastTick == -1) {
