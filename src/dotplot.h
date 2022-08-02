@@ -5,7 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/dynamic_bitset.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -182,19 +181,6 @@ namespace wallysworld
   template<typename TConfig, typename THashMap>
   inline void
   wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
-    // Preprocess hash maps, heuristic pre-filter
-    typedef boost::dynamic_bitset<> TBitSet;
-    TBitSet hitsX(std::numeric_limits<uint32_t>::max(), false); 
-    TBitSet hitsY(std::numeric_limits<uint32_t>::max(), false); 
-    for(typename THashMap::iterator it = fwd.begin(); it != fwd.end(); ++it) {
-      hitsX[(uint32_t)((it->first & 0xFFFFFFFF00000000LL) >> 32)] = true;
-      hitsY[(uint32_t)(it->first & 0xFFFFFFFFLL)] = true;
-    }
-    for(typename THashMap::iterator it = rev.begin(); it != rev.end(); ++it) {
-      hitsX[(uint32_t)((it->first & 0xFFFFFFFF00000000LL) >> 32)] = true;
-      hitsY[(uint32_t)(it->first & 0xFFFFFFFFLL)] = true;
-    }
-    
     // Find word matches
     uint64_t h = 0;
     bool rewind = true;
@@ -211,26 +197,24 @@ namespace wallysworld
 	}
       }
       if (!rewind) {
-	if ((hitsY[(uint32_t)(h & 0xFFFFFFFFLL)]) && (hitsX[(uint32_t)((h & 0xFFFFFFFF00000000LL) >> 32)])) {
-	  // Forward matches
-	  if (fwd.find(h) != fwd.end()) {
-	    for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
-	      int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
-	      int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
-	      int32_t py = pixelX(c.usedheight, ylen, k);
-	      int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
-	    }
+	// Forward matches
+	if (fwd.find(h) != fwd.end()) {
+	  for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
 	  }
-	  // Reverse matches
-	  if (rev.find(h) != rev.end()) {
-	    for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
-	      int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
-	      int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
-	      int32_t py = pixelX(c.usedheight, ylen, k);
-	      int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
-	    }
+	}
+	// Reverse matches
+	if (rev.find(h) != rev.end()) {
+	  for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
 	  }
 	}
       }
@@ -241,44 +225,29 @@ namespace wallysworld
   template<typename TConfig, typename THashMap>
   inline void
   wordMatchLong(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
-    // Preprocess hash maps, heuristic pre-filter
-    typedef boost::dynamic_bitset<> TBitSet;
-    TBitSet hitsX(std::numeric_limits<uint32_t>::max(), false); 
-    TBitSet hitsY(std::numeric_limits<uint32_t>::max(), false); 
-    for(typename THashMap::iterator it = fwd.begin(); it != fwd.end(); ++it) {
-      hitsX[(uint32_t)((it->first & 0xFFFFFFFF00000000LL) >> 32)] = true;
-      hitsY[(uint32_t)(it->first & 0xFFFFFFFFLL)] = true;
-    }
-    for(typename THashMap::iterator it = rev.begin(); it != rev.end(); ++it) {
-      hitsX[(uint32_t)((it->first & 0xFFFFFFFF00000000LL) >> 32)] = true;
-      hitsY[(uint32_t)(it->first & 0xFFFFFFFFLL)] = true;
-    }
-    
     // Find word matches
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
       std::string word = std::string(seq + k, seq + k + c.matchlen);
       if (word.find('N') == std::string::npos) {
 	uint64_t h = hashwordLong(word);
-	if ((hitsY[(uint32_t)(h & 0xFFFFFFFFLL)]) && (hitsX[(uint32_t)((h & 0xFFFFFFFF00000000LL) >> 32)])) {
-	  // Forward matches
-	  if (fwd.find(h) != fwd.end()) {
-	    for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
-	      int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
-	      int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
-	      int32_t py = pixelX(c.usedheight, ylen, k);
-	      int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
-	    }
+	// Forward matches
+	if (fwd.find(h) != fwd.end()) {
+	  for(uint32_t idx = 0; idx < fwd[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, fwd[h][idx]);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
 	  }
-	  // Reverse matches
-	  if (rev.find(h) != rev.end()) {
-	    for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
-	      int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
-	      int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
-	      int32_t py = pixelX(c.usedheight, ylen, k);
-	      int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	      cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
-	    }
+	}
+	// Reverse matches
+	if (rev.find(h) != rev.end()) {
+	  for(uint32_t idx = 0; idx < rev[h].size(); ++idx) {
+	    int32_t px = pixelX(c.usedwidth, xlen, rev[h][idx] + c.matchlen);
+	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
+	    int32_t py = pixelX(c.usedheight, ylen, k);
+	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
+	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
 	  }
 	}
       }
