@@ -34,14 +34,14 @@ namespace wallysworld
 
   inline uint32_t
   findTicks(double const pxoffset, double const textwidth) {
-    std::vector<int32_t> bounds{5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000};
+    std::vector<int32_t> bounds{5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 25000000, 50000000};
     for(uint32_t i = 0; i < bounds.size(); ++i) {
       if (bounds[i] * pxoffset > textwidth * 1.5) {
 	return bounds[i];
 	break;
       }
     }
-    return 1000000;
+    return 50000000;
   }
     
   template<typename TConfig>
