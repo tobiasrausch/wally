@@ -73,21 +73,34 @@ namespace wallysworld
       return 'C';
     case 'C':
       return 'G';
-    case 'N':
-      return 'N';
+    }
+    return 'N';
+  }
+
+  inline char
+  upper(char n) {
+    switch(n) {
     case 'a':
-      return 'T';
-    case 't':
       return 'A';
-    case 'g':
-      return 'C';
     case 'c':
+      return 'C';
+    case 'g':
       return 'G';
+    case 't':
+      return 'T';
     case 'n':
       return 'N';
-    }   
-    return 'N';
-  }   
+    }
+    return n;
+  }
+
+  inline void
+  upper(char* nucs) {
+    while (*nucs) {
+      *nucs = upper(*nucs);
+      ++nucs;
+    }
+  }
 
   inline void
   revcomplement(char* nucs) {
@@ -109,7 +122,7 @@ namespace wallysworld
     uint32_t j = 0;
     uint64_t h = 0;
     for(int32_t i = word.size() - 1; i>=0; --i, ++j) {
-      if ((word[i] == 'n') || (word[i] == 'N')) return std::numeric_limits<uint64_t>::max();
+      if (word[i] == 'N') return std::numeric_limits<uint64_t>::max();
       h += (uint64_t) nuc(word[i]) * (uint64_t) std::pow((long double) 4, j);
     }
     return h;
@@ -135,7 +148,7 @@ namespace wallysworld
 	h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
 	if (h != std::numeric_limits<uint64_t>::max()) rewind = false;
       } else {
-	if ((seq[k+c.matchlen-1] == 'n') || (seq[k+c.matchlen-1] == 'N')) rewind = true;
+	if (seq[k+c.matchlen-1] == 'N') rewind = true;
 	else {
 	  h -= (uint64_t) nuc(seq[k - 1]) * std::pow((long double) 4, c.matchlen - 1);
 	  h *= 4;
@@ -157,7 +170,7 @@ namespace wallysworld
     typedef typename THashMap::mapped_type TPosVec;
     for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
       std::string word = std::string(seq + k, seq + k + c.matchlen);
-      if ((word.find('N') == std::string::npos) && (word.find('n') == std::string::npos)) {
+      if (word.find('N') == std::string::npos) {
 	uint64_t h = hashwordLong(word);
 	if (hmap.find(h) == hmap.end()) hmap.insert(std::make_pair(h, TPosVec()));
 	if (forward) hmap[h].push_back(k);
@@ -190,7 +203,7 @@ namespace wallysworld
 	h = hashwordShort(std::string(seq + k, seq + k + c.matchlen));
 	if (h != std::numeric_limits<uint64_t>::max()) rewind = false;
       } else {
-	if ((seq[k+c.matchlen-1] == 'n') || (seq[k+c.matchlen-1] == 'N')) rewind = true;
+	if (seq[k+c.matchlen-1] == 'N') rewind = true;
 	else {
 	  h -= (uint64_t) nuc(seq[k - 1]) * std::pow((long double) 4, c.matchlen - 1);
 	  h *= 4;
@@ -244,7 +257,7 @@ namespace wallysworld
     // Find word matches
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
       std::string word = std::string(seq + k, seq + k + c.matchlen);
-      if ((word.find('N') == std::string::npos) && (word.find('n') == std::string::npos)) {
+      if (word.find('N') == std::string::npos) {
 	uint64_t h = hashwordLong(word);
 	if ((hitsY[(uint32_t)(h & 0xFFFFFFFFLL)]) && (hitsX[(uint32_t)((h & 0xFFFFFFFF00000000LL) >> 32)])) {
 	  // Forward matches
@@ -511,6 +524,7 @@ namespace wallysworld
       if (xlen < (int32_t) c.seqsize) continue;
       int32_t sl = 0;
       char* seq1 = faidx_fetch_seq(fai, seqname1.c_str(), 0, xlen, &sl);
+      upper(seq1);
       
       // Hash fwd and rev words
       typedef std::vector<uint32_t> TPosVec;
@@ -530,7 +544,8 @@ namespace wallysworld
 	if (ylen < (int32_t) c.seqsize) continue;
 	sl = 0;
 	char* seq2 = faidx_fetch_seq(fai, seqname2.c_str(), 0, ylen, &sl);
-
+	upper(seq2);
+	
 	// Next plot
 	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << seqname1 << " and " << seqname2 << std::endl;
 
