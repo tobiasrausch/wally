@@ -53,7 +53,7 @@ namespace wallysworld
 	    std::string str = chrName + ":" + start + "-" + end;
 	    if (tokIter != tokens.end()) str += ":" + std::string(*tokIter++);
 	    Region tmp;
-	    if (!parseRegion(hdr, str, tmp)) return false;
+	    if (!parseRegion(c, hdr, str, tmp)) return false;
 	    bool transcript = false;
 	    bool fwd = true;
 	    if (tokIter != tokens.end()) {

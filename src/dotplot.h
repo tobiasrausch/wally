@@ -42,6 +42,8 @@ namespace wallysworld
   // Config arguments
   struct ConfigDotplot {
     bool showWindow;
+    bool hasReadFile;
+    bool hasRegionFile;
     bool storeSequences;
     bool flatten;
     uint32_t matchlen;
@@ -55,9 +57,12 @@ namespace wallysworld
     float lw;
     double pxoffset; // 1bp in pixel
     double pyoffset; // 1bp in pixel
+    std::string readStr;
+    std::string regionStr;
     boost::filesystem::path seqfile;
     boost::filesystem::path readFile;
     boost::filesystem::path genome;
+    boost::filesystem::path regionFile;
     boost::filesystem::path file;
   };
 
@@ -446,36 +451,6 @@ namespace wallysworld
     // Chromosome colors
     cv::Scalar colors[12] = { cv::Scalar(44,160,51), cv::Scalar(180,120,31), cv::Scalar(28,26,227), cv::Scalar(153,255,255), cv::Scalar(227,206,166), cv::Scalar(138,223,178), cv::Scalar(153,154,251), cv::Scalar(111,191,253), cv::Scalar(0,127,255), cv::Scalar(214,178,202), cv::Scalar(154,61,106), cv::Scalar(40,89,177) };
 
-    
-    // Read mappings
-    typedef std::vector<Mapping> TMappings;
-    typedef std::map<std::string, TMappings > TReadMappings;
-    TReadMappings mp;
-
-    // Parse BAM
-    std::string filename = c.seqfile.string();
-    if (c.format == 0) {
-      // Make sure the FASTA index is gone
-      boost::filesystem::remove(c.seqfile.string());
-      boost::filesystem::remove(c.seqfile.string() + ".fai");
-
-      // Parse reads
-      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
-      typedef std::set<std::string> TReadSet;
-      TReadSet reads;
-      _parseReads(c, reads);
-    
-      // Get read mappings
-      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
-      mappings(c, reads, mp);
-
-      // Sort mappings
-      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
-	std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
-      }
-    } else if (c.format == 1) filename = c.file.string();
-
-
     // Open file handles
     samFile* samfile = NULL;
     bam_hdr_t* hdr = NULL;
@@ -485,9 +460,77 @@ namespace wallysworld
       hdr = sam_hdr_read(samfile);
     }
     
+    // Read mappings
+    typedef std::vector<Mapping> TMappings;
+    typedef std::map<std::string, TMappings > TReadMappings;
+    TReadMappings mp;
+
+    // Make sure the FASTA index is gone
+    boost::filesystem::remove(c.seqfile.string());
+    boost::filesystem::remove(c.seqfile.string() + ".fai");
+    
+    // Parse BAM
+    if (c.format == 0) {
+      // Parse reads
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse reads." << std::endl;
+      typedef std::set<std::string> TReadSet;
+      TReadSet reads;
+      if (c.hasReadFile) _parseReads(c, reads);
+      else reads.insert(c.readStr);
+
+      // Get read mappings
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract read mappings." << std::endl;
+      mappings(c, reads, mp);
+
+      // Sort mappings
+      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
+	std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
+      }
+    } else if (c.format == 1) {
+      // Copy sequence file to append possible reference regions
+      boost::filesystem::copy_file(c.file, c.seqfile, boost::filesystem::copy_option::overwrite_if_exists);
+    }
+
+    // Parse regions and extract FASTA
+    std::vector<Region> rg;
+    uint32_t rgcount = 0;
+    if ((!c.regionStr.empty()) || (c.hasRegionFile)) {
+      std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse regions." << std::endl;
+      if (!parseRegions(NULL, c, rg)) return 1;
+      if (!rg.empty()) {
+	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract FASTA for regions." << std::endl;
+	std::ofstream sfile;
+	sfile.open(c.seqfile.string().c_str(), std::ios_base::app);
+	faidx_t* fai = fai_load(c.genome.string().c_str());
+	for(int32_t refIndex=0; refIndex < faidx_nseq(fai); ++refIndex) {
+	  std::string tname(faidx_iseq(fai, refIndex));
+	  char* seq = NULL;
+	  for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
+	    if (rg[rgIdx].tid == refIndex) {
+	      // Load sequence
+	      if (seq == NULL) {
+		int32_t seqlen = -1;
+		seq = faidx_fetch_seq(fai, tname.c_str(), 0, faidx_seq_len(fai, tname.c_str()), &seqlen);
+	      }
+	      
+	      // Extract fasta
+	      sfile << ">" << rg[rgIdx].id << std::endl;
+	      sfile << boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)) << std::endl;
+	      ++rgcount;
+	    }
+	  }
+	  if (seq != NULL) free(seq);
+	}
+	fai_destroy(fai);
+	sfile.close();
+      }
+    }
+
     // Load sequences from disk for large contigs
-    faidx_t* fai = fai_load(filename.c_str());
-    for(int32_t idx1 = 0; idx1 < faidx_nseq(fai) - 1; ++idx1) {
+    faidx_t* fai = fai_load(c.seqfile.c_str());
+    int32_t seqend = faidx_nseq(fai) - 1;
+    if (rgcount) seqend = faidx_nseq(fai) - rgcount;  // With reference regions, plot against regions only
+    for(int32_t idx1 = 0; idx1 < seqend; ++idx1) {
       std::string seqname1(faidx_iseq(fai, idx1));
       int32_t xlen = faidx_seq_len(fai, seqname1.c_str());
       if (xlen < (int32_t) c.seqsize) continue;
@@ -507,7 +550,9 @@ namespace wallysworld
       else hashLong(c, seq1, xlen, rev, false);
       
       // Match 2nd sequence
-      for(int32_t idx2 = idx1 + 1; idx2 < faidx_nseq(fai); ++idx2) {
+      int32_t seqoffset = idx1 + 1;
+      if (rgcount) seqoffset = faidx_nseq(fai) - rgcount;  // In BAM mode and with reference regions, plot against regions
+      for(int32_t idx2 = seqoffset; idx2 < faidx_nseq(fai); ++idx2) {
 	std::string seqname2(faidx_iseq(fai, idx2));
 	int32_t ylen = faidx_seq_len(fai, seqname2.c_str());
 	if (ylen < (int32_t) c.seqsize) continue;
@@ -628,16 +673,24 @@ namespace wallysworld
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
-      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file in BAM mode")
-      ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
+      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")
+      ("region,e", boost::program_options::value<std::string>(&c.regionStr), "region to display [chrA:35-78]")
+      ("reglist,E", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ;
+
+    boost::program_options::options_description bammod("BAM mode");
+    bammod.add_options()
+      ("read,r", boost::program_options::value<std::string>(&c.readStr), "read to display")
+      ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
+      ("flatten,f", "flatten mapping segments")
+      ;
+
     
     boost::program_options::options_description disc("Display options");
     disc.add_options()
       ("linewidth,l", boost::program_options::value<float>(&c.lw)->default_value(1.5), "match line width")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
-      ("flatten,f", "flatten mapping segments")
       ;
     
     // Define hidden options
@@ -652,9 +705,9 @@ namespace wallysworld
     
     // Set the visibility
     boost::program_options::options_description cmdline_options;
-    cmdline_options.add(generic).add(disc).add(hidden);
+    cmdline_options.add(generic).add(bammod).add(disc).add(hidden);
     boost::program_options::options_description visible_options;
-    visible_options.add(generic).add(disc);
+    visible_options.add(generic).add(bammod).add(disc);
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(cmdline_options).positional(pos_args).run(), vm);
     boost::program_options::notify(vm);
@@ -672,6 +725,24 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Read file
+    if (vm.count("rfile")) {
+      if (!(boost::filesystem::exists(c.readFile) && boost::filesystem::is_regular_file(c.readFile) && boost::filesystem::file_size(c.readFile))) {
+	std::cerr << "File with list of reads is missing: " << c.readFile.string() << std::endl;
+	return 1;
+      }
+      c.hasReadFile = true;
+    } else c.hasReadFile = false;
+
+    // Region file
+    if (vm.count("reglist")) {
+      if (!(boost::filesystem::exists(c.regionFile) && boost::filesystem::is_regular_file(c.regionFile) && boost::filesystem::file_size(c.regionFile))) {
+	std::cerr << "BED file with regions is missing: " << c.regionFile.string() << std::endl;
+	return 1;
+      }
+      c.hasRegionFile = true;
+    } else c.hasRegionFile = false;
 
     // Flatten mappings
     if (vm.count("flatten")) c.flatten = true;

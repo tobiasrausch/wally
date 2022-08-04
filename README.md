@@ -129,6 +129,12 @@ For instance, to inspect haplotype differences or tumor heterogeneity at a given
 
 `wally dotplot -R reads -g hg38.fa input.bam`
 
+Instead of plotting reads in pairs against each other, you can also calculate dot plots with respect to reference regions.
+
+`wally dotplot -g hg38.fa -R reads -e chrA:35000-80000 input.bam`
+
+`wally dotplot -g hg38.fa -e chrA:35000-80000 sequences.fa`
+
 A minimum contig or read length can be specified using `-s`
 
 `wally dotplot -s 10000 -R reads -g hg38.fa input.bam`

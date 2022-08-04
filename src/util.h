@@ -238,8 +238,9 @@ namespace wallysworld
     return str;
   }
 
+  template<typename TConfig>
   inline bool
-  parseRegion(bam_hdr_t* hdr, std::string const& regionStr, Region& rg) {
+  parseRegion(TConfig const& c, bam_hdr_t* hdr, std::string const& regionStr, Region& rg) {
     std::size_t pos = regionStr.find(":");
     if (pos == std::string::npos) {
       std::cerr << "Invalid region " << regionStr << std::endl;
@@ -264,7 +265,28 @@ namespace wallysworld
       rg.end = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
       rg.id = tmp.substr(pos+1);
     }
-    rg.tid = bam_name2id(hdr, chrName.c_str());
+    if (hdr == NULL) {
+      if (c.genome.empty()) {
+	std::cerr << "You need to specify a genome file (-g)!" << std::endl;
+	return false;
+      }
+      faidx_t* fai = fai_load(c.genome.string().c_str());
+      if (faidx_has_seq(fai, chrName.c_str())) {
+	for(int32_t refIndex = 0; refIndex < faidx_nseq(fai); ++refIndex) {
+	  if (std::string(faidx_iseq(fai, refIndex)) == chrName) {
+	    rg.tid = refIndex;
+	    break;
+	  }
+	}
+      } else {
+	std::cerr << "Invalid region " << regionStr << std::endl;
+	std::cerr << "Chromosome not found in FASTA file: " << c.genome.string() << std::endl;
+	return false;
+      }
+      fai_destroy(fai);
+    } else {
+      rg.tid = bam_name2id(hdr, chrName.c_str());
+    }
     if (rg.tid < 0) {
       std::cerr << "Invalid region " << regionStr << std::endl;
       std::cerr << "Chromosome not found in BAM file." << std::endl;
@@ -310,7 +332,7 @@ namespace wallysworld
 		std::string str = chrName + ":" + start + "-" + end;
 		if (tokIter != tokens.end()) str += ":" + std::string(*tokIter++);
 		Region tmp;
-		if (!parseRegion(hdr, str, tmp)) return false;
+		if (!parseRegion(c, hdr, str, tmp)) return false;
 		rg.push_back(tmp);
 	      }
 	    }
@@ -327,7 +349,7 @@ namespace wallysworld
       for(;tokIter != tokens.end(); ++tokIter) {
 	std::string regStr = *tokIter;
 	Region tmp;
-	if (!parseRegion(hdr, regStr, tmp)) return false;
+	if (!parseRegion(c, hdr, regStr, tmp)) return false;
 	rg.push_back(tmp);
       }
     }
