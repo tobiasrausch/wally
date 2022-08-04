@@ -46,6 +46,7 @@ namespace wallysworld
     bool hasRegionFile;
     bool storeSequences;
     bool flatten;
+    bool incSelf;
     uint32_t matchlen;
     uint32_t seqsize;
     uint32_t width;
@@ -550,7 +551,8 @@ namespace wallysworld
       else hashLong(c, seq1, xlen, rev, false);
       
       // Match 2nd sequence
-      int32_t seqoffset = idx1 + 1;
+      int32_t seqoffset = idx1;
+      if (!c.incSelf) seqoffset += 1;
       if (rgcount) seqoffset = faidx_nseq(fai) - rgcount;  // In BAM mode and with reference regions, plot against regions
       for(int32_t idx2 = seqoffset; idx2 < faidx_nseq(fai); ++idx2) {
 	std::string seqname2(faidx_iseq(fai, idx2));
@@ -676,6 +678,7 @@ namespace wallysworld
       ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")
       ("region,e", boost::program_options::value<std::string>(&c.regionStr), "region to display [chrA:35-78]")
       ("reglist,E", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
+      ("selfalign,a", "incl. self alignments")
       ;
 
     boost::program_options::options_description bammod("BAM mode");
@@ -725,6 +728,10 @@ namespace wallysworld
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
+
+    // Include self alignment
+    if (vm.count("selfalign")) c.incSelf = true;
+    else c.incSelf = false;
 
     // Read file
     if (vm.count("rfile")) {
