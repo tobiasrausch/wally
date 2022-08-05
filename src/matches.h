@@ -362,7 +362,7 @@ namespace wallysworld
       ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
       ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile), "sequence output file [optional]")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "plot output file")
-      ("separate,s", "create one plot for each input read")
+      ("separate,p", "create one plot for each input read")
       ;
     
     boost::program_options::options_description disc("Display options");

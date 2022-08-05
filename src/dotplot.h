@@ -487,6 +487,13 @@ namespace wallysworld
       for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
 	std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
       }
+
+      // Check size
+      if (mp.empty()) {
+	std::cerr << "No reads found!" << std::endl;
+	std::cerr << "Please check your read names and BAM file!" << std::endl;
+	return 1;
+      }
     } else if (c.format == 1) {
       // Copy sequence file to append possible reference regions
       boost::filesystem::copy_file(c.file, c.seqfile, boost::filesystem::copy_option::overwrite_if_exists);
@@ -527,6 +534,7 @@ namespace wallysworld
       }
     }
 
+    
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(c.seqfile.c_str());
     int32_t seqend = faidx_nseq(fai) - 1;
