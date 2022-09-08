@@ -685,8 +685,6 @@ namespace wallysworld
       ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
       ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")
-      ("region,e", boost::program_options::value<std::string>(&c.regionStr), "region to display [chrA:35-78]")
-      ("reglist,E", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("selfalign,a", "incl. self alignments")
       ;
 
@@ -694,6 +692,8 @@ namespace wallysworld
     bammod.add_options()
       ("read,r", boost::program_options::value<std::string>(&c.readStr), "read to display")
       ("rfile,R", boost::program_options::value<boost::filesystem::path>(&c.readFile), "file with reads to display")
+      ("region,e", boost::program_options::value<std::string>(&c.regionStr), "region to display [chrA:35-78]")
+      ("reglist,E", boost::program_options::value<boost::filesystem::path>(&c.regionFile), "BED file with regions to display")
       ("flatten,f", "flatten mapping segments")
       ;
 
