@@ -537,7 +537,8 @@ namespace wallysworld
     
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(c.seqfile.c_str());
-    int32_t seqend = faidx_nseq(fai) - 1;
+    int32_t seqend = faidx_nseq(fai);
+    if (!c.incSelf) seqend -= 1;
     if (rgcount) seqend = faidx_nseq(fai) - rgcount;  // With reference regions, plot against regions only
     for(int32_t idx1 = 0; idx1 < seqend; ++idx1) {
       std::string seqname1(faidx_iseq(fai, idx1));
@@ -777,7 +778,7 @@ namespace wallysworld
 	  return 1;
 	}
       } else {
-	std::cerr << "BAM input requires -g and -R command-line options." << std::endl;
+	std::cerr << "BAM input requires -g command-line option." << std::endl;
 	return 1;
       }
 
@@ -787,8 +788,8 @@ namespace wallysworld
 	  std::cerr << "File with list of reads is missing: " << c.readFile.string() << std::endl;
 	  return 1;
 	}
-      } else {
-	std::cerr << "BAM input requires -g and -R command-line options." << std::endl;
+      } else if (!vm.count("read")) {
+	std::cerr << "BAM input requires -r or -R command-line option." << std::endl;
 	return 1;
       }
 

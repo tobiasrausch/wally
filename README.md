@@ -143,6 +143,9 @@ Lastly, you can flatten the genomic mappings into simple blocks using `-f`
 
 `wally dotplot -f -s 10000 -R reads -g hg38.fa input.bam`
 
+To visualize a self-alignment of a read with reference mappings use `-a`
+
+`wally dotplot -a -r read_name -g hg38.fa input.bam`
 
 ## Citation
 
