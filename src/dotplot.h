@@ -46,6 +46,7 @@ namespace wallysworld
     bool hasRegionFile;
     bool storeSequences;
     bool flatten;
+    bool flip;
     bool incSelf;
     uint32_t matchlen;
     uint32_t seqsize;
@@ -534,7 +535,35 @@ namespace wallysworld
       }
     }
 
-    
+    // Flip x and y, reverse file
+    if (c.flip) {
+      faidx_t* fai = fai_load(c.seqfile.c_str());
+      int32_t seqpointer = faidx_nseq(fai) - 1;
+      std::vector<std::string> seqstore(faidx_nseq(fai));
+      std::vector<std::string> seqname(faidx_nseq(fai));
+      for(int32_t idx = 0; idx < faidx_nseq(fai); ++idx, --seqpointer) {
+	seqname[seqpointer] = std::string(faidx_iseq(fai, idx));
+	int32_t seqlen = faidx_seq_len(fai, seqname[seqpointer].c_str());
+	int32_t sl = 0;
+	char* seq = faidx_fetch_seq(fai, seqname[seqpointer].c_str(), 0, seqlen, &sl);
+	seqstore[seqpointer] = std::string(seq);
+	free(seq);
+      }
+      fai_destroy(fai);
+
+      // Make sure the FASTA index is gone
+      boost::filesystem::remove(c.seqfile.string());
+      boost::filesystem::remove(c.seqfile.string() + ".fai");
+
+      std::ofstream sfile;
+      sfile.open(c.seqfile.string().c_str());
+      for(uint32_t idx = 0; idx < seqname.size(); ++idx) {
+	sfile << ">" << seqname[idx] << std::endl;
+	sfile << seqstore[idx] << std::endl;
+      }
+      sfile.close();
+    }
+
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(c.seqfile.c_str());
     int32_t seqend = faidx_nseq(fai);
@@ -684,8 +713,9 @@ namespace wallysworld
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
-      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")
+      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")      
       ("selfalign,a", "incl. self alignments")
+      ("flip,p", "flip x and y-axis")
       ;
 
     boost::program_options::options_description bammod("BAM mode");
@@ -763,6 +793,10 @@ namespace wallysworld
     // Flatten mappings
     if (vm.count("flatten")) c.flatten = true;
     else c.flatten = false;
+
+    // Flip x and y-axis
+    if (vm.count("flip")) c.flip = true;
+    else c.flip = false;
 
     // Input format
     c.format = inputType(c.file.string());
