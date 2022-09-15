@@ -40,6 +40,7 @@ namespace wallysworld
     bool showWindow;
     bool hasReadFile;
     bool separatePlots;
+    bool nolabel;
     bool storeSequences;
     uint16_t splits;
     int32_t winsize;
@@ -49,8 +50,10 @@ namespace wallysworld
     uint32_t height;
     uint32_t tlheight;  // pixel height of a track line
     uint32_t rdheight;  // pixel height of a single read
+    float ftscale;  // Font scale
     double pxoffset; // 1bp in pixel
     double bpoffset; // 1pixel in bp
+    double lw; // line width
     std::string readStr;
     boost::filesystem::path outfile;
     boost::filesystem::path seqfile;
@@ -290,7 +293,7 @@ namespace wallysworld
 	    ++trackIdx;
 	  }	
 	  // Draw read name
-	  if (rgIdx == 0) drawSampleLabel(c, prevReadOffset + 1, it->first, bg);
+	  if (rgIdx == 0) drawReadLabel(c, prevReadOffset, it->first, bg);
 	  // Draw split line
 	  drawSplitLine(c, bg, trackIdx);
 	  prevReadOffset = trackIdx;
@@ -349,8 +352,6 @@ namespace wallysworld
 
   int matches(int argc, char **argv) {
     ConfigMatches c;
-    c.tlheight = 15;
-    c.rdheight = 12;
     
     // Define generic options
     boost::program_options::options_description generic("Generic options");
@@ -369,8 +370,11 @@ namespace wallysworld
     disc.add_options()
       ("winsize,n", boost::program_options::value<int32_t>(&c.winsize)->default_value(10000), "window size to cluster nearby matches")
       ("matches,m", boost::program_options::value<uint32_t>(&c.minMatches)->default_value(1), "min. number of matches per region")
+      ("trackheight,t", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(15), "track height in pixels")
+      ("ftscale,f", boost::program_options::value<float>(&c.ftscale)->default_value(0.4), "font scale")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
+      ("labeloff,l", "turn off node labeling")
       ;
     
     // Define hidden options
@@ -401,6 +405,13 @@ namespace wallysworld
       return 0;
     }
 
+    // Set match height to 80% of track height
+    c.rdheight = (int) (0.9 * c.tlheight);
+
+    // Set line width
+    c.lw = 0.05 * c.tlheight;
+    if (c.lw < 1) c.lw = 1;
+    
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
@@ -408,6 +419,10 @@ namespace wallysworld
     // Separate plots?
     if (vm.count("separate")) c.separatePlots = true;
     else c.separatePlots = false;
+
+    // No labels
+    if (vm.count("labeloff")) c.nolabel = true;
+    else c.nolabel = false;
 
     // Store sequences
     if (vm.count("seqfile")) c.storeSequences = true;
