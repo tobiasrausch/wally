@@ -70,6 +70,10 @@ namespace wallysworld
   #define WALLY_SPLITBORDER cv::Scalar(200,200,200)
   #endif
 
+  #ifndef POS_UNDEF
+  #define POS_UNDEF std::numeric_limits<uint32_t>::max()
+  #endif
+  
   #ifndef WALLY_BLOCKED
   #define WALLY_BLOCKED 1073741824
   #endif
