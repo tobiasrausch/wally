@@ -113,7 +113,7 @@ You can also compare assemblies or align contigs to a reference genome using a w
 
 `wally matches -r <contig_name> -g <genome> <input.bam>`
 
-## Subcommand `dotplot`: Pairwise sequence dotplots (work-in-progress)
+## Subcommand `dotplot`: Pairwise sequence dotplots
 
 All pairwise dotplots of a FASTA file can be generated using
 
