@@ -53,14 +53,31 @@ namespace wallysworld
     uint32_t tid;
     uint32_t pos;
     uint32_t rank;
-    std::string name;
 
-    Segment(uint32_t const t, uint32_t const p, uint32_t const rk, std::string const& str) : tid(t), pos(p), rank(rk), name(str) {}
+    Segment(uint32_t const t, uint32_t const p, uint32_t const rk) : tid(t), pos(p), rank(rk) {}
+  };
+
+  struct Link {
+    bool fromrev;
+    bool torev;
+    uint32_t from;
+    uint32_t to;
+
+    Link(bool const fv, bool const tv, uint32_t const fr, uint32_t tos) : fromrev(fv), torev(tv), from(fr), to(tos) {}
+  };
+
+  struct Graph {
+    std::vector<Segment> segments;
+    std::vector<Link> links;
   };
 
   template<typename TConfig>
   inline bool
-  parseGfa(TConfig& c, std::vector<Segment>& segments) {
+  parseGfa(TConfig& c, Graph& g) {
+    // Segment map
+    typedef std::map<std::string, uint32_t> TSegmentIdMap;
+    TSegmentIdMap smap;
+    
     // Segment FASTA sequences
     std::ofstream sfile;
     sfile.open(c.seqfile.string().c_str());
@@ -86,6 +103,7 @@ namespace wallysworld
 	      ++tokIter;
 	      if (tokIter != tokens.end()) {
 		// Sequence
+		std::string sequence = *tokIter;
 		std::string chrname;
 		uint32_t pos = POS_UNDEF;
 		uint32_t rank = POS_UNDEF;
@@ -109,10 +127,12 @@ namespace wallysworld
 		if (c.nchr.find(chrname) != c.nchr.end()) tid = c.nchr[chrname];
 
 		// New segment
-		segments.push_back(Segment(tid, pos, rank, segname));
+		g.segments.push_back(Segment(tid, pos, rank));
 		// Store sequence
 		sfile << ">" << id_counter << " " << segname << " " << chrname << ":" << pos << ":" << rank << std::endl;
-		sfile << *tokIter << std::endl;
+		sfile << sequence << std::endl;
+		// Keep segment name <-> id relationship
+		smap.insert(std::make_pair(segname, id_counter));
 		++id_counter;
 	      } else {
 		std::cerr << "S segment lacks sequence information!" << std::endl;
@@ -125,6 +145,45 @@ namespace wallysworld
 	  }
 	  else if (*tokIter == "L") {
 	    // Link
+	    ++tokIter;
+	    if (tokIter != tokens.end()) {
+	      // From
+	      if (smap.find(*tokIter) == smap.end()) {
+		std::cerr << "Link with unknown from segment! " << *tokIter << std::endl;
+		return false;
+	      }
+	      uint32_t fromId = smap[*tokIter];
+	      ++tokIter;
+	      if (tokIter != tokens.end()) {
+		// FromOrient
+		bool fromrev = false;
+		if (*tokIter == "-") fromrev = true;
+		++tokIter;
+		if (tokIter != tokens.end()) {
+		  // To
+		  if (smap.find(*tokIter) == smap.end()) {
+		    std::cerr << "Link with unknown to segment! " << *tokIter << std::endl;
+		    return false;
+		  }
+		  uint32_t toId = smap[*tokIter];
+		  ++tokIter;
+		  if (tokIter != tokens.end()) {
+		    // ToOrient
+		    bool torev = false;
+		    if (*tokIter == "-") torev = true;
+		    ++tokIter;
+		    if (tokIter != tokens.end()) {
+		      // Overlap CIGAR
+		      if (*tokIter != "0M") {
+			std::cerr << "Currently only 0M links are supported!" << std::endl;
+			return false;
+		      }
+		      g.links.push_back(Link(fromrev, torev, fromId, toId));
+		    }
+		  }
+		}
+	      }
+	    }
 	  } else {
 	    // Todo
 	    std::cerr << "Warning: Unknown line " << *tokIter << std::endl;
@@ -144,8 +203,8 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
-    std::vector<Segment> segments;
-    parseGfa(c, segments);
+    Graph g;
+    parseGfa(c, g);
     
 #ifdef PROFILE
     ProfilerStop();
