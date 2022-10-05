@@ -64,8 +64,8 @@ namespace wallysworld
   inline uint32_t
   numRanks(Graph const& g, SubGraph const& gsub) {
     std::set<uint32_t> ranks;
-    for(uint32_t i = 0; i < g.segments.size(); ++i) {
-      if (gsub.segments[i]) ranks.insert(g.segments[i].rank);
+    for(uint32_t i = 0; i < gsub.segments.size(); ++i) {
+      ranks.insert(g.segments[gsub.segments[i]].rank);
     }
     return ranks.size();
   }
@@ -74,12 +74,10 @@ namespace wallysworld
   subgraphTiles(Graph const& g, SubGraph const& gsub, uint32_t& numranks, uint32_t& mnodes) {
     numranks = numRanks(g, gsub);
     std::vector<uint32_t> ni(numranks, 0);
-    for(uint32_t i = 0; i < g.segments.size(); ++i) {
-      if (gsub.segments[i]) {
-	uint32_t rk = g.segments[i].rank;
-	if (rk == POS_UNDEF) rk = numranks - 1;
-	++ni[rk];
-      }
+    for(uint32_t i = 0; i < gsub.segments.size(); ++i) {
+      uint32_t rk = g.segments[gsub.segments[i]].rank;
+      if (rk == POS_UNDEF) rk = numranks - 1;
+      ++ni[rk];
     }
     std::sort(ni.begin(), ni.end(), std::greater<uint32_t>());
     if (!ni.empty()) mnodes = ni[0];
@@ -171,7 +169,7 @@ namespace wallysworld
 	      }
 	      
 	      // New segment
-	      g.segments.push_back(Segment(rank, tid, pos));
+	      g.segments.push_back(Segment(rank, tid, pos, sequence.size()));
 	      // Store sequence
 	      sfile << ">" << id_counter << " " << segname << " " << chrn << ":" << pos << ":" << rank << std::endl;
 	      sfile << sequence << std::endl;
@@ -271,7 +269,7 @@ namespace wallysworld
       sfile << "S\ts" << (i+1) << "\t" << seq;
       //sfile << "S\t" << (i+1) << "\t" << seq;
       if (g.segments[i].rank != POS_UNDEF) {
-	sfile << "\tLN:i:" << seqlen;
+	sfile << "\tLN:i:" << g.segments[i].len;
 	sfile << "\tSN:Z:" << c.chrname[g.segments[i].rank][g.segments[i].tid];
 	sfile << "\tSO:i:" << g.segments[i].pos;
 	sfile << "\tSR:i:" << g.segments[i].rank;
@@ -311,9 +309,9 @@ namespace wallysworld
     }
 
     // Define subgraph for plotting
-    SubGraph gsub(g);
-    std::fill(gsub.segments.begin(), gsub.segments.end(), true);
-    std::fill(gsub.links.begin(), gsub.links.end(), true);
+    SubGraph gsub;
+    for(uint32_t i = 0; i < g.segments.size(); ++i) gsub.segments.push_back(i);
+    for(uint32_t i = 0; i < g.links.size(); ++i) gsub.links.push_back(i);
 
     // Number of x- and y-tiles
     uint32_t numranks = 0;
@@ -328,7 +326,7 @@ namespace wallysworld
     cv::Mat img( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
     // Draw nodes
-    drawNodes(c, img, g, gsub, numranks);
+    drawNodes(c, img, g, gsub, numranks, mnodes);
 
     // Store image (comment this for valgrind, png encoder seems leaky)
     cv::imwrite(c.outfile.string().c_str(), img);
@@ -361,7 +359,7 @@ namespace wallysworld
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output png file")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("trackheight,t", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(50), "tile height in pixels")
-      ("trackwidth,u", boost::program_options::value<uint32_t>(&c.tlwidth)->default_value(50), "tile width in pixels")
+      ("trackwidth,u", boost::program_options::value<uint32_t>(&c.tlwidth)->default_value(300), "tile width in pixels")
       ("ftscale,f", boost::program_options::value<float>(&c.ftscale)->default_value(0.4), "font scale")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
