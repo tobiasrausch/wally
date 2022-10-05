@@ -254,8 +254,8 @@ namespace wallysworld
       std::string seqid = boost::lexical_cast<std::string>(i);
       int32_t seqlen;
       char* seq = faidx_fetch_seq(fai, seqid.c_str(), 0, faidx_seq_len(fai, seqid.c_str()), &seqlen);
-      //sfile << "S\ts" << (i+1) << "\t" << seq;
-      sfile << "S\t" << (i+1) << "\t" << seq;
+      sfile << "S\ts" << (i+1) << "\t" << seq;
+      //sfile << "S\t" << (i+1) << "\t" << seq;
       if (g.segments[i].rank != POS_UNDEF) {
 	sfile << "\tLN:i:" << seqlen;
 	sfile << "\tSN:Z:" << c.chrname[g.segments[i].rank][g.segments[i].tid];
@@ -269,12 +269,12 @@ namespace wallysworld
 
     // Output links
     for(uint32_t i = 0; i < g.links.size(); ++i) {
-      //sfile << "L\ts" << (g.links[i].from+1);
-      sfile << "L\t" << (g.links[i].from+1);
+      sfile << "L\ts" << (g.links[i].from+1);
+      //sfile << "L\t" << (g.links[i].from+1);
       if (g.links[i].fromrev) sfile << "\t-";
       else sfile << "\t+";
-      //sfile << "\ts" << (g.links[i].to+1);
-      sfile << "\t" << (g.links[i].to+1);
+      sfile << "\ts" << (g.links[i].to+1);
+      //sfile << "\t" << (g.links[i].to+1);
       if (g.links[i].torev) sfile << "\t-";
       else sfile << "\t+";
       sfile << "\t0M" << std::endl;
