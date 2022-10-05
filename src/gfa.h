@@ -33,7 +33,7 @@
 #include "version.h"
 #include "util.h"
 #include "mapping.h"
-#include "matchdraw.h"
+#include "gfadraw.h"
 #include "bed.h"
 
 namespace wallysworld
@@ -44,34 +44,48 @@ namespace wallysworld
     typedef std::vector<std::string> TChrNames;
     
     bool showWindow;
+    uint32_t width;
+    uint32_t height;
+    uint32_t tlheight;  // pixel height of a tile
+    uint32_t tlwidth;  // pixel width of a tile
+    uint32_t nodeheight;  // pixel height of a node
+    uint32_t nodewidth;  // pixel width of a node
+    float ftscale;  // Font scale
+    double pxoffset; // 1bp in pixel
+    double bpoffset; // 1pixel in bp
+    double lw; // line width
     std::vector<TChrNames> chrname;
     boost::filesystem::path gfafile;
     boost::filesystem::path seqfile;
+    boost::filesystem::path outfile;
     boost::filesystem::path genome;
   };
 
-  struct Segment {
-    uint32_t rank;
-    uint32_t tid;
-    uint32_t pos;
+  inline uint32_t
+  numRanks(Graph const& g, SubGraph const& gsub) {
+    std::set<uint32_t> ranks;
+    for(uint32_t i = 0; i < g.segments.size(); ++i) {
+      if (gsub.segments[i]) ranks.insert(g.segments[i].rank);
+    }
+    return ranks.size();
+  }
 
-    Segment(uint32_t const rk, uint32_t const t, uint32_t const p) : rank(rk), tid(t), pos(p) {}
-  };
-
-  struct Link {
-    bool fromrev;
-    bool torev;
-    uint32_t from;
-    uint32_t to;
-
-    Link(bool const fv, bool const tv, uint32_t const fr, uint32_t tos) : fromrev(fv), torev(tv), from(fr), to(tos) {}
-  };
-
-  struct Graph {
-    std::vector<Segment> segments;
-    std::vector<Link> links;
-  };
-
+  inline void
+  subgraphTiles(Graph const& g, SubGraph const& gsub, uint32_t& numranks, uint32_t& mnodes) {
+    numranks = numRanks(g, gsub);
+    std::vector<uint32_t> ni(numranks, 0);
+    for(uint32_t i = 0; i < g.segments.size(); ++i) {
+      if (gsub.segments[i]) {
+	uint32_t rk = g.segments[i].rank;
+	if (rk == POS_UNDEF) rk = numranks - 1;
+	++ni[rk];
+      }
+    }
+    std::sort(ni.begin(), ni.end(), std::greater<uint32_t>());
+    if (!ni.empty()) mnodes = ni[0];
+  }
+      
+  
   template<typename TConfig>
   inline bool
   parseGfa(TConfig& c, Graph& g) {
@@ -289,12 +303,41 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
+    // Parse pangenome graph
     Graph g;
     if (!parseGfa(c, g)) {
       std::cerr << "GFA parsing failed!" << std::endl;
       return 1;
     }
-    writeGfa(c, g);
+
+    // Define subgraph for plotting
+    SubGraph gsub(g);
+    std::fill(gsub.segments.begin(), gsub.segments.end(), true);
+    std::fill(gsub.links.begin(), gsub.links.end(), true);
+
+    // Number of x- and y-tiles
+    uint32_t numranks = 0;
+    uint32_t mnodes = 0;
+    subgraphTiles(g, gsub, numranks, mnodes); 
+    // Generate image
+    if (c.width == 0) {
+      c.width = c.tlwidth * mnodes;
+      c.height = c.tlheight * numranks;
+    }
+    std::cerr << numranks << ',' << mnodes << ';' << c.width << ',' << c.height << std::endl;
+    cv::Mat img( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
+
+    // Draw nodes
+    drawNodes(c, img, g, gsub, numranks);
+
+    // Store image (comment this for valgrind, png encoder seems leaky)
+    cv::imwrite(c.outfile.string().c_str(), img);
+    if (c.showWindow) {
+      cv::imshow(c.outfile.string().c_str(), img);
+      cv::waitKey(0);
+    }
+    
+    //writeGfa(c, g);
     
 #ifdef PROFILE
     ProfilerStop();
@@ -315,7 +358,13 @@ namespace wallysworld
     generic.add_options()
       ("help,?", "show help message")
       ("fasta,f", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "fasta file for segment sequences")
+      ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output png file")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
+      ("trackheight,t", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(50), "tile height in pixels")
+      ("trackwidth,u", boost::program_options::value<uint32_t>(&c.tlwidth)->default_value(50), "tile width in pixels")
+      ("ftscale,f", boost::program_options::value<float>(&c.ftscale)->default_value(0.4), "font scale")
+      ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
+      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
       ;
 
     // Define hidden options
@@ -346,6 +395,14 @@ namespace wallysworld
       return 0;
     }
 
+    // Set node parameters
+    c.nodeheight = (int) (0.5 * c.tlheight);
+    c.nodewidth = (int) (0.5 * c.tlwidth);
+
+    // Set line width
+    c.lw = 0.05 * c.tlheight;
+    if (c.lw < 1) c.lw = 1;
+    
     // Show window?
     if (vm.count("window")) c.showWindow = true;
     else c.showWindow = false;
