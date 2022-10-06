@@ -297,7 +297,10 @@ namespace wallysworld
       //sfile << "\t" << (g.links[i].to+1);
       if (g.links[i].torev) sfile << "\t-";
       else sfile << "\t+";
-      sfile << "\t0M" << std::endl;
+      sfile << "\t0M";
+      // From and to rank
+      sfile << "\tFR:i:" << g.segments[g.links[i].from].rank;
+      sfile << "\tTR:i:" << g.segments[g.links[i].to].rank << std::endl;
     }
     sfile.close();
   }
@@ -406,7 +409,7 @@ namespace wallysworld
     c.nodewidth = (int) (0.5 * c.tlwidth);
 
     // Set line width
-    c.lw = 0.05 * c.tlheight;
+    c.lw = 0.005 * c.tlheight;
     if (c.lw < 1) c.lw = 1;
     
     // Show window?
