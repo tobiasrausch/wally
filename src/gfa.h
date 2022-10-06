@@ -74,11 +74,7 @@ namespace wallysworld
   subgraphTiles(Graph const& g, SubGraph const& gsub, uint32_t& numranks, uint32_t& mnodes) {
     numranks = numRanks(g, gsub);
     std::vector<uint32_t> ni(numranks, 0);
-    for(uint32_t i = 0; i < gsub.segments.size(); ++i) {
-      uint32_t rk = g.segments[gsub.segments[i]].rank;
-      if (rk == POS_UNDEF) rk = numranks - 1;
-      ++ni[rk];
-    }
+    for(uint32_t i = 0; i < gsub.segments.size(); ++i) ++ni[g.segments[gsub.segments[i]].rank];
     std::sort(ni.begin(), ni.end(), std::greater<uint32_t>());
     if (!ni.empty()) mnodes = ni[0];
   }
@@ -90,6 +86,9 @@ namespace wallysworld
     typedef std::map<std::string, uint32_t> TChrMap;
     typedef std::vector<TChrMap> TGraphChrMap;
     TGraphChrMap chrmap(1, TChrMap());
+    typedef std::map<uint32_t, uint32_t> TRankMap;
+    TRankMap rmap;
+    rmap.insert(std::make_pair(0, 0));  // Always map rank 0 to rank 0 (reference) even if there are no nodes
     for(uint32_t refIndex = 0; refIndex < c.chrname[0].size(); ++refIndex) chrmap[0].insert(std::make_pair(c.chrname[0][refIndex], refIndex));
     
     // Segment map
@@ -97,6 +96,8 @@ namespace wallysworld
     TSegmentIdMap smap;
     
     // Segment FASTA sequences
+    boost::filesystem::remove(c.seqfile.string());
+    boost::filesystem::remove(c.seqfile.string() + ".fai");
     std::ofstream sfile;
     sfile.open(c.seqfile.string().c_str());
     uint64_t seqsize = 0;
@@ -147,24 +148,32 @@ namespace wallysworld
 		  rank = boost::lexical_cast<uint32_t>(*tikv);
 		}
 	      }
-	      if (rank != POS_UNDEF) {
-		// rGFA
-		if ((rank < chrmap.size()) && (chrmap[rank].find(chrn) != chrmap[rank].end())) tid = chrmap[rank][chrn];
-		else {
-		  if (rank == 0) {
-		    std::cerr << "Genome file does not match rank 0 chromosome names!" << std::endl;
-		    std::cerr << chrn << " is not present in your genome file!" << std::endl;
-		    return false;
-		  } else {
-		    // Insert new chromosome
-		    if (rank >= chrmap.size()) {
-		      chrmap.resize(rank + 1, TChrMap());
-		      c.chrname.resize(rank + 1, ConfigGfa::TChrNames());
-		    }
-		    tid = chrmap[rank].size();
-		    chrmap[rank].insert(std::make_pair(chrn, tid));
-		    c.chrname[rank].push_back(chrn);
+	      // Remap ranks
+	      if (rmap.find(rank) == rmap.end()) {
+		// Create new rank level
+		uint32_t newrank = rmap.size();
+		rmap.insert(std::make_pair(rank, newrank));
+	      }
+	      rank = rmap[rank];
+	      // Set chromosome names to NA and pos to 0 if not present
+	      if (chrn.empty()) chrn = "NA";
+	      if (pos == POS_UNDEF) pos = 0;
+	      // rGFA
+	      if ((rank < chrmap.size()) && (chrmap[rank].find(chrn) != chrmap[rank].end())) tid = chrmap[rank][chrn];
+	      else {
+		if (rank == 0) {
+		  std::cerr << "Genome file does not match rank 0 chromosome names!" << std::endl;
+		  std::cerr << chrn << " is not present in your genome file!" << std::endl;
+		  return false;
+		} else {
+		  // Insert new chromosome
+		  if (rank >= chrmap.size()) {
+		    chrmap.resize(rank + 1, TChrMap());
+		    c.chrname.resize(rank + 1, ConfigGfa::TChrNames());
 		  }
+		  tid = chrmap[rank].size();
+		  chrmap[rank].insert(std::make_pair(chrn, tid));
+		  c.chrname[rank].push_back(chrn);
 		}
 	      }
 	      
@@ -248,6 +257,7 @@ namespace wallysworld
       std::cerr << "Could not build FASTA index!" << std::endl;
       return false;
     }
+    
     return true;
   }
 
@@ -268,12 +278,10 @@ namespace wallysworld
       char* seq = faidx_fetch_seq(fai, seqid.c_str(), 0, faidx_seq_len(fai, seqid.c_str()), &seqlen);
       sfile << "S\ts" << (i+1) << "\t" << seq;
       //sfile << "S\t" << (i+1) << "\t" << seq;
-      if (g.segments[i].rank != POS_UNDEF) {
-	sfile << "\tLN:i:" << g.segments[i].len;
-	sfile << "\tSN:Z:" << c.chrname[g.segments[i].rank][g.segments[i].tid];
-	sfile << "\tSO:i:" << g.segments[i].pos;
-	sfile << "\tSR:i:" << g.segments[i].rank;
-      }
+      sfile << "\tLN:i:" << g.segments[i].len;
+      sfile << "\tSN:Z:" << c.chrname[g.segments[i].rank][g.segments[i].tid];
+      sfile << "\tSO:i:" << g.segments[i].pos;
+      sfile << "\tSR:i:" << g.segments[i].rank;
       sfile << std::endl;
       free(seq);
     }
@@ -313,6 +321,7 @@ namespace wallysworld
     for(uint32_t i = 0; i < g.segments.size(); ++i) gsub.segments.push_back(i);
     for(uint32_t i = 0; i < g.links.size(); ++i) gsub.links.push_back(i);
 
+
     // Number of x- and y-tiles
     uint32_t numranks = 0;
     uint32_t mnodes = 0;
@@ -322,7 +331,6 @@ namespace wallysworld
       c.width = c.tlwidth * mnodes;
       c.height = c.tlheight * numranks;
     }
-    std::cerr << numranks << ',' << mnodes << ';' << c.width << ',' << c.height << std::endl;
     cv::Mat img( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
 
     // Draw nodes
@@ -334,8 +342,8 @@ namespace wallysworld
       cv::imshow(c.outfile.string().c_str(), img);
       cv::waitKey(0);
     }
-    
-    //writeGfa(c, g);
+
+    writeGfa(c, g);
     
 #ifdef PROFILE
     ProfilerStop();
