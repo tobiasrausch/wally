@@ -55,6 +55,9 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawNodes(TConfig const& c, cv::Mat& img, Graph const& g, SubGraph const& gsub, uint32_t const nranks, uint32_t const mnodes) {
+    boost::random::mt19937 rng;
+    boost::random::uniform_int_distribution<> uf(0,1000);
+
     uint32_t xoffset = (c.tlwidth - c.nodewidth) / 2;
     uint32_t yoffset = (c.tlheight - c.nodeheight) / 2;
 
@@ -99,9 +102,12 @@ namespace wallysworld
       bool torev = g.links[gsub.links[i]].torev;
 
       // Offset lines based on grid position in x- and y-direction
-      float sf = (((float) std::abs((int32_t) xnodemap[from] - (int32_t) xnodemap[to]) / (float) mnodes) + ((float) std::abs((int32_t) g.segments[from].rank - (int32_t) g.segments[to].rank) / (float) nranks)) / 2;
-      float pry = sf * yoffset + 1;
-      float prx = sf * xoffset + 1;
+      //float sf = (((float) std::abs((int32_t) xnodemap[from] - (int32_t) xnodemap[to]) / (float) mnodes) + ((float) std::abs((int32_t) g.segments[from].rank - (int32_t) g.segments[to].rank) / (float) nranks)) / 2;
+      //double sf = ((double) rand() / (RAND_MAX));
+      double sf = (double) uf(rng) / 1000.0;
+      std::cerr << sf << std::endl;
+      float pry = sf * (yoffset * 0.8) + 1;
+      float prx = sf * (xoffset * 0.8) + 1;
       // Offset outgoing edges
       float outg = sf * c.nodeheight / 2;
       
@@ -115,16 +121,38 @@ namespace wallysworld
 	      // Consecutive nodes in the same rank
 	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth, g.segments[to].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
 	    } else {
-	      // Same rank
+	      // Non-consecutive nodes in the same rank
 	      pry = pry + yoffset + c.nodeheight;
-	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
 	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
 	    }
 	  } else {
 	    // Different rank, - - link
+	    if (g.segments[from].rank > g.segments[to].rank) outg = -1 * outg; // Above or below node midline
+	    else pry = pry + yoffset + c.nodeheight;
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);	    
+	  }
+	} else {
+	  // + incoming edge
+	  if (g.segments[from].rank == g.segments[to].rank) {
+	    // Same rank, - + link
+	    std::cerr << "-+" << std::endl;
+	  } else {
+	    // Different rank, - + link
+	    if (g.segments[from].rank > g.segments[to].rank) outg = -1 * outg; // Above or below node midline
+	    else pry = pry + yoffset + c.nodeheight;
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
 	  }
 	}
       } else {
@@ -133,6 +161,7 @@ namespace wallysworld
 	  // - incoming edge
 	  if (g.segments[from].rank == g.segments[to].rank) {
 	    // Same rank, + - link
+	    std::cerr << "+-" << std::endl;
 	  } else {
 	    // Different rank, + - link
 	    if (g.segments[from].rank > g.segments[to].rank) outg = -1 * outg; // Above or below node midline
@@ -152,11 +181,11 @@ namespace wallysworld
 	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[to] * c.tlwidth + xoffset, g.segments[to].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
 	    } else {
 	      // Non-consecutive nodes in the same rank
+	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
 	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2), cv::Point(xnodemap[to] * c.tlwidth + xoffset, g.segments[to].rank * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	      cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
 	    }
 	  } else {
 	    // Different rank, + + link

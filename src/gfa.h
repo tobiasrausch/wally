@@ -64,6 +64,7 @@ namespace wallysworld
   inline uint32_t
   numRanks(Graph const& g, SubGraph const& gsub) {
     std::set<uint32_t> ranks;
+    ranks.insert(0); // The reference rank is always present
     for(uint32_t i = 0; i < gsub.segments.size(); ++i) {
       ranks.insert(g.segments[gsub.segments[i]].rank);
     }
@@ -369,8 +370,8 @@ namespace wallysworld
       ("fasta,f", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "fasta file for segment sequences")
       ("outfile,o", boost::program_options::value<boost::filesystem::path>(&c.outfile)->default_value("out.png"), "output png file")
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
-      ("trackheight,t", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(50), "tile height in pixels")
-      ("trackwidth,u", boost::program_options::value<uint32_t>(&c.tlwidth)->default_value(300), "tile width in pixels")
+      ("trackheight,t", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(100), "tile height in pixels")
+      ("trackwidth,u", boost::program_options::value<uint32_t>(&c.tlwidth)->default_value(400), "tile width in pixels")
       ("ftscale,f", boost::program_options::value<float>(&c.ftscale)->default_value(0.4), "font scale")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(0), "width of the plot [0: best fit]")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot [0: best fit]")
@@ -405,8 +406,8 @@ namespace wallysworld
     }
 
     // Set node parameters
-    c.nodeheight = (int) (0.5 * c.tlheight);
-    c.nodewidth = (int) (0.5 * c.tlwidth);
+    c.nodeheight = (int) (0.7 * c.tlheight);
+    c.nodewidth = (int) (0.7 * c.tlwidth);
 
     // Set line width
     c.lw = 0.005 * c.tlheight;
