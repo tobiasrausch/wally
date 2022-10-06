@@ -54,7 +54,7 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  drawNodes(TConfig const& c, cv::Mat& img, Graph const& g, SubGraph const& gsub, uint32_t const nranks, uint32_t const mnodes) {
+  drawNodes(TConfig const& c, cv::Mat& img, Graph const& g, SubGraph const& gsub, uint32_t const nranks) {
     boost::random::mt19937 rng;
     boost::random::uniform_int_distribution<> uf(0,1000);
 
@@ -76,13 +76,16 @@ namespace wallysworld
       double font_thickness = 3 * c.ftscale;
       int32_t baseline = 0;
 
-      // Segment coordinate
-      std::string posStr(boost::lexical_cast<std::string>(g.segments[gsub.segments[i]].pos));
-      insertComma(posStr);
+      // Segment name
       std::string text(c.chrname[g.segments[gsub.segments[i]].rank][g.segments[gsub.segments[i]].tid]);
-      text += ":" + posStr;
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
       cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+
+      // Coordinate
+      text = boost::lexical_cast<std::string>(g.segments[gsub.segments[i]].pos);
+      insertComma(text);
+      textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + c.nodeheight / 2 + textSize.height / 2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
       
       // Segment length
       text = boost::lexical_cast<std::string>(g.segments[gsub.segments[i]].len);
@@ -95,6 +98,9 @@ namespace wallysworld
     }
 
     // Draw links
+    std::vector<float> sf(gsub.links.size(), 0);
+    for(uint32_t i = 0; i < gsub.links.size(); ++i) sf[i] = (float) i / (float) gsub.links.size();
+    std::random_shuffle(sf.begin(), sf.end());
     for(uint32_t i = 0; i < gsub.links.size(); ++i) {
       uint32_t from = g.links[gsub.links[i]].from;
       bool fromrev = g.links[gsub.links[i]].fromrev;
@@ -104,12 +110,11 @@ namespace wallysworld
       // Offset lines based on grid position in x- and y-direction
       //float sf = (((float) std::abs((int32_t) xnodemap[from] - (int32_t) xnodemap[to]) / (float) mnodes) + ((float) std::abs((int32_t) g.segments[from].rank - (int32_t) g.segments[to].rank) / (float) nranks)) / 2;
       //double sf = ((double) rand() / (RAND_MAX));
-      double sf = (double) uf(rng) / 1000.0;
-      std::cerr << sf << std::endl;
-      float pry = sf * (yoffset * 0.8) + 1;
-      float prx = sf * (xoffset * 0.8) + 1;
+      //double sf = (double) uf(rng) / 1000.0;
+      float pry = sf[i] * (yoffset * 0.8) + 0.1 * yoffset;
+      float prx = sf[i] * (xoffset * 0.8) + 0.1 * xoffset;
       // Offset outgoing edges
-      float outg = sf * c.nodeheight / 2;
+      float outg = sf[i] * (c.nodeheight / 2 * 0.8) + 0.1 * c.nodeheight / 2;
       
       if (fromrev) {
 	// - outgoing edge
@@ -143,7 +148,12 @@ namespace wallysworld
 	  // + incoming edge
 	  if (g.segments[from].rank == g.segments[to].rank) {
 	    // Same rank, - + link
-	    std::cerr << "-+" << std::endl;
+	    pry = pry + yoffset + c.nodeheight;
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset - prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset, g.segments[from].rank * c.tlheight + c.tlheight / 2 + outg), cv::Scalar(0, 0, 0), c.lw);
 	  } else {
 	    // Different rank, - + link
 	    if (g.segments[from].rank > g.segments[to].rank) outg = -1 * outg; // Above or below node midline
@@ -161,7 +171,11 @@ namespace wallysworld
 	  // - incoming edge
 	  if (g.segments[from].rank == g.segments[to].rank) {
 	    // Same rank, + - link
-	    std::cerr << "+-" << std::endl;
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[from] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[from].rank * c.tlheight + pry), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
+	    cv::line(img, cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth + prx, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Point(xnodemap[to] * c.tlwidth + xoffset + c.nodewidth, g.segments[to].rank * c.tlheight + c.tlheight / 2 - outg), cv::Scalar(0, 0, 0), c.lw);
 	  } else {
 	    // Different rank, + - link
 	    if (g.segments[from].rank > g.segments[to].rank) outg = -1 * outg; // Above or below node midline
