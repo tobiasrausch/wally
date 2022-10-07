@@ -26,7 +26,7 @@ displayUsage() {
   std::cout << "    region         plot genomic region" << std::endl;
   std::cout << "    matches        plot read or contig alignments" << std::endl;
   std::cout << "    dotplot        plot pairwise alignments" << std::endl;
-  //std::cout << "    gfa            GFA plotting" << std::endl;
+  std::cout << "    gfa            rGFA plotting" << std::endl;
   std::cout << "    hilbert        plot genomic region as hilbert curve" << std::endl; 
   std::cout << std::endl;
   std::cout << std::endl;
