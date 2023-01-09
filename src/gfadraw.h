@@ -79,19 +79,19 @@ namespace wallysworld
       // Segment name
       std::string text(c.chrname[g.segments[gsub.segments[i]].rank][g.segments[gsub.segments[i]].tid]);
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
 
       // Coordinate
       text = boost::lexical_cast<std::string>(g.segments[gsub.segments[i]].pos);
       insertComma(text);
       textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + c.nodeheight / 2 + textSize.height / 2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset, rk * c.tlheight + yoffset + c.nodeheight / 2 + textSize.height / 2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
       
       // Segment length
       text = boost::lexical_cast<std::string>(g.segments[gsub.segments[i]].len);
       insertComma(text);
       textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset + c.nodewidth - textSize.width, rk * c.tlheight + yoffset + c.nodeheight - 1), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      cv::putText(img, text, cv::Point(xpos[rk] * c.tlwidth + xoffset + c.nodewidth - textSize.width, rk * c.tlheight + yoffset + c.nodeheight - 1), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
       
       // Next tile
       ++xpos[rk];

@@ -73,7 +73,7 @@ namespace wallysworld
 	    lastTick = px;
 	    int32_t midpoint = (prevTick + lastTick) / 2;
 	    cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	    cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	    cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
 	  }
 	}
       }
@@ -88,7 +88,7 @@ namespace wallysworld
 	baseline = 0;
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.width)) {
-	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, (track - 1) * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, (track - 1) * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
 	}
       }
       px += c.pxoffset;
@@ -145,7 +145,7 @@ namespace wallysworld
 	cv::Size textSize = cv::getTextSize(anno[i].id, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
 	int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
 	if ((pxmid > px) && (pxmid + textSize.width < pxend)) {
-	  cv::putText(img, anno[i].id, cv::Point(pxmid, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness);
+	  cv::putText(img, anno[i].id, cv::Point(pxmid, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
 	}
       }
     }
@@ -168,7 +168,7 @@ namespace wallysworld
 	      int32_t midpoint = (kstart + kend) / 2;
 	      cv::Rect rect(midpoint - textSize.width/2, track * c.tlheight, textSize.width, c.tlheight);
 	      cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
-	      cv::putText(img, tr[i].rg.id, cv::Point(midpoint - textSize.width/2, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness);
+	      cv::putText(img, tr[i].rg.id, cv::Point(midpoint - textSize.width/2, track * c.tlheight + c.tlheight - 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 0, 0), font_thickness, cv::LINE_AA);
 	      for(int32_t l = kstart; l < kend; ++l) blocked[l] = true;
 	      break;
 	    }
@@ -192,7 +192,7 @@ namespace wallysworld
       for(int32_t i = 0; i < rg.size; ++i) {
 	std::string text(1, ref[i]);
 	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-	cv::putText(img, text, cv::Point(px + c.pxoffset/2 - textSize.width/2, track * c.tlheight + textSize.height + 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, text, cv::Point(px + c.pxoffset/2 - textSize.width/2, track * c.tlheight + textSize.height + 2), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
 	px += c.pxoffset;
       }
     }
@@ -287,7 +287,7 @@ namespace wallysworld
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
       cv::Rect rect(0,  track * c.tlheight - textSize.height/2, textSize.width, textSize.height);
       cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
-      cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+      cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
     }
   }
 
@@ -300,7 +300,7 @@ namespace wallysworld
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
     cv::Rect rect(0,  track * c.tlheight - textSize.height, textSize.width, textSize.height);
     cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
-    cv::putText(img, text, cv::Point(0, track * c.tlheight), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    cv::putText(img, text, cv::Point(0, track * c.tlheight), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
   }
 
   
@@ -348,18 +348,18 @@ namespace wallysworld
       cv::Rect rect(x, y, w, h);
       cv::rectangle(img, rect, clr, -1);
       if ((nuc == 'a') or (nuc == 'A')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness, cv::LINE_AA);
       }
       else if ((nuc == 'c') or (nuc == 'C')) {
-      	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_C, font_thickness);
+      	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_C, font_thickness, cv::LINE_AA);
       }
       else if ((nuc == 'g') or (nuc == 'G')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_G, font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_G, font_thickness, cv::LINE_AA);
       }
       else if ((nuc == 't') or (nuc == 'T')) {
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness, cv::LINE_AA);
       } else {  // n or N most likely
-	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_N, font_thickness);
+	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_N, font_thickness, cv::LINE_AA);
       }
     } else {
       int32_t pxw = w;
@@ -405,7 +405,7 @@ namespace wallysworld
       if (frac < 0.5) {
 	cv::Rect rect(x+w/2-textSize.width/2, y, textSize.width, h);
 	cv::rectangle(img, rect, cv::Scalar(255, 255, 255), -1);
-	cv::putText(img, text, cv::Point(x+w/2 - textSize.width/2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+	cv::putText(img, text, cv::Point(x+w/2 - textSize.width/2, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness, cv::LINE_AA);
       }
     }
   }
@@ -463,7 +463,7 @@ namespace wallysworld
       cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
       // Put length if space takes max. 5 genomic position
       if (textSize.width <= 5 * w) {
-	cv::putText(img, text, cv::Point(x+w/2 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness);
+	cv::putText(img, text, cv::Point(x+w/2 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(211, 0, 148), font_thickness, cv::LINE_AA);
       }
     }
   }
@@ -490,9 +490,9 @@ namespace wallysworld
     // Put length if space takes max. 5 genomic position
     if (textSize.width <= 5 * w) {
       if (leading) {
-	cv::putText(img, text, cv::Point(x+w - 1, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, text, cv::Point(x+w - 1, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
       } else {
-	cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, text, cv::Point(x+w - 1 - textSize.width, y + h/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
       }
     }
   }

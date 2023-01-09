@@ -63,7 +63,7 @@ namespace wallysworld
     cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
     cv::Rect rect(0,  track * c.tlheight, textSize.width, textSize.height);
     cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
-    cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
   }
   
   template<typename TConfig>
@@ -79,9 +79,9 @@ namespace wallysworld
     double font_thickness = 3 * c.ftscale;
     int32_t baseline = 0;
     cv::Size textSize = cv::getTextSize(chr, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, chr, cv::Point(c.width / 2 - textSize.width / 2, 0 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    cv::putText(img, chr, cv::Point(c.width / 2 - textSize.width / 2, 0 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
     textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, text, cv::Point(c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    cv::putText(img, text, cv::Point(c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
 
     // Draw scale
     int32_t bpscale = 0.5 * c.width * c.bpoffset;
@@ -102,7 +102,7 @@ namespace wallysworld
     insertComma(scaletxt);
     scaletxt += "bp";
     textSize = cv::getTextSize(scaletxt, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, scaletxt, cv::Point(pxend + sep, 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+    cv::putText(img, scaletxt, cv::Point(pxend + sep, 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
   }
 
   template<typename TConfig>
@@ -204,7 +204,7 @@ namespace wallysworld
       int32_t baseline = 0;
       cv::Size textSize = cv::getTextSize(readcoord, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
       if (textSize.width < w) {
-	cv::putText(img, readcoord, cv::Point(x + w / 2 - textSize.width / 2, y + c.tlheight/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness);
+	cv::putText(img, readcoord, cv::Point(x + w / 2 - textSize.width / 2, y + c.tlheight/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
       }
     }
 
