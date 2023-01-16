@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libboost-filesystem-dev \
     libboost-iostreams-dev \
     libbz2-dev \
+    libdeflate-dev \
     libhdf5-dev \
     libncurses-dev \
     liblzma-dev \

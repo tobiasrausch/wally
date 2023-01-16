@@ -21,7 +21,7 @@ LDFLAGS += -L${EBROOTHTSLIB} -lboost_iostreams -lboost_filesystem -lboost_system
 ifeq (${STATIC}, 1)
 	OPENCVSTATIC = --static
 	CVSHARED = "OFF"
-	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2
+	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2 -ldeflate
 else
 	OPENCVSTATIC = ""
 	CVSHARED = "ON"
