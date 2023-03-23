@@ -91,7 +91,7 @@ For large and complex structural variants, wally supports split views (as explai
 
 `wally region -up -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
-## Subcommand `matches`: Visualization of alignment matches
+## Subcommand `matches`: Visualization of chained alignment matches
 
 For long read alignments or mappings of entire contigs, one often wants to explore all matches of a long input sequence with respect to the reference to visualize, for instance, complex rearrangements. For a single read or contig, you need a sorted and indexed BAM file and the reference genome.
 
