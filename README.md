@@ -162,9 +162,9 @@ With [gfatools](https://github.com/lh3/gfatools), you can extract subgraphs out 
 
 ## Citation
 
-Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel.          
-Long-read sequencing of diagnosis and post-therapy medulloblastoma reveals complex rearrangement patterns and epigenetic signatures.            
-[bioRxiv 2022.02.20.480758](https://doi.org/10.1101/2022.02.20.480758)
+Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Mădălina Giurgiu, Laura Villacorta, Anton G. Henssen, Stefan Fröhling, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel     
+Long-read sequencing of diagnosis and post-therapy medulloblastoma reveals complex rearrangement patterns and epigenetic signatures     
+Cell Genomics, 2023, 100281, [DOI: 10.1016/j.xgen.2023.100281](https://doi.org/10.1016/j.xgen.2023.100281)     
 
 ## License
 
