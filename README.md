@@ -89,7 +89,11 @@ The paired-end coloring highlights candidate structural variants supported by re
 
 For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split with a larger image size.
 
-`wally region -up -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+`wally region -p -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+
+To visualize genomic breakpoints it's also helpful to highlight clipped reads `-c` and supplementary alignments `-u`.
+
+`wally region -cup -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
 ## Subcommand `matches`: Visualization of chained alignment matches
 
@@ -111,7 +115,7 @@ You can also compare assemblies or align contigs to a reference genome using a w
 
 `samtools index assembly.bam`
 
-`wally matches -r <contig_name> -g <genome> <input.bam>`
+`wally matches -r <contig_name> -g ref.fa assembly.bam`
 
 ## Subcommand `dotplot`: Pairwise sequence dotplots
 
