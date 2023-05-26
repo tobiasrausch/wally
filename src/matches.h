@@ -209,8 +209,7 @@ namespace wallysworld
 	for(typename TReadMappings::const_iterator it = mp.begin(); it != mp.end(); ++it) matchCount += it->second.size();
       }	
       if (!matchCount) {
-	std::cerr << "Error: No mappings found! Are the read names correct?" << std::endl;
-	return 1;
+	std::cerr << "Warning: No mappings found! Are the read names correct? " << *itread << std::endl;
       }      
 
       // Check image height
