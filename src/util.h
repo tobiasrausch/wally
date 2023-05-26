@@ -218,7 +218,7 @@ namespace wallysworld
     else {
       std::string ext = std::string(hts_format_file_extension(hts_get_format(hts_fp)));
       hts_close(hts_fp);
-      if (ext == "bam") return 0;
+      if ((ext == "bam") || (ext == "cram")) return 0;
       else if (ext == "fa") return 1;
       else {
 	return -1;
