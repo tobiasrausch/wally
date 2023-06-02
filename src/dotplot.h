@@ -713,7 +713,7 @@ namespace wallysworld
       ("genome,g", boost::program_options::value<boost::filesystem::path>(&c.genome), "genome fasta file")
       ("matchlen,m", boost::program_options::value<uint32_t>(&c.matchlen)->default_value(11), "default match length")
       ("size,s", boost::program_options::value<uint32_t>(&c.seqsize)->default_value(0), "min. sequence size to include")
-      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile)->default_value("seq.fa"), "output sequence file")      
+      ("seqfile,q", boost::program_options::value<boost::filesystem::path>(&c.seqfile), "sequence output file [optional]")      
       ("selfalign,a", "incl. self alignments")
       ("flip,p", "flip x and y-axis")
       ;
@@ -837,6 +837,14 @@ namespace wallysworld
     // In case of no automatic estimation
     c.usedwidth = c.width;
     c.usedheight = c.height;
+
+    // Seqfile random name
+    if (c.storeSequences) {
+      if (!(vm.count("seqfile"))) {
+	boost::uuids::uuid uuid = boost::uuids::random_generator()();
+	c.seqfile = "seq_" + boost::lexical_cast<std::string>(uuid) + ".fa";
+      }
+    }
     
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -844,8 +852,19 @@ namespace wallysworld
     std::cout << "wally ";
     for(int i=0; i<argc; ++i) { std::cout << argv[i] << ' '; }
     std::cout << std::endl;
-    
-    return dotplotRun(c);
+
+    // generate dot plots
+    int32_t retVal = dotplotRun(c);
+
+    // Clean-up temporary files
+    if (c.storeSequences) {
+      if (!(vm.count("seqfile"))) {
+	boost::filesystem::remove(c.seqfile.string());
+	boost::filesystem::remove(c.seqfile.string() + ".fai");
+      }
+    }
+
+    return retVal;
   }
 
 }
