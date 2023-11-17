@@ -41,15 +41,16 @@ RUN cd /opt \
 
 # Multi-stage build
 FROM alpine:latest
+RUN apk add --no-cache bash
 RUN mkdir -p /opt/wally/bin
 WORKDIR /opt/wally/bin
 COPY --from=0 /opt/wally/bin/wally .
 
 # Workdir
-WORKDIR /root/
+WORKDIR /home
 
 # Add Wally to PATH
 ENV PATH="/opt/wally/bin:${PATH}"
 
 # by default /bin/sh is executed
-CMD ["/bin/sh"]
+CMD ["/bin/bash"]
