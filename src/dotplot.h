@@ -838,13 +838,8 @@ namespace wallysworld
     c.usedwidth = c.width;
     c.usedheight = c.height;
 
-    // Seqfile random name
-    if (c.storeSequences) {
-      if (!(vm.count("seqfile"))) {
-	boost::uuids::uuid uuid = boost::uuids::random_generator()();
-	c.seqfile = "seq_" + boost::lexical_cast<std::string>(uuid) + ".fa";
-      }
-    }
+    // Temporary seqfile
+    if (!(vm.count("seqfile"))) c.seqfile = boost::filesystem::unique_path().replace_extension(".fa");
     
     // Show cmd
     boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -857,11 +852,9 @@ namespace wallysworld
     int32_t retVal = dotplotRun(c);
 
     // Clean-up temporary files
-    if (c.storeSequences) {
-      if (!(vm.count("seqfile"))) {
-	boost::filesystem::remove(c.seqfile.string());
-	boost::filesystem::remove(c.seqfile.string() + ".fai");
-      }
+    if (!(vm.count("seqfile"))) {
+      boost::filesystem::remove(c.seqfile.string());
+      boost::filesystem::remove(c.seqfile.string() + ".fai");
     }
 
     return retVal;
