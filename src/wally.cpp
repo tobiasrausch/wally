@@ -15,7 +15,6 @@
 #include "dotplot.h"
 #include "heatmap.h"
 #include "hilbert.h"
-#include "gfa.h"
 
 using namespace wallysworld;
 
@@ -26,7 +25,6 @@ displayUsage() {
   std::cout << "    region         plot genomic region" << std::endl;
   std::cout << "    matches        plot read or contig alignments" << std::endl;
   std::cout << "    dotplot        plot pairwise alignments" << std::endl;
-  std::cout << "    gfa            rGFA plotting" << std::endl;
   //std::cout << "    hilbert        plot genomic region as hilbert curve" << std::endl; 
   std::cout << std::endl;
   std::cout << std::endl;
@@ -66,9 +64,6 @@ int main(int argc, char **argv) {
     }
     else if ((std::string(argv[1]) == "dotplot")) {
       return dotplot(argc-1,argv+1);
-    }
-    else if ((std::string(argv[1]) == "gfa")) {
-      return gfa(argc-1,argv+1);
     }
     else if ((std::string(argv[1]) == "shared")) {
       return heatmap(argc-1,argv+1);
