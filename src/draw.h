@@ -132,7 +132,7 @@ namespace wallysworld
 	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg + 1);
 	int32_t pxend = pixelX(c.width, rg.size, anno[i].end - rg.beg + 1);
 	cv::Rect rect(px, track * c.tlheight + 1, pxend - px, c.tlheight - 2);
-	cv::rectangle(img, rect, cv::Scalar(255, 0, 0), -1);
+	cv::rectangle(img, rect, hexToScalar(anno[i].color), -1);
 
 	// Block regions
 	if (px < 0) px = 0;

@@ -57,8 +57,8 @@ namespace wallysworld
 	    bool transcript = false;
 	    bool fwd = true;
 	    if (tokIter != tokens.end()) {
-	      std::string bedtype = *tokIter++;
-	      if (bedtype == "transcript") {
+	      std::string column5 = *tokIter++;
+	      if (column5 == "transcript") {
 		transcript = true;
 		if (tokIter != tokens.end()) {
 		  std::string strand = *tokIter++;
@@ -72,6 +72,8 @@ namespace wallysworld
 		  std::cerr << "Transcript lacks forward (+) or reverse (-) in the 6th column!" << std::endl;
 		  return false;
 		}
+	      } else if ((column5.size()>1) && (column5[0] == '0') && (column5[1] == 'x')) {
+		tmp.color = hexColor(column5);
 	      }
 	    }
 	    if (transcript) tr.push_back(Transcript(tmp, fwd));

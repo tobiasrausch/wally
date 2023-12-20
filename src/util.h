@@ -91,10 +91,11 @@ namespace wallysworld
     int32_t beg;
     int32_t end;
     int32_t size;
+    uint32_t color;
     std::string id;
     
-    Region() : tid(0), beg(0), end(0), size(0), id("") {}
-    Region(int32_t const t, int32_t const b, int32_t const e) : tid(t), beg(b), end(e), size(e-b), id("") {}
+    Region() : tid(0), beg(0), end(0), size(0), color(255), id("") {}
+    Region(int32_t const t, int32_t const b, int32_t const e) : tid(t), beg(b), end(e), size(e-b), color(255), id("") {}
   };
 
   struct Mapping {
@@ -134,6 +135,19 @@ namespace wallysworld
     double font_thickness = 1.5;
     int32_t baseline = 0;
     return cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+  }
+
+  uint32_t hexColor(std::string& color) {
+    if ((color.size() > 1) && (color[0] == '0') && (color[1] == 'x')) {
+      color.erase(0, 2);
+      return std::stoul(color, nullptr, 16);
+    } else {
+      return 255;
+    }
+  }
+
+  cv::Scalar hexToScalar(uint32_t const hex) {
+    return cv::Scalar(((hex) & 0xFF), ((hex >> 8) & 0xFF), ((hex >> 16) & 0xFF));
   }
   
   inline void

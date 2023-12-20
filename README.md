@@ -48,6 +48,23 @@ Simple BED files are used to provide gene or other annotations. The BED file nee
 
 The chromosome names of the genome FASTA file, BAM file and BED annotation file need to match, "chr11" and "11" are not considered identical.
 
+### Custom colors for BED file annotations
+
+You can specify custom colors for each annotation record in the BED file using Hex color codes (column 5 of the BED file). For instance, an annotation file `anno.bed` with this content:
+
+```
+chr17	7350100	7350900	regRed	0xFF0000
+chr17	7351100	7351900	regLime	0x00FF00
+chr17	7352100	7352900	regBlue	0x0000FF
+chr17	7353100	7353900	regTeal	0x008080
+```
+
+can be visualized using
+
+`bgzip anno.bed`
+`tabix -p bed anno.bed.gz`
+`wally region -b anno.bed.gz -r chr17:7350000-7354000 -g <genome> <input.bam>`
+
 ### Multiple BAM files
 
 You can include multiple BAM files in a plot such as a tumor genome and a matched control in cancer genomics.
