@@ -13,6 +13,7 @@
 
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
+#include <htslib/kseq.h>
 
 #include "util.h"
 
@@ -37,9 +38,9 @@ namespace wallysworld
     htsFile* bedfile = hts_open(c.bedFile.string().c_str(), "r");
     tbx_t* tbx = tbx_index_load(c.bedFile.string().c_str());
     hts_itr_t *itr = tbx_itr_querys(tbx, convertToStr(hdr, irg).c_str());
-    kstring_t str = {0,0,0};
-    while (tbx_itr_next(bedfile, tbx, itr, &str) >= 0) {
-      std::string line = std::string(str.s);
+    kstring_t kstr = {0,0,0};
+    while (tbx_itr_next(bedfile, tbx, itr, &kstr) >= 0) {
+      std::string line = std::string(kstr.s);
       typedef boost::tokenizer< boost::char_separator<char> > Tokenizer;
       boost::char_separator<char> sep("\t");
       Tokenizer tokens(line, sep);
@@ -82,6 +83,7 @@ namespace wallysworld
 	}
       }
     }
+    free(kstr.s);
     if (itr) hts_itr_destroy(itr);
     tbx_destroy(tbx);
     hts_close(bedfile);
