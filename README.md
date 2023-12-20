@@ -62,8 +62,11 @@ chr17	7353100	7353900	regTeal	0x008080
 can be visualized using
 
 `bgzip anno.bed`
+
 `tabix -p bed anno.bed.gz`
+
 `wally region -b anno.bed.gz -r chr17:7350000-7354000 -g <genome> <input.bam>`
+
 
 ### Multiple BAM files
 
