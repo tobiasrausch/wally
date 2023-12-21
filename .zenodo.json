@@ -1,0 +1,21 @@
+{
+  "creators": [
+    {
+      "orcid": "0000-0001-5773-5620",
+      "affiliation": "European Molecular Biology Laboratory (EMBL)",
+      "name": "Rausch, Tobias"
+    }
+  ],
+  "title": "Wally: Visualization of aligned sequencing reads and contigs.",
+  "upload_type": "software",
+  "access_right": "open",
+  "description": "<a href=\"https://github.com/tobiasrausch/wally\">Wally</a> is a method to visualize aligned sequencing reads from the command-line.",
+  "keywords": [
+    "visualization",
+    "genomics",
+    "assembly",
+    "plotting",
+    "sequencing-data",
+    "genomics"
+  ]
+}
