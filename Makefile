@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 DEBUG ?= 0
 STATIC ?= 0
 
@@ -68,14 +70,20 @@ all:   	$(TARGETS)
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --cflags opencv4) $@.cpp -o $@ $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --libs ${LDSTATIC} opencv4) $(LDFLAGS)
 
+.emsdk:
+	cd src/ && git clone https://github.com/emscripten-core/emsdk && cd emsdk && git pull && ./emsdk install latest && ./emsdk activate latest && cd ../../ && touch .emsdk
+
+.opencvjs: .emsdk $(OPENCVSOURCES)
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/ && ./emsdk/emsdk activate latest &&  source "${PWD}/src/emsdk/emsdk_env.sh" && EMSCRIPTEN="${PWD}/src/emsdk/upstream/emscripten" python3 opencv/platforms/js/build_js.py opencv_js --build_wasm && cd ../ && touch .opencvjs; fi
+
 install: ${BUILT_PROGRAMS}
 	mkdir -p ${bindir}
 	install -p ${BUILT_PROGRAMS} ${bindir}
 
 clean:
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && $(MAKE) clean; fi
-	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES}
-	rm -rf src/ocv/ src/opencv/build/
+	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES} .emsdk .opencvjs
+	rm -rf src/ocv/ src/opencv/build/ src/emsdk/ src/opencv_js/
 
 distclean: clean
 	rm -f ${BUILT_PROGRAMS}
