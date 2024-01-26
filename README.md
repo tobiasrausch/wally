@@ -7,7 +7,7 @@
 
 # Wally
 
-Plotting of aligned sequencing reads, assembled contigs or pan-genome graphs in BAM/CRAM/GFA format and visualization of genomic variants.
+Plotting of aligned sequencing reads, assembled contigs or pan-genome graphs in BAM/CRAM format and visualization of genomic variants.
 
 ## Installing Wally
 
@@ -170,19 +170,6 @@ Lastly, you can flatten the genomic mappings into simple blocks using `-f`
 To visualize a self-alignment of a read with reference mappings use `-a`
 
 `wally dotplot -a -r read_name -g hg38.fa input.bam`
-
-## Subcommand `gfa`: Visualization of pan-genome graphs (work-in-progress)
-
-Pan-genome graphs in [rGFA](https://github.com/lh3/gfatools/blob/master/doc/rGFA.md#the-reference-gfa-rgfa-format) format can be visualized using
-
-`wally gfa -g GRCh38.fa example/example.gfa.gz`
-
-With [gfatools](https://github.com/lh3/gfatools), you can extract subgraphs out of larger [prebuilt human graphs](https://github.com/lh3/minigraph#prebuilt-graphs).
-
-`gfatools view -R chr6:31354483-31357158 -r 2 GRCh38-90c.r518.gfa | bgzip > subgraph.gfa.gz`
-
-`wally gfa -g GRCh38.fa subgraph.gfa.gz`
-
 
 ## Citation
 
