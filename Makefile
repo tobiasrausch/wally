@@ -86,7 +86,7 @@ install: ${BUILT_PROGRAMS}
 clean:
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && $(MAKE) clean; fi
 	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES} .emsdk .opencvjs
-	rm -rf src/ocv/ src/opencv/build/ src/emsdk/ src/opencv_js/ html/
+	rm -rf src/ocv/ src/opencv/build/ src/emsdk/ src/opencv_js/
 
 distclean: clean
 	rm -f ${BUILT_PROGRAMS}

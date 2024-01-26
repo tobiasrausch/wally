@@ -14,7 +14,6 @@ src/wally
 src/ocv
 src/opencv_js
 src/emsdk
-html/
 
 # Prerequisites
 *.d
