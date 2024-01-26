@@ -65,7 +65,7 @@ all:   	$(TARGETS)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoreconf -i && ./configure ${HTSSTATIC} --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
 .opencv: $(OPENCVSOURCES)
-	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${PWD}/src/ocv -D BUILD_SHARED_LIBS=${CVSHARED} -DOPENCV_GENERATE_PKGCONFIG=ON -D BUILD_ZLIB=ON -D BUILD_PNG=ON -D BUILD_OPENJPEG=ON -D WITH_OPENEXR=OFF -D WITH_JPEG=OFF -D WITH_JASPER=OFF -D WITH_TIFF=OFF -D WITH_WEBP=OFF -D WITH_OPENCL=OFF -D WITH_GTK=${CVSHARED} -D WITH_FFMPEG=OFF -D WITH_1394=OFF -D WITH_IPP=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_apps=OFF .. &&  make -j 4 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/opencv/ && mkdir build && cd build/ &&  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${PWD}/src/ocv -DBUILD_SHARED_LIBS=${CVSHARED} -DOPENCV_GENERATE_PKGCONFIG=ON -DENABLE_PIC=FALSE -DBUILD_JAVA=OFF -DWITH_1394=OFF -DWITH_ADE=OFF -DWITH_VTK=OFF -DWITH_EIGEN=OFF -DWITH_FFMPEG=OFF -DWITH_GSTREAMER=OFF -DWITH_GTK=${CVSHARED} -DWITH_GTK_2_X=OFF -DWITH_IPP=OFF -DWITH_JASPER=OFF -DWITH_JPEG=OFF -DWITH_WEBP=OFF -DWITH_OPENEXR=OFF -DWITH_OPENGL=OFF -DWITH_OPENVX=OFF -DWITH_OPENNI=OFF -DWITH_OPENNI2=OFF -DWITH_PNG=ON -DBUILD_PNG=ON -DWITH_TBB=OFF -DWITH_TIFF=OFF -DWITH_V4L=OFF -DWITH_OPENCL=OFF -DWITH_OPENCL_SVM=OFF -DWITH_OPENCLAMDFFT=OFF -DWITH_OPENCLAMDBLAS=OFF -DWITH_GPHOTO2=OFF -DWITH_LAPACK=OFF -DWITH_ITT=OFF -DWITH_QUIRC=OFF -DCV_TRACE=OFF -DBUILD_OPENJPEG=ON -DWITH_JPEG=ON -DBUILD_ZLIB=ON -DBUILD_opencv_dnn=OFF -DBUILD_opencv_highgui=ON -DBUILD_opencv_ml=OFF -DBUILD_opencv_objdetect=OFF -DBUILD_opencv_photo=OFF -DBUILD_opencv_python3=OFF -DBUILD_opencv_shape=OFF -DBUILD_opencv_stitching=OFF -DBUILD_opencv_superres=OFF -DBUILD_opencv_videoio=OFF -DBUILD_opencv_videostab=OFF -DBUILD_opencv_xfeatures2d=OFF -DBUILD_opencv_bgsegm=OFF -DBUILD_opencv_bioinspired=OFF -DBUILD_opencv_fuzzy=OFF -DBUILD_opencv_hfs=OFF -DBUILD_opencv_img_hash=OFF -DBUILD_opencv_intensity_transform=OFF -DBUILD_opencv_line_descriptor=OFF -DBUILD_opencv_optflow=OFF -DBUILD_opencv_phase_unwrapping=OFF -DBUILD_opencv_plot=OFF -DBUILD_opencv_rapid=OFF -DBUILD_opencv_reg=OFF -DBUILD_opencv_rgbd=OFF -DBUILD_opencv_saliency=OFF -DBUILD_opencv_stereo=OFF -DBUILD_opencv_structured_light=OFF -DBUILD_opencv_surface_matching=OFF -DBUILD_opencv_tracking=OFF -DBUILD_opencv_ximgproc=OFF -DBUILD_opencv_xobjdetect=OFF -DBUILD_opencv_xphoto=OFF -DBUILD_opencv_calib3d=ON -DBUILD_opencv_core=ON -DBUILD_opencv_features2d=ON -DBUILD_opencv_flann=ON -DBUILD_opencv_imgcodecs=ON -DBUILD_opencv_video=ON -DBUILD_opencv_apps=OFF -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_IPP_IW=OFF -DBUILD_PACKAGE=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_TESTS=OFF -DBUILD_WITH_DEBUG_INFO=OFF -DWITH_PTHREADS_PF=OFF -DCV_ENABLE_INTRINSICS=OFF .. && make -j 8 && make install && cd ../ && rm -rf build/ && cd ../../ && touch .opencv; fi
 
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --cflags opencv4) $@.cpp -o $@ $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --libs ${LDSTATIC} opencv4) $(LDFLAGS)
@@ -74,7 +74,10 @@ src/wally: ${SUBMODULES} $(SOURCES)
 	cd src/ && git clone https://github.com/emscripten-core/emsdk && cd emsdk && git pull && ./emsdk install latest && ./emsdk activate latest && cd ../../ && touch .emsdk
 
 .opencvjs: .emsdk $(OPENCVSOURCES)
-	if [ -f src/opencv/CMakeLists.txt ]; then cd src/ && ./emsdk/emsdk activate latest &&  source "${PWD}/src/emsdk/emsdk_env.sh" && EMSCRIPTEN="${PWD}/src/emsdk/upstream/emscripten" python3 opencv/platforms/js/build_js.py opencv_js --build_wasm && cd ../ && touch .opencvjs; fi
+	if [ -f src/opencv/CMakeLists.txt ]; then cd src/ && ./emsdk/emsdk activate latest && source "${PWD}/src/emsdk/emsdk_env.sh" && EMSCRIPTEN="${PWD}/src/emsdk/upstream/emscripten" python3 opencv/platforms/js/build_js.py opencv_js --build_wasm && cd ../ && touch .opencvjs; fi
+
+html/image.js: .emsdk .opencvjs $(SOURCES)
+	mkdir -p html/ && ./src/emsdk/emsdk activate latest && source "${PWD}/src/emsdk/emsdk_env.sh" && em++ -Isrc/ocv/include/opencv4/ src/image.cpp -o html/image.js -Lsrc/opencv_js/lib/ -lopencv_core -lopencv_imgproc -O3 -s NO_EXIT_RUNTIME=1 -s "EXPORTED_RUNTIME_METHODS=['ccall']" -s ASSERTIONS=1  --bind
 
 install: ${BUILT_PROGRAMS}
 	mkdir -p ${bindir}
@@ -83,7 +86,7 @@ install: ${BUILT_PROGRAMS}
 clean:
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && $(MAKE) clean; fi
 	rm -f $(TARGETS) $(TARGETS:=.o) ${SUBMODULES} .emsdk .opencvjs
-	rm -rf src/ocv/ src/opencv/build/ src/emsdk/ src/opencv_js/
+	rm -rf src/ocv/ src/opencv/build/ src/emsdk/ src/opencv_js/ html/
 
 distclean: clean
 	rm -f ${BUILT_PROGRAMS}
