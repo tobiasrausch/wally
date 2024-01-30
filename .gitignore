@@ -2,6 +2,7 @@
 .opencv
 .emsdk
 .opencvjs
+.htslibjs
 singularity/wally.sif
 bed/*.bed
 bed/*.bed.gz
@@ -14,6 +15,10 @@ src/wally
 src/ocv
 src/opencv_js
 src/emsdk
+src/htslib_js/
+html/image.js
+html/image.wasm
+
 
 # Prerequisites
 *.d
