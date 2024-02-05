@@ -70,18 +70,6 @@ all:   	$(TARGETS)
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --cflags opencv4) $@.cpp -o $@ $(shell export PKG_CONFIG_PATH=${PWD}/src/ocv/lib/pkgconfig/:${PWD}/src/ocv/lib64/pkgconfig/:${PKG_CONFIG_PATH} && pkg-config --libs ${LDSTATIC} opencv4) $(LDFLAGS)
 
-.emsdk:
-	cd src/ && git clone https://github.com/emscripten-core/emsdk && cd emsdk && git pull && ./emsdk install latest && ./emsdk activate latest && cd ../../ && touch .emsdk
-
-.opencvjs: .emsdk $(OPENCVSOURCES)
-	if [ -f src/opencv/CMakeLists.txt ]; then cd src/ && ./emsdk/emsdk activate latest && source "${PWD}/src/emsdk/emsdk_env.sh" && EMSCRIPTEN="${PWD}/src/emsdk/upstream/emscripten" python3 opencv/platforms/js/build_js.py opencv_js --build_wasm && cd ../ && touch .opencvjs; fi
-
-.htslibjs: .emsdk .htslib
-	if [ -r src/htslib/Makefile ]; then cp -r src/htslib/ src/htslib_js/ && cd src/htslib_js/ && make clean && make distclean && ../emsdk/emsdk activate latest && source "${PWD}/src/emsdk/emsdk_env.sh" && autoheader && autoconf && EMSCRIPTEN="${PWD}/src/emsdk/upstream/emscripten" emconfigure ./configure --disable-lzma --disable-plugins && emmake make LDFLAGS="-O2 -s ERROR_ON_UNDEFINED_SYMBOLS=0" && cd ../../ && touch .htslibjs; fi
-
-html/image.js: .emsdk .opencvjs .htslibjs $(SOURCES)
-	mkdir -p html/ && ./src/emsdk/emsdk activate latest && source "${PWD}/src/emsdk/emsdk_env.sh" && em++ -Isrc/ocv/include/opencv4/ -Isrc/htslib_js/ src/image.cpp -o html/image.js -Lsrc/opencv_js/lib/ -Lsrc/htslib_js/ -lopencv_core -lopencv_imgproc -lhts -lz -lbz2 -O3 -s USE_BOOST_HEADERS=1 -s NO_EXIT_RUNTIME=1 -s "EXPORTED_RUNTIME_METHODS=['ccall']" -s ASSERTIONS=1  --bind
-
 install: ${BUILT_PROGRAMS}
 	mkdir -p ${bindir}
 	install -p ${BUILT_PROGRAMS} ${bindir}
