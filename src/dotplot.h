@@ -485,9 +485,7 @@ namespace wallysworld
       mappings(c, reads, mp);
 
       // Sort mappings
-      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
-	std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
-      }
+      for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) std::sort(it->second.begin(), it->second.end());
 
       // Check size
       if (mp.empty()) {
@@ -497,7 +495,7 @@ namespace wallysworld
       }
     } else if (c.format == 1) {
       // Copy sequence file to append possible reference regions
-      boost::filesystem::copy_file(c.file, c.seqfile, boost::filesystem::copy_option::overwrite_if_exists);
+      boost::filesystem::copy_file(c.file, c.seqfile, boost::filesystem::copy_options::overwrite_existing);
     }
 
     // Parse regions and extract FASTA

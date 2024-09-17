@@ -26,7 +26,7 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  drawMatch(TConfig const& c, cv::Mat& img, int32_t const x, int32_t const xend, int32_t const y, int32_t const yend, bool const forward) {
+  drawMatch(TConfig const&, cv::Mat& img, int32_t const x, int32_t const xend, int32_t const y, int32_t const yend, bool const forward) {
     if (forward) {
       cv::line(img, cv::Point(x, y), cv::Point(xend, yend), cv::Scalar(0, 0, 255), 1);
     } else {

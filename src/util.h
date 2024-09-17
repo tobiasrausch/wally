@@ -109,16 +109,11 @@ namespace wallysworld
 
     Mapping() : tid(-1), gstart(0), gend(0), rstart(0), rend(0), fwd(false), qual(0) {}
     Mapping(int32_t const t, int32_t const gs, int32_t const ge, int32_t const rs, int32_t const re, bool const val, uint16_t const qval) : tid(t), gstart(gs), gend(ge), rstart(rs), rend(re), fwd(val), qual(qval) {}
-  };
 
-  template<typename TMapping>
-  struct SortMappings : public std::binary_function<TMapping, TMapping, bool>
-  {
-    inline bool operator()(TMapping const& mp1, TMapping const& mp2) {
-      return ((mp1.rstart < mp2.rstart) || ((mp1.rstart == mp2.rstart) && (mp1.rend < mp2.rend)));
+    bool operator<(const Mapping& mp2) const {
+      return ((rstart < mp2.rstart) || ((rstart == mp2.rstart) && (rend < mp2.rend)));
     }
   };
-  
 
   struct LibraryInfo {
     int32_t rs;

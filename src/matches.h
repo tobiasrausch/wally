@@ -152,7 +152,7 @@ namespace wallysworld
 
     // Sort mappings
     for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
-      std::sort(it->second.begin(), it->second.end(), SortMappings<Mapping>());
+      std::sort(it->second.begin(), it->second.end());
 
       // Debug
       //for(uint32_t i = 0; i < it->second.size(); ++i) std::cerr << hdr->target_name[it->second[i].tid] << ':' << it->second[i].gstart << '-' << it->second[i].gend << '\t' << it->second[i].rstart << '-' << it->second[i].rend << '(' << (int) it->second[i].fwd << ')' << '\t' << it->first << std::endl;
