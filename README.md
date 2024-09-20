@@ -171,6 +171,10 @@ To visualize a self-alignment of a read with reference mappings use `-a`
 
 `wally dotplot -a -r read_name -g hg38.fa input.bam`
 
+## Web application
+
+You can try wally on some selected data sets using the [wally web application](https://www.gear-genomics.com/wally/).
+
 ## Citation
 
 Tobias Rausch, Rene Snajder, Adrien Leger, Milena Simovic, Mădălina Giurgiu, Laura Villacorta, Anton G. Henssen, Stefan Fröhling, Oliver Stegle, Ewan Birney, Marc Jan Bonder, Aurelie Ernst, Jan O. Korbel     
