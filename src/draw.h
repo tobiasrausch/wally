@@ -347,16 +347,16 @@ namespace wallysworld
     if (c.pxoffset >= WALLY_PX) {
       cv::Rect rect(x, y, w, h);
       cv::rectangle(img, rect, clr, -1);
-      if ((nuc == 'a') or (nuc == 'A')) {
+      if (nuc == 'A') {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_A, font_thickness, cv::LINE_AA);
       }
-      else if ((nuc == 'c') or (nuc == 'C')) {
+      else if (nuc == 'C') {
       	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_C, font_thickness, cv::LINE_AA);
       }
-      else if ((nuc == 'g') or (nuc == 'G')) {
+      else if (nuc == 'G') {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_G, font_thickness, cv::LINE_AA);
       }
-      else if ((nuc == 't') or (nuc == 'T')) {
+      else if (nuc == 'T') {
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_T, font_thickness, cv::LINE_AA);
       } else {  // n or N most likely
 	cv::putText(img, text, cv::Point(x + w/2 - textSize.width/2, y+h/2+textSize.height/2), cv::FONT_HERSHEY_DUPLEX, font_scale, WALLY_N, font_thickness, cv::LINE_AA);
@@ -365,16 +365,16 @@ namespace wallysworld
       int32_t pxw = w;
       if (pxw < 1) pxw = 1; // Make mismatches always visible
       cv::Rect rect(x, y, pxw, h);
-      if ((nuc == 'a') or (nuc == 'A')) {
+      if (nuc == 'A') {
 	cv::rectangle(img, rect, WALLY_A, -1);
       }
-      else if ((nuc == 'c') or (nuc == 'C')) {
+      else if (nuc == 'C') {
 	cv::rectangle(img, rect, WALLY_C, -1);
       }
-      else if ((nuc == 'g') or (nuc == 'G')) {
+      else if (nuc == 'G') {
 	cv::rectangle(img, rect, WALLY_G, -1);
       }
-      else if ((nuc == 't') or (nuc == 'T')) {
+      else if (nuc == 'T') {
 	cv::rectangle(img, rect, WALLY_T, -1);
       }
     }

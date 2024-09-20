@@ -159,6 +159,7 @@ namespace wallysworld
 	if (seq != NULL) free(seq);
 	seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], 0, hdr->target_len[rg[rgIdx].tid], &seqlen);
 	oldchr = chrName;
+	boost::to_upper(seq);
       }
 
       // Header
@@ -364,19 +365,19 @@ namespace wallysworld
 	  cumsum += covG[rpadj];
 	  cumsum += covT[rpadj];
 	  if (cumsum >= c.snvcov) {
-	    if ((seq[rp] == 'a') || (seq[rp] == 'A')) {
+	    if (seq[rp] == 'A') {
 	      if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if ((seq[rp] == 'c') || (seq[rp] == 'C')) {
+	    } else if (seq[rp] == 'C') {
 	      if (((double) covC[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if ((seq[rp] == 'g') || (seq[rp] == 'G')) {
+	    } else if (seq[rp] == 'G') {
 	      if (((double) covG[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if ((seq[rp] == 't') || (seq[rp] == 'T')) {
+	    } else if (seq[rp] == 'T') {
 	      if (((double) covT[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
