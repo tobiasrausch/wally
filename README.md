@@ -125,9 +125,9 @@ Forward matches are colored in blue, reverse matches in orange and the black lin
 
 `wally matches -R <read.lst> -g <genome> <input.bam>`
 
-For many reads, this quickly leads to "wall(y)papers". With `-s` you get a separate plot for each read.
+For many reads, this quickly leads to "wall(y)papers". With `-p` you get a separate plot for each read.
 
-`wally matches -s -R <read.lst> -g <genome> <input.bam>`
+`wally matches -p -R <read.lst> -g <genome> <input.bam>`
 
 You can also compare assemblies or align contigs to a reference genome using a workflow like this:
 
