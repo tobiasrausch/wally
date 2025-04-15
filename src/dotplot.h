@@ -503,12 +503,18 @@ namespace wallysworld
     uint32_t rgcount = 0;
     if ((!c.regionStr.empty()) || (c.hasRegionFile)) {
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Parse regions." << std::endl;
-      if (!parseRegions(NULL, c, rg)) return 1;
+      faidx_t* fai = fai_load(c.genome.string().c_str());
+      typedef std::map<std::string, std::pair<int32_t, int32_t> > TChrIdLenMap;
+      TChrIdLenMap chrMap;
+      for(int32_t refIndex=0; refIndex < faidx_nseq(fai); ++refIndex) {
+	std::string tname(faidx_iseq(fai, refIndex));
+	chrMap.insert(std::make_pair(tname, std::make_pair(refIndex, faidx_seq_len(fai, tname.c_str()))));
+      }
+      if (!parseRegions(chrMap, c, rg)) return 1;
       if (!rg.empty()) {
 	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] " << "Extract FASTA for regions." << std::endl;
 	std::ofstream sfile;
 	sfile.open(c.seqfile.string().c_str(), std::ios_base::app);
-	faidx_t* fai = fai_load(c.genome.string().c_str());
 	for(int32_t refIndex=0; refIndex < faidx_nseq(fai); ++refIndex) {
 	  std::string tname(faidx_iseq(fai, refIndex));
 	  char* seq = NULL;
@@ -528,9 +534,9 @@ namespace wallysworld
 	  }
 	  if (seq != NULL) free(seq);
 	}
-	fai_destroy(fai);
 	sfile.close();
       }
+      fai_destroy(fai);
     }
 
     // Flip x and y, reverse file

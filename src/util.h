@@ -254,13 +254,29 @@ namespace wallysworld
   template<typename TConfig>
   inline bool
   parseRegion(TConfig const& c, bam_hdr_t* hdr, std::string const& regionStr, Region& rg) {
-    std::size_t pos = regionStr.find(":");
+    std::size_t pos = regionStr.rfind(":");
     if (pos == std::string::npos) {
       std::cerr << "Invalid region " << regionStr << std::endl;
       std::cerr << "No chromosome separator found ':'" << std::endl;
       return false;
     }
     std::string chrName(regionStr.substr(0, pos));
+    rg.tid = bam_name2id(hdr, chrName.c_str());
+    if (rg.tid < 0) {
+      pos = chrName.rfind(":");
+      if (pos == std::string::npos) {
+	std::cerr << "Invalid region " << regionStr << std::endl;
+	std::cerr << "No chromosome separator found ':'" << std::endl;
+	return false;
+      }
+      chrName = chrName.substr(0, pos);
+      rg.tid = bam_name2id(hdr, chrName.c_str());
+      if (rg.tid < 0) {
+	std::cerr << "Invalid region " << regionStr << std::endl;
+	std::cerr << "Chromosome not found in FASTA file: " << c.genome.string() << std::endl;
+	return false;
+      }
+    }
     std::string tmp = regionStr.substr(pos+1);
     pos = tmp.find("-");
     if (pos == std::string::npos) {
@@ -269,36 +285,17 @@ namespace wallysworld
       return false;
     }
     rg.beg = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+    if (rg.beg < 0) rg.beg = 0;
     tmp = tmp.substr(pos+1);
     pos = tmp.find(":");
     if (pos == std::string::npos) {
       rg.end = boost::lexical_cast<int32_t>(tmp);
+      if (rg.end > (int32_t) hdr->target_len[rg.tid]) rg.end = hdr->target_len[rg.tid];
       rg.id = chrName + "_" + boost::lexical_cast<std::string>(rg.beg) + "_" + boost::lexical_cast<std::string>(rg.end);
     } else {
       rg.end = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+      if (rg.end > (int32_t) hdr->target_len[rg.tid]) rg.end = hdr->target_len[rg.tid];
       rg.id = tmp.substr(pos+1);
-    }
-    if (hdr == NULL) {
-      if (c.genome.empty()) {
-	std::cerr << "You need to specify a genome file (-g)!" << std::endl;
-	return false;
-      }
-      faidx_t* fai = fai_load(c.genome.string().c_str());
-      if (faidx_has_seq(fai, chrName.c_str())) {
-	for(int32_t refIndex = 0; refIndex < faidx_nseq(fai); ++refIndex) {
-	  if (std::string(faidx_iseq(fai, refIndex)) == chrName) {
-	    rg.tid = refIndex;
-	    break;
-	  }
-	}
-      } else {
-	std::cerr << "Invalid region " << regionStr << std::endl;
-	std::cerr << "Chromosome not found in FASTA file: " << c.genome.string() << std::endl;
-	return false;
-      }
-      fai_destroy(fai);
-    } else {
-      rg.tid = bam_name2id(hdr, chrName.c_str());
     }
     if (rg.tid < 0) {
       std::cerr << "Invalid region " << regionStr << std::endl;
@@ -320,12 +317,82 @@ namespace wallysworld
       return false;
     }
     rg.size = rg.end - rg.beg;
+    //std::cerr << rg.tid << ',' << rg.beg << ',' << rg.end << ',' << rg.id << std::endl;
+    return true;
+  }
+  
+  template<typename TConfig>
+  inline bool
+  parseRegion(TConfig const& c, std::map<std::string, std::pair<int32_t, int32_t> >& chrMap, std::string const& regionStr, Region& rg) {
+    std::size_t pos = regionStr.rfind(":");
+    if (pos == std::string::npos) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "No chromosome separator found ':'" << std::endl;
+      return false;
+    }
+    std::string chrName(regionStr.substr(0, pos));
+    if (chrMap.find(chrName) == chrMap.end()) {
+      pos = chrName.rfind(":");
+      if (pos == std::string::npos) {
+	std::cerr << "Invalid region " << regionStr << std::endl;
+	std::cerr << "No chromosome separator found ':'" << std::endl;
+	return false;
+      }
+      chrName = chrName.substr(0, pos);
+      if (chrMap.find(chrName) == chrMap.end()) {
+	std::cerr << "Invalid region " << regionStr << std::endl;
+	std::cerr << "Chromosome not found in FASTA file: " << c.genome.string() << std::endl;
+	return false;
+      }
+    }
+    rg.tid = chrMap[chrName].first;
+    std::string tmp = regionStr.substr(pos+1);
+    pos = tmp.find("-");
+    if (pos == std::string::npos) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "No position separator found '-'" << std::endl;
+      return false;
+    }
+    rg.beg = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+    if (rg.beg < 0) rg.beg = 0;
+    tmp = tmp.substr(pos+1);
+    pos = tmp.find(":");
+    if (pos == std::string::npos) {
+      rg.end = boost::lexical_cast<int32_t>(tmp);
+      if (rg.end > chrMap[chrName].second) rg.end = chrMap[chrName].second;
+      rg.id = chrName + "_" + boost::lexical_cast<std::string>(rg.beg) + "_" + boost::lexical_cast<std::string>(rg.end);
+    } else {
+      rg.end = boost::lexical_cast<int32_t>(tmp.substr(0, pos));
+      if (rg.end > chrMap[chrName].second) rg.end = chrMap[chrName].second;
+      rg.id = tmp.substr(pos+1);
+    }
+    if (rg.tid < 0) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Chromosome not found in BAM file." << std::endl;
+      return false;
+    }
+    if (rg.beg >= rg.end) {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Region begin has to be smaller than region end." << std::endl;
+      return false;
+    }
+    // Regions are 1-based, offset
+    if (rg.beg > 0) {
+      --rg.beg;
+      --rg.end;
+    } else {
+      std::cerr << "Invalid region " << regionStr << std::endl;
+      std::cerr << "Regions are 1-based." << std::endl;
+      return false;
+    }
+    rg.size = rg.end - rg.beg;
+    //std::cerr << rg.tid << ',' << rg.beg << ',' << rg.end << ',' << rg.id << std::endl;
     return true;
   }
 
-  template<typename TConfig>
+  template<typename TChrDataStruct, typename TConfig>
   inline bool
-  parseRegions(bam_hdr_t* hdr, TConfig const& c, std::vector<Region>& rg) {
+  parseRegions(TChrDataStruct& hdr, TConfig const& c, std::vector<Region>& rg) {
     if (c.hasRegionFile) {
       std::ifstream regionFile(c.regionFile.string().c_str(), std::ifstream::in);
       if (regionFile.is_open()) {
