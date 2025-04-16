@@ -98,14 +98,14 @@ With `-p` you can switch on the paired-end view.
 
 The paired-end coloring highlights candidate structural variants supported by read1 (R1) and read2 (R2). Below is a mapping of [delly's](https://github.com/dellytools/delly) structural variant types to [wally's](https://github.com/tobiasrausch/wally) paired-end coloring. For inter-chromosomal translocations I assumed for this illustration that R1 maps to chromosome A and R2 maps to chromosome B.
 
-- ![#3fafaf](https://via.placeholder.com/15/3fafaf/3fafaf.png) `  inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
-- ![#4e64d5](https://via.placeholder.com/15/4e64d5/4e64d5.png) `  inversion-type paired-end, <--R1--   <--R2--, INV:5to5`
-- ![#d53f3f](https://via.placeholder.com/15/d53f3f/d53f3f.png) `   deletion-type paired-end, --R1-->   <--R2--, DEL:3to5`
-- ![#3faf3f](https://via.placeholder.com/15/3faf3f/3faf3f.png) `duplication-type paired-end, <--R1--   --R2-->, DUP:5to3`
-- ![#fb9a99](https://via.placeholder.com/15/fb9a99/fb9a99.png) `inter-chr paired-end, A:--R1--> B:--R2--> leads to --A--> <--B-- junction, BND:3to3`
-- ![#fdbf6f](https://via.placeholder.com/15/fdbf6f/fdbf6f.png) `inter-chr paired-end, A:<--R1-- B:<--R2-- leads to <--A-- --B--> junction, BND:5to5`
-- ![#ff8000](https://via.placeholder.com/15/ff8000/ff8000.png) `inter-chr paired-end, A:--R1--> B:<--R2-- leads to --A--> --B--> junction, BND:3to5`
-- ![#cab2d6](https://via.placeholder.com/15/cab2d6/cab2d6.png) `inter-chr paired-end, A:<--R1-- B:--R2--> leads to <--A-- <--B-- junction, BND:5to3`
+- ![#3fafaf](https://placehold.co/15x15/3fafaf/3fafaf.png) `  inversion-type paired-end, --R1-->   --R2-->, INV:3to3`
+- ![#4e64d5](https://placehold.co/15x15/4e64d5/4e64d5.png) `  inversion-type paired-end, <--R1--   <--R2--, INV:5to5`
+- ![#d53f3f](https://placehold.co/15x15/d53f3f/d53f3f.png) `   deletion-type paired-end, --R1-->   <--R2--, DEL:3to5`
+- ![#3faf3f](https://placehold.co/15x15/3faf3f/3faf3f.png) `duplication-type paired-end, <--R1--   --R2-->, DUP:5to3`
+- ![#fb9a99](https://placehold.co/15x15/fb9a99/fb9a99.png) `inter-chr paired-end, A:--R1--> B:--R2--> leads to --A--> <--B-- junction, BND:3to3`
+- ![#fdbf6f](https://placehold.co/15x15/fdbf6f/fdbf6f.png) `inter-chr paired-end, A:<--R1-- B:<--R2-- leads to <--A-- --B--> junction, BND:5to5`
+- ![#ff8000](https://placehold.co/15x15/ff8000/ff8000.png) `inter-chr paired-end, A:--R1--> B:<--R2-- leads to --A--> --B--> junction, BND:3to5`
+- ![#cab2d6](https://placehold.co/15x15/cab2d6/cab2d6.png) `inter-chr paired-end, A:<--R1-- B:--R2--> leads to <--A-- <--B-- junction, BND:5to3`
 
 For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split with a larger image size.
 
