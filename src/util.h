@@ -266,7 +266,7 @@ namespace wallysworld
       pos = chrName.rfind(":");
       if (pos == std::string::npos) {
 	std::cerr << "Invalid region " << regionStr << std::endl;
-	std::cerr << "No chromosome separator found ':'" << std::endl;
+	std::cerr << "Chromosome not found in FASTA file: " << c.genome.string() << std::endl;
 	return false;
       }
       chrName = chrName.substr(0, pos);
