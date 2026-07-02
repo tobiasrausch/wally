@@ -57,17 +57,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install dependencies
         run: |
-          brew install boost htslib autoconf libtool automake
+          brew install boost htslib opencv
 
       - name: Build
         run: |
-          export PATH="$(brew --prefix libtool)/libexec/gnubin:$PATH"
-          export CMAKE_POLICY_VERSION_MINIMUM=3.5
           export CXXFLAGS="-I$(brew --prefix boost)/include -I$(brew --prefix htslib)/include"
           export LDFLAGS="-L$(brew --prefix boost)/lib -L$(brew --prefix htslib)/lib"
           make
