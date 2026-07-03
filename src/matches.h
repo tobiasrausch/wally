@@ -180,14 +180,17 @@ namespace wallysworld
     for(uint32_t plotk = 0; plotk < numPlots; ++plotk) {
       if (c.separatePlots) {
       std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << *itread << std::endl;
-	if (source_mp.find(*itread) != source_mp.end()) {
-	  mp.clear();
-	  reads.clear();
-	  mp.insert(std::make_pair(*itread, source_mp[*itread]));
-	  reads.insert(*itread);
-	  c.width = source_c_width;
-	  c.height = source_c_height;
+	if (source_mp.find(*itread) == source_mp.end()) {
+	  std::cerr << "Warning: No mappings found! Are the read names correct? " << *itread << std::endl;
+	  ++itread;
+	  continue;
 	}
+	mp.clear();
+	reads.clear();
+	mp.insert(std::make_pair(*itread, source_mp[*itread]));
+	reads.insert(*itread);
+	c.width = source_c_width;
+	c.height = source_c_height;
       }
 
       // Determine regions

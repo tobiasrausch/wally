@@ -216,6 +216,7 @@ namespace wallysworld
       cumsum += covT[i];
       if (cumsum > maxObsCov) maxObsCov = cumsum;
     }
+    if (maxObsCov == 0) maxObsCov = 1;
 
     // Draw horizontal top line
     cv::line(img, cv::Point(0, (track-1) * c.tlheight), cv::Point(c.width, (track-1) * c.tlheight), WALLY_BORDER, 1);

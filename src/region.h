@@ -59,29 +59,6 @@ namespace wallysworld
     boost::filesystem::path regionFile;
     std::vector<boost::filesystem::path> files;
   };
-
-
-
-  inline bool
-  readMM(bam1_t* rec) {
-    uint8_t *mm = bam_aux_get(rec, "MM");
-    if ((!mm) || (mm[0] != 'Z')) {
-      std::cerr << "Read lacks MM tag or wrong data type (not 'Z')" << std::endl;
-      return false;
-    }
-    uint8_t *ml = bam_aux_get(rec, "ML");
-    if ((!ml) || (ml[0] != 'B') || (ml[1] != 'C')) {
-      std::cerr << "Read lacks ML tag or wrong data type (not 'B')" << std::endl;
-      return false;
-    }
-    std::string mmval;
-    char* cpMM = (char *)mm+1;
-    while(*cpMM) mmval += *cpMM++;
-
-    std::cerr << mmval << std::endl;
-    
-    return true;
-  }
   
   template<typename TConfigStruct>
   inline int wallyRun(TConfigStruct& c) {

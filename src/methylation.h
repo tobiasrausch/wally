@@ -102,7 +102,13 @@ namespace wallysworld
 	  int32_t current = -1;
 	  for (const auto& pt : pos_tokens) {
 	    if (pt.empty()) continue;
-	    current += std::stoi(pt) + 1;
+	    int32_t delta = 0;
+	    try {
+	      delta = std::stoi(pt);
+	    } catch (...) {
+	      break;
+	    }
+	    current += delta + 1;
 	    for (char mc : mod_codes) modhits.emplace_back(current, mc, static_cast<uint8_t>(0), revMod, base);
 	  }
 	}

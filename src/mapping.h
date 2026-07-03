@@ -103,6 +103,7 @@ namespace wallysworld
 	  int32_t gpStart = -1; //Match start
 	  int32_t gpEnd = -1; //Match end
 	  int32_t sp = 0; // Sequence position
+	  int32_t readlen = sequenceLength(rec); // Full read length
 	  int32_t seqStart = -1;  // Match start
 	  int32_t seqEnd = -1; // Match end
 	  for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
@@ -138,8 +139,8 @@ namespace wallysworld
 	      if (rec->core.flag & BAM_FREVERSE) {
 		dir = false;
 		int32_t seqTmp = seqStart;
-		seqStart = sp - seqEnd;
-		seqEnd = sp - seqTmp;
+		seqStart = readlen - seqEnd;
+		seqEnd = readlen - seqTmp;
 	      }
 	      if (gpStart < gpEnd) {
 		if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
@@ -161,8 +162,8 @@ namespace wallysworld
 	  if (rec->core.flag & BAM_FREVERSE) {
 	    dir = false;
 	    int32_t seqTmp = seqStart;
-	    seqStart = sp - seqEnd;
-	    seqEnd = sp - seqTmp;
+	    seqStart = readlen - seqEnd;
+	    seqEnd = readlen - seqTmp;
 	  }
 	  if (gpStart < gpEnd) {
 	    if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();

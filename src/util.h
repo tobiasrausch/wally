@@ -259,7 +259,7 @@ namespace wallysworld
   convertToStr(bam_hdr_t* hdr, Region const& irg) {
     std::string str = hdr->target_name[irg.tid];
     str += ":" + boost::lexical_cast<std::string>(irg.beg + 1);
-    str += "-" + boost::lexical_cast<std::string>(irg.end + 1);
+    str += "-" + boost::lexical_cast<std::string>(irg.end);
     return str;
   }
 
@@ -319,10 +319,8 @@ namespace wallysworld
       std::cerr << "Region begin has to be smaller than region end." << std::endl;
       return false;
     }
-    // Regions are 1-based, offset
     if (rg.beg > 0) {
       --rg.beg;
-      --rg.end;
     } else {
       std::cerr << "Invalid region " << regionStr << std::endl;
       std::cerr << "Regions are 1-based." << std::endl;
@@ -388,10 +386,10 @@ namespace wallysworld
       std::cerr << "Region begin has to be smaller than region end." << std::endl;
       return false;
     }
-    // Regions are 1-based, offset
+    // Regions are 1-based inclusive; convert start to 0-based and keep
+    // end as a 0-based, half-open bound so the last base is included.
     if (rg.beg > 0) {
       --rg.beg;
-      --rg.end;
     } else {
       std::cerr << "Invalid region " << regionStr << std::endl;
       std::cerr << "Regions are 1-based." << std::endl;
@@ -459,7 +457,7 @@ namespace wallysworld
       case 'G': sequence[i]='C'; break;
       case 'T': sequence[i]='A'; break;
       case 'N': sequence[i]='N'; break;
-      default: break;
+      default: sequence[i]=*revIt; break;
       }
     }
   }

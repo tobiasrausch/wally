@@ -573,6 +573,7 @@ namespace wallysworld
     int32_t seqend = faidx_nseq(fai);
     if (!c.incSelf) seqend -= 1;
     if (rgcount) seqend = faidx_nseq(fai) - rgcount;  // With reference regions, plot against regions only
+    int32_t plotCount = 0;
     for(int32_t idx1 = 0; idx1 < seqend; ++idx1) {
       std::string seqname1(faidx_iseq(fai, idx1));
       int32_t xlen = faidx_seq_len(fai, seqname1.c_str());
@@ -605,17 +606,18 @@ namespace wallysworld
 	upper(seq2);
 	
 	// Next plot
+	++plotCount;
 	std::cout << '[' << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << "] Plot for " << seqname1 << " and " << seqname2 << std::endl;
 
 	// Estimate image size
 	if ((c.width == 0) && (c.height == 0)) {
 	  int32_t maxlen = std::max(xlen, ylen);
-	  c.usedwidth = (int32_t) ((double) xlen / (double) maxlen * 1024.0);
-	  c.usedheight = (int32_t) ((double) ylen / (double) maxlen * 1024.0);
+	  c.usedwidth = std::max(1, (int32_t) ((double) xlen / (double) maxlen * 1024.0));
+	  c.usedheight = std::max(1, (int32_t) ((double) ylen / (double) maxlen * 1024.0));
 	} else if (c.width == 0) {
-	  c.usedwidth = (int32_t) ((double) xlen / (double) ylen * c.height);
+	  c.usedwidth = std::max(1, (int32_t) ((double) xlen / (double) ylen * c.height));
 	} else if (c.height == 0) {
-	  c.usedheight = (int32_t) ((double) ylen / (double) xlen * c.width);
+	  c.usedheight = std::max(1, (int32_t) ((double) ylen / (double) xlen * c.width));
 	}
 
 	// Create image
@@ -689,6 +691,7 @@ namespace wallysworld
       }
       free(seq1);
     }
+    if (!plotCount) std::cerr << "Warning: No dotplots created. Please provide a second sequence or a region to compare against or use self-alignment." << std::endl;
     fai_destroy(fai);
     if (c.format == 0) {
       bam_hdr_destroy(hdr);
