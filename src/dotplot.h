@@ -147,6 +147,7 @@ namespace wallysworld
   inline void
   hashShort(TConfig const& c, char* seq, int32_t const len, THashMap& hmap, bool forward) {
     typedef typename THashMap::mapped_type TPosVec;
+    const uint64_t topmult = 1ULL << (2 * (c.matchlen - 1));
     uint64_t h = 0;
     bool rewind = true;
     for(int32_t k = 0; k < (int32_t) len - (int32_t) c.matchlen + 1; ++k) {
@@ -156,7 +157,7 @@ namespace wallysworld
       } else {
 	if (seq[k+c.matchlen-1] == 'N') rewind = true;
 	else {
-	  h -= (uint64_t) nuc(seq[k - 1]) * std::pow((long double) 4, c.matchlen - 1);
+	  h -= (uint64_t) nuc(seq[k - 1]) * topmult;
 	  h *= 4;
 	  h += (uint64_t) nuc(seq[k+c.matchlen-1]);
 	}
@@ -189,6 +190,7 @@ namespace wallysworld
   inline void
   wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
     // Find word matches
+    const uint64_t topmult = 1ULL << (2 * (c.matchlen - 1));
     uint64_t h = 0;
     bool rewind = true;
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
@@ -198,7 +200,7 @@ namespace wallysworld
       } else {
 	if (seq[k+c.matchlen-1] == 'N') rewind = true;
 	else {
-	  h -= (uint64_t) nuc(seq[k - 1]) * std::pow((long double) 4, c.matchlen - 1);
+	  h -= (uint64_t) nuc(seq[k - 1]) * topmult;
 	  h *= 4;
 	  h += (uint64_t) nuc(seq[k+c.matchlen-1]);
 	}
