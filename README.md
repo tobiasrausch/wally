@@ -78,6 +78,12 @@ In fact, wally can be used to create "wallpapers" of genomes which gave rise to 
 
 `wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
 
+### Modified base (methylation) view
+
+For long reads with `MM`/`ML` modified base tags, you can switch to a 2-color modified base view, e.g., for methylation (5mC):
+
+`wally region -m 5mC -r chrA:35-80 -g <genome> <input.bam>`
+
 ### Aligning multiple regions horizontally (split view)
 
 Wally allows concatenating images of different regions horizontally using the `--split` option. This can be used, for instance, to zoom into a specific variant. On the command line the regions need to be separated by `,` without spaces. As an example, you can zoom into the N501Y variant of the alpha SARS-CoV-2 lineage using 
@@ -114,6 +120,12 @@ For large and complex structural variants, wally supports split views (as explai
 To visualize genomic breakpoints it's also helpful to highlight clipped reads `-c` and supplementary alignments `-u`.
 
 `wally region -cup -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+
+### Track customization
+
+You can turn off the coverage track and/or control the pixel height of a track line (`--tlheight`) and of a single read (`--rdheight`).
+
+`wally region --no-coverage --tlheight 5 --rdheight 4 -r chrA:35-80 -g <genome> <input.bam>`
 
 ## Subcommand `matches`: Visualization of chained alignment matches
 
@@ -187,4 +199,4 @@ Wally is distributed under the BSD 3-Clause license. Consult the accompanying [L
 
 ## Credits
 
-Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and [OpenCV](https://github.com/opencv/opencv). The visualization of genomic alignments was heavily inspired by [IGV](https://github.com/igvteam/igv).
+Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and [OpenCV](https://github.com/opencv/opencv) libraries. [Claude](https://claude.com/) is used for bug fixes, performance improvements and code suggestions. The initial visualization of genomic alignments (`region` subcommand) was heavily inspired by [IGV](https://github.com/igvteam/igv).

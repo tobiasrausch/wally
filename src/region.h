@@ -42,6 +42,7 @@ namespace wallysworld
     bool showPairs;
     bool hasRegionFile;
     bool hasAnnotationFile;
+    bool showCoverage;
     int32_t modType;  // no, 5mC, 5hmC
     uint16_t madCutoff;
     uint16_t splits;
@@ -168,7 +169,8 @@ namespace wallysworld
 	  else taken[i] = WALLY_UNBLOCK;
 	}
 	// Reserve coverage track
-	for(int32_t i = lowerBound; i < lowerBound + 2; ++i) taken[i] = WALLY_BLOCKED;
+	int32_t covTracks = (c.showCoverage) ? 2 : 1;
+	for(int32_t i = lowerBound; i < lowerBound + covTracks; ++i) taken[i] = WALLY_BLOCKED;
 	
 	// Coverage
 	uint32_t maxCoverage = std::numeric_limits<uint16_t>::max();
@@ -374,8 +376,12 @@ namespace wallysworld
 	    }
 	  }
 	}
-	drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
-	drawSampleLabel(c, lowerBound + 3, c.files[file_c].stem().string(), bg);
+	if (c.showCoverage) {
+	  drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
+	  drawSampleLabel(c, lowerBound + 3, c.files[file_c].stem().string(), bg);
+	} else {
+	  drawSampleLabel(c, lowerBound + 1, c.files[file_c].stem().string(), bg);
+	}
       }
       drawBorder(c, bg);
 
@@ -435,9 +441,7 @@ namespace wallysworld
   int region(int argc, char **argv) {
     ConfigRegion c;
     std::string modStr;
-    c.tlheight = 14;
-    c.rdheight = 12;
-    
+
     // Define generic options
     boost::program_options::options_description generic("Generic options");
     generic.add_options()
@@ -465,6 +469,9 @@ namespace wallysworld
       ("split,s", boost::program_options::value<uint16_t>(&c.splits)->default_value(1), "number of horizontal images")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
       ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
+      ("tlheight", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(14), "track line height in pixels")
+      ("rdheight", boost::program_options::value<uint32_t>(&c.rdheight)->default_value(12), "read height in pixels")
+      ("no-coverage", "turn off the coverage track")
       ;
 
     // Define hidden options
@@ -510,6 +517,18 @@ namespace wallysworld
     // Paired-end view
     if (vm.count("paired")) c.showPairs = true;
     else c.showPairs = false;
+
+    // Coverage track
+    if (vm.count("no-coverage")) c.showCoverage = false;
+    else c.showCoverage = true;
+
+    // Track heights
+    if (c.tlheight < 1) c.tlheight = 1;
+    if (c.rdheight < 1) c.rdheight = 1;
+    if (c.rdheight > c.tlheight) {
+      std::cerr << "Warning: read height exceeds track height." << std::endl;
+      c.rdheight = c.tlheight;
+    }
 
     // Modified base view
     if ((modStr == "off") || (modStr == "Off")) c.modType = WALLY_MOD_NONE;
