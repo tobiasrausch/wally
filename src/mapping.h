@@ -57,7 +57,7 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
-  mappings(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::vector<Mapping> >& mp) {
+  mappings(TConfig const& c, std::set<std::string> const& reads, std::map<std::string, std::vector<Mapping> >& mp, int32_t const indelSplit = 0) {
     // Sequence file
     std::ofstream sfile;
     if (c.storeSequences) sfile.open(c.seqfile.string().c_str());
@@ -106,6 +106,27 @@ namespace wallysworld
 	  int32_t readlen = sequenceLength(rec); // Full read length
 	  int32_t seqStart = -1;  // Match start
 	  int32_t seqEnd = -1; // Match end
+	  
+	  // Emit the current match
+	  auto flushSegment = [&]() {
+	    if (gpStart < gpEnd) {
+	      bool dir = true;
+	      int32_t rs = seqStart;
+	      int32_t re = seqEnd;
+	      if (rec->core.flag & BAM_FREVERSE) {
+		dir = false;
+		rs = readlen - seqEnd;
+		re = readlen - seqStart;
+	      }
+	      if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
+	      mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, rs, re, dir, rec->core.qual));
+	    }
+	    gpStart = -1;
+	    gpEnd = -1;
+	    seqStart = -1;
+	    seqEnd = -1;
+	  };
+	  
 	  for (std::size_t i = 0; i < rec->core.n_cigar; ++i) {
 	    if ((bam_cigar_op(cigar[i]) == BAM_CMATCH) || (bam_cigar_op(cigar[i]) == BAM_CEQUAL) || (bam_cigar_op(cigar[i]) == BAM_CDIFF)) {
 	      if (seqStart == -1) {
@@ -117,58 +138,48 @@ namespace wallysworld
 	      seqEnd = sp;
 	      gpEnd = gp;
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-	      if (seqStart == -1) {
-		seqStart = sp;
-		gpStart = gp;
+	      int32_t oplen = bam_cigar_oplen(cigar[i]);
+	      if ((indelSplit > 0) && (oplen > indelSplit)) {
+		// Large insertion
+		flushSegment();
+		sp += oplen;
+	      } else {
+		if (seqStart == -1) {
+		  seqStart = sp;
+		  gpStart = gp;
+		}
+		sp += oplen;
+		seqEnd = sp;
+		gpEnd = gp;
 	      }
-	      sp += bam_cigar_oplen(cigar[i]);
-	      seqEnd = sp;
-	      gpEnd = gp;
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	      if (seqStart == -1) {
-		seqStart = sp;
-		gpStart = gp;
+	      int32_t oplen = bam_cigar_oplen(cigar[i]);
+	      if ((indelSplit > 0) && (oplen > indelSplit)) {
+		// Large deletion
+		flushSegment();
+		gp += oplen;
+	      } else {
+		if (seqStart == -1) {
+		  seqStart = sp;
+		  gpStart = gp;
+		}
+		gp += oplen;
+		seqEnd = sp;
+		gpEnd = gp;
 	      }
-	      gp += bam_cigar_oplen(cigar[i]);
-	      seqEnd = sp;
-	      gpEnd = gp;
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
-	      bool dir = true;
-	      if (rec->core.flag & BAM_FREVERSE) {
-		dir = false;
-		int32_t seqTmp = seqStart;
-		seqStart = readlen - seqEnd;
-		seqEnd = readlen - seqTmp;
-	      }
-	      if (gpStart < gpEnd) {
-		if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
-		mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, seqStart, seqEnd, dir, rec->core.qual));
-	      }
+	      // Reference skip
+	      flushSegment();
 	      gp += bam_cigar_oplen(cigar[i]);
-	      // Reset match
-	      gpStart = -1;
-	      gpEnd = -1;
-	      seqStart = -1;
-	      seqEnd = -1;
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else {
 	      std::cerr << "Warning: Unknown Cigar options!" << std::endl;
 	    }
-	  }	  
-	  bool dir = true;
-	  if (rec->core.flag & BAM_FREVERSE) {
-	    dir = false;
-	    int32_t seqTmp = seqStart;
-	    seqStart = readlen - seqEnd;
-	    seqEnd = readlen - seqTmp;
 	  }
-	  if (gpStart < gpEnd) {
-	    if (mp.find(qname) == mp.end()) mp[qname] = std::vector<Mapping>();
-	    mp[qname].push_back(Mapping(rec->core.tid, gpStart, gpEnd, seqStart, seqEnd, dir, rec->core.qual));
-	  }
+	  flushSegment();
 	}
       }
       bam_destroy1(rec);

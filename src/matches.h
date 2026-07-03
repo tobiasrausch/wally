@@ -148,7 +148,7 @@ namespace wallysworld
     typedef std::vector<Mapping> TMappings;
     typedef std::map<std::string, TMappings > TReadMappings;
     TReadMappings mp;
-    mappings(c, reads, mp);
+    mappings(c, reads, mp, c.winsize);
 
     // Sort mappings
     for(TReadMappings::iterator it = mp.begin(); it != mp.end(); ++it) {
