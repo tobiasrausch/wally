@@ -51,7 +51,9 @@ namespace wallysworld
 	  std::string start = *tokIter++;
 	  if (tokIter != tokens.end()) {
 	    std::string end = *tokIter++;
-	    std::string str = chrName + ":" + start + "-" + end;
+	    // BED is 0-based half-open [start, end)
+	    std::string beg1 = boost::lexical_cast<std::string>(boost::lexical_cast<int32_t>(start) + 1);
+	    std::string str = chrName + ":" + beg1 + "-" + end;
 	    if (tokIter != tokens.end()) str += ":" + std::string(*tokIter++);
 	    Region tmp;
 	    if (!parseRegion(c, hdr, str, tmp)) return false;

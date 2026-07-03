@@ -314,9 +314,9 @@ namespace wallysworld
       std::cerr << "Chromosome not found in BAM file." << std::endl;
       return false;
     }
-    if (rg.beg >= rg.end) {
+    if (rg.beg > rg.end) {
       std::cerr << "Invalid region " << regionStr << std::endl;
-      std::cerr << "Region begin has to be smaller than region end." << std::endl;
+      std::cerr << "Region begin has to be smaller or equal to region end." << std::endl;
       return false;
     }
     if (rg.beg > 0) {
@@ -381,9 +381,9 @@ namespace wallysworld
       std::cerr << "Chromosome not found in BAM file." << std::endl;
       return false;
     }
-    if (rg.beg >= rg.end) {
+    if (rg.beg > rg.end) {
       std::cerr << "Invalid region " << regionStr << std::endl;
-      std::cerr << "Region begin has to be smaller than region end." << std::endl;
+      std::cerr << "Region begin has to be smaller or equal to region end." << std::endl;
       return false;
     }
     // Regions are 1-based inclusive; convert start to 0-based and keep

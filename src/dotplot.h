@@ -539,6 +539,16 @@ namespace wallysworld
       fai_destroy(fai);
     }
 
+    // Ensure there is sequence
+    if ((!boost::filesystem::exists(c.seqfile)) || (boost::filesystem::file_size(c.seqfile) == 0)) {
+      std::cerr << "Error: No sequences available to plot." << std::endl;
+      if (c.format == 0) {
+	bam_hdr_destroy(hdr);
+	sam_close(samfile);
+      }
+      return 1;
+    }
+
     // Flip x and y, reverse file
     if (c.flip) {
       faidx_t* fai = fai_load(c.seqfile.c_str());
@@ -570,6 +580,14 @@ namespace wallysworld
 
     // Load sequences from disk for large contigs
     faidx_t* fai = fai_load(c.seqfile.c_str());
+    if (fai == NULL) {
+      std::cerr << "Error: Unable to index the extracted sequences (" << c.seqfile.string() << ")." << std::endl;
+      if (c.format == 0) {
+	bam_hdr_destroy(hdr);
+	sam_close(samfile);
+      }
+      return 1;
+    }
     int32_t seqend = faidx_nseq(fai);
     if (!c.incSelf) seqend -= 1;
     if (rgcount) seqend = faidx_nseq(fai) - rgcount;  // With reference regions, plot against regions only
@@ -804,6 +822,12 @@ namespace wallysworld
     // Flip x and y-axis
     if (vm.count("flip")) c.flip = true;
     else c.flip = false;
+
+    // Flip does not work with regions
+    if ((c.flip) && ((!c.regionStr.empty()) || (c.hasRegionFile))) {
+      std::cerr << "Error: Axis flip cannot be combined with regions." << std::endl;
+      return 1;
+    }
 
     // Input format
     c.format = inputType(c.file.string());

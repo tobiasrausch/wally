@@ -102,8 +102,8 @@ namespace wallysworld
     // Transcripts
     if (!tr.empty()) {
       for(uint32_t i = 0; i < tr.size(); ++i) {
-	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg + 1);
-	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg + 1);
+	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg);
+	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg);
 	cv::line(img, cv::Point(px, track * c.tlheight + c.tlheight/2), cv::Point(pxend, track * c.tlheight + c.tlheight/2), cv::Scalar(255, 0, 0), 1);
 	int32_t pxi = px + 5;
 	if (pxi < 0) pxi = 5;
@@ -129,8 +129,8 @@ namespace wallysworld
     TBitSet blocked(c.width, false);
     if (!anno.empty()) {
       for(uint32_t i = 0; i < anno.size(); ++i) {
-	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg + 1);
-	int32_t pxend = pixelX(c.width, rg.size, anno[i].end - rg.beg + 1);
+	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg);
+	int32_t pxend = pixelX(c.width, rg.size, anno[i].end - rg.beg);
 	cv::Rect rect(px, track * c.tlheight + 1, pxend - px, c.tlheight - 2);
 	cv::rectangle(img, rect, hexToScalar(anno[i].color), -1);
 
@@ -153,8 +153,8 @@ namespace wallysworld
     // Transcript labels
     if (!tr.empty()) {
       for(uint32_t i = 0; i < tr.size(); ++i) {
-	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg + 1);
-	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg + 1);
+	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg);
+	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg);
 	if (px < 0) px = 0;
 	if (pxend > (int32_t) c.width) pxend = c.width;
 	int32_t kstart = -1;
