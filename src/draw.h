@@ -389,6 +389,21 @@ namespace wallysworld
     drawNuc(c, img, px, track * c.tlheight, pxend - px, c.rdheight, nuc, clr);
   }
 
+  template<typename TConfig>
+  inline void
+  drawModBase(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, int32_t const gstart, int16_t const prob, cv::Scalar const& modClr, cv::Scalar const& unmodClr) {
+    if (track == -1) return;
+    if (prob < 0) return;
+    int32_t px = pixelX(c.width, rg.size, gstart);
+    int32_t pxend = pixelX(c.width, rg.size, gstart + 1);
+    int32_t w = pxend - px;
+    if (w < 1) w = 1;
+    double p = (double) prob / 255.0;
+    cv::Scalar clr(unmodClr[0] * (1 - p) + modClr[0] * p, unmodClr[1] * (1 - p) + modClr[1] * p, unmodClr[2] * (1 - p) + modClr[2] * p);
+    cv::Rect rect(px, track * c.tlheight, w, c.rdheight);
+    cv::rectangle(img, rect, clr, -1);
+  }
+
   inline void
   drawDel(cv::Mat& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, int32_t const len) {
     int32_t pxw = w;

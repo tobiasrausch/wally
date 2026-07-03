@@ -70,6 +70,18 @@ namespace wallysworld
   #define WALLY_SPLITBORDER cv::Scalar(200,200,200)
   #endif
 
+  #ifndef WALLY_MOD_UNMOD
+  #define WALLY_MOD_UNMOD cv::Scalar(255,0,0)
+  #endif
+
+  #ifndef WALLY_MOD_5MC_COL
+  #define WALLY_MOD_5MC_COL cv::Scalar(0,0,255)
+  #endif
+
+  #ifndef WALLY_MOD_5HMC_COL
+  #define WALLY_MOD_5HMC_COL cv::Scalar(0,165,255)
+  #endif
+
   #ifndef POS_UNDEF
   #define POS_UNDEF std::numeric_limits<uint32_t>::max()
   #endif

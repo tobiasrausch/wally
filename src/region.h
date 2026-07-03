@@ -29,6 +29,7 @@
 #include "util.h"
 #include "draw.h"
 #include "bed.h"
+#include "methylation.h"
 
 namespace wallysworld
 {
@@ -41,6 +42,7 @@ namespace wallysworld
     bool showPairs;
     bool hasRegionFile;
     bool hasAnnotationFile;
+    int32_t modType;  // no, 5mC, 5hmC
     uint16_t madCutoff;
     uint16_t splits;
     uint32_t minMapQual;
@@ -216,8 +218,11 @@ namespace wallysworld
 	  for (int i = 0; i < rec->core.l_qseq; ++i) sequence[i] = "=ACMGRSVTWYHKDBN"[bam_seqi(seqptr, i)];
 
 	  // Modified bases
-	  //if (!readMM(rec)) return 1;
-	  
+	  std::vector<int16_t> methProb;
+	  if (c.modType != WALLY_MOD_NONE) buildModProb(rec, modCode(c.modType), methProb);
+	  bool readRev = (rec->core.flag & BAM_FREVERSE);
+	  int32_t qlen = rec->core.l_qseq;
+
 	  // Find out layout
 	  cv::Scalar readCol = WALLY_READ1;
 	  if (c.showPairs) {
@@ -322,8 +327,16 @@ namespace wallysworld
 		    if (covT[rpadj] < maxCoverage) ++covT[rpadj];
 		  }
 		}
-		// Draw nucleotide for mismatches
-		if (rec->core.l_qseq) {
+		// Modified base view
+		if (c.modType != WALLY_MOD_NONE) {
+		  int32_t fwdPos = readRev ? (qlen - (int32_t) sp - 1) : (int32_t) sp;
+		  if ((fwdPos >= 0) && (fwdPos < (int32_t) methProb.size()) && (methProb[fwdPos] >= 0)) {
+		    cv::Scalar modClr = (c.modType == WALLY_MOD_5HMC) ? WALLY_MOD_5HMC_COL : WALLY_MOD_5MC_COL;
+		    int32_t gpos = (int32_t) rp - (int32_t) rg[rgIdx].beg - (readRev ? 1 : 0);
+		    drawModBase(c, rg[rgIdx], bg, trackIdx, gpos, methProb[fwdPos], modClr, WALLY_MOD_UNMOD);
+		  }
+		} else if (rec->core.l_qseq) {
+		  // Draw nucleotide for mismatches
 		  if (sequence[sp] != seq[rp]) {
 		    drawNuc(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
 		  }
@@ -444,6 +457,7 @@ namespace wallysworld
 
   int region(int argc, char **argv) {
     ConfigRegion c;
+    std::string modStr;
     c.tlheight = 14;
     c.rdheight = 12;
     
@@ -458,7 +472,8 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("mad-cutoff,m", boost::program_options::value<uint16_t>(&c.madCutoff)->default_value(9), "insert size cutoff, median+m*MAD")
+      ("mad-cutoff,a", boost::program_options::value<uint16_t>(&c.madCutoff)->default_value(9), "insert size cutoff, median+a*MAD")
+      ("mod,m", boost::program_options::value<std::string>(&modStr)->default_value("off"), "modified base view [off|5mC|5hmC]")
       ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
       ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
       ("region,r", boost::program_options::value<std::string>(&c.regionStr)->default_value("chrA:35-78"), "region to display")
@@ -518,6 +533,15 @@ namespace wallysworld
     // Paired-end view
     if (vm.count("paired")) c.showPairs = true;
     else c.showPairs = false;
+
+    // Modified base view
+    if ((modStr == "off") || (modStr == "Off")) c.modType = WALLY_MOD_NONE;
+    else if ((modStr == "5mC") || (modStr == "5mc")) c.modType = WALLY_MOD_5MC;
+    else if ((modStr == "5hmC") || (modStr == "5hmc")) c.modType = WALLY_MOD_5HMC;
+    else {
+      std::cerr << "Error: Unknown modified base view '" << modStr << std::endl;
+      return 1;
+    }
 
     // Check splits
     if (c.splits < 1) {
