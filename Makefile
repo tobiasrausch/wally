@@ -20,7 +20,7 @@ WASMDIR = ${PWD}/wasm
 WASMHTS = ${WASMDIR}/htslib/libhts.a
 WASMB2D = ${BLEND2DSRC}/build-wasm/libblend2d.a
 WASMBOOST = ${WASMDIR}/boost/libboost_wasm.a
-NPROC = $(shell nproc)
+NPROC = $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 EMCONF = ${WASMDIR}/emscripten_config
 EMCACHE = ${WASMDIR}/emcache
 export EM_CONFIG = ${EMCONF}
@@ -39,11 +39,16 @@ LDFLAGS += -L${EBROOTHTSLIB} -lboost_iostreams -lboost_filesystem -lboost_progra
 ifeq (${STATIC}, 1)
 	LDSTATIC = --static
 	HTSSTATIC = --disable-libcurl
-	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2 -ldeflate -lrt
+	LDFLAGS += -static -static-libgcc -pthread -lhts -lz -llzma -lbz2 -ldeflate
 else
 	LDSTATIC =
 	HTSSTATIC =
-	LDFLAGS += -pthread -lhts -lz -llzma -lbz2 -lrt -Wl,-rpath,${EBROOTHTSLIB}
+	LDFLAGS += -pthread -lhts -lz -llzma -lbz2 -Wl,-rpath,${EBROOTHTSLIB}
+endif
+
+# librt
+ifeq ($(shell uname -s), Linux)
+	LDFLAGS += -lrt
 endif
 
 # Flags for debugging, profiling and releases
@@ -79,7 +84,7 @@ all:   	$(TARGETS)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoreconf -i && ./configure ${HTSSTATIC} --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
 .blend2d: ${BLEND2DSOURCES}
-	if [ -f ${BLEND2DSRC}/CMakeLists.txt ]; then cd ${BLEND2DSRC} && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON && cmake --build build --target blend2d -j$(shell nproc) && cd ../../ && touch .blend2d; fi
+	if [ -f ${BLEND2DSRC}/CMakeLists.txt ]; then unset CXXFLAGS CFLAGS LDFLAGS; cd ${BLEND2DSRC} && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON && cmake --build build --target blend2d -j${NPROC} && cd ../../ && touch .blend2d; fi
 
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(BLEND2DLIB) $(LDFLAGS)
@@ -103,7 +108,7 @@ ${WASMHTS}: ${EMCONF}
 	cd ${WASMDIR}/htslib && ${EMCONFIGURE} ./configure --host=wasm32-unknown-emscripten --disable-libcurl --disable-lzma --disable-bz2 --without-libdeflate CFLAGS="-O2 -sUSE_ZLIB=1" && ${EMMAKE} make -j${NPROC} libhts.a
 
 ${WASMB2D}: ${EMCONF}
-	cd ${BLEND2DSRC} && ${EMCMAKE} cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON && ${EMMAKE} cmake --build build-wasm --target blend2d -j${NPROC}
+	unset CXXFLAGS CFLAGS LDFLAGS; cd ${BLEND2DSRC} && ${EMCMAKE} cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON && ${EMMAKE} cmake --build build-wasm --target blend2d -j${NPROC}
 
 ${WASMBOOST}: ${EMCONF}
 	mkdir -p ${WASMDIR}
