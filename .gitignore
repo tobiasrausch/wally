@@ -9,13 +9,9 @@ bed/*.bed.gz.tbi
 # Binaries
 bin/
 src/wally
-src/ocv
-src/opencv_js
-src/emsdk
-src/htslib_js/
-html/image.js
-html/image.wasm
-
+wasm/
+src/blend2d/build-wasm/
+src/blend2d/build/
 
 # Prerequisites
 *.d
@@ -49,3 +45,4 @@ html/image.wasm
 *.exe
 *.out
 *.app
+
