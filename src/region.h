@@ -84,7 +84,6 @@ namespace wallysworld
     // Load genome
     faidx_t* fai = fai_load(c.genome.string().c_str());
     int32_t seqlen;
-    std::string oldchr("None");
     char* seq = NULL;
 
     // Adjust image width by number of split images?
@@ -131,20 +130,16 @@ namespace wallysworld
       // Split by number of BAMs
       int32_t bamTrackSize = (int32_t) ((maxTracks - headerTracks) / c.files.size());
           
-      // Lazy loading of genome
-      std::string chrName = hdr->target_name[rg[rgIdx].tid];
-      if (chrName != oldchr) {
-	if (seq != NULL) free(seq);
-	seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], 0, hdr->target_len[rg[rgIdx].tid], &seqlen);
-	oldchr = chrName;
-	boost::to_upper(seq);
-      }
+      // Load reference slice covering this region
+      if (seq != NULL) free(seq);
+      seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], rg[rgIdx].beg, rg[rgIdx].end - 1, &seqlen);
+      boost::to_upper(seq);
 
       // Header
       drawGenome(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], ctx, 1);
 
       // Reference
-      drawReference(c, rg[rgIdx], ctx, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
+      drawReference(c, rg[rgIdx], ctx, boost::to_upper_copy(std::string(seq, seq + rg[rgIdx].size)), 2);
 
       // Genes/Annotation
       drawAnnotation(c, rg[rgIdx], tr, anno, ctx, 3);
@@ -314,7 +309,7 @@ namespace wallysworld
 		  }
 		} else if (rec->core.l_qseq) {
 		  // Draw nucleotide for mismatches
-		  if (sequence[sp] != seq[rp]) {
+		  if ((rpadj >= 0) && (rpadj < (int32_t) rg[rgIdx].size) && (sequence[sp] != seq[rpadj])) {
 		    drawNuc(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
 		  }
 		}
@@ -355,19 +350,19 @@ namespace wallysworld
 	  cumsum += covG[rpadj];
 	  cumsum += covT[rpadj];
 	  if (cumsum >= c.snvcov) {
-	    if (seq[rp] == 'A') {
+	    if (seq[rpadj] == 'A') {
 	      if (((double) covA[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if (seq[rp] == 'C') {
+	    } else if (seq[rpadj] == 'C') {
 	      if (((double) covC[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if (seq[rp] == 'G') {
+	    } else if (seq[rpadj] == 'G') {
 	      if (((double) covG[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }
-	    } else if (seq[rp] == 'T') {
+	    } else if (seq[rpadj] == 'T') {
 	      if (((double) covT[rpadj] / (double) cumsum) < (1 - c.snvvaf)) {
 		snp[rpadj] = true;
 	      }

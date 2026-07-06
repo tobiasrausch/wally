@@ -10,10 +10,13 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: make
       run: |
-        brew install boost htslib opencv
-        export CXXFLAGS='-I/opt/homebrew/opt/boost/include -I/opt/homebrew/opt/htslib/include'
-        export LDFLAGS='-L/opt/homebrew/opt/boost/lib -L/opt/homebrew/opt/htslib/lib'
+        brew install boost htslib cmake
+        touch .htslib
+        export CXXFLAGS="-I$(brew --prefix boost)/include -I$(brew --prefix htslib)/include"
+        export LDFLAGS="-L$(brew --prefix boost)/lib -L$(brew --prefix htslib)/lib"
         make
