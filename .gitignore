@@ -1,8 +1,5 @@
 .htslib
-.opencv
-.emsdk
-.opencvjs
-.htslibjs
+.blend2d
 singularity/wally.sif
 bed/*.bed
 bed/*.bed.gz

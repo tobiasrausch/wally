@@ -19,10 +19,6 @@
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 #include "version.h"
@@ -91,7 +87,9 @@ namespace wallysworld
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
       // Generate image
-      cv::Mat hm( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
+      BLImage hm(c.width, c.height, BL_FORMAT_PRGB32);
+      BLContext ctx(hm);
+      ctx.fill_all(BLRgba32(255, 255, 255));
 
       // Parse BAM files
       boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -120,7 +118,7 @@ namespace wallysworld
 	      int32_t xcenter = (rmap[seed][i].alnstart + rmap[seed][i].alnend) / 2;
 	      int32_t ycenter = (rec->core.pos + alnend) / 2;
 	      int32_t matchlen = std::min(rmap[seed][i].alnend - rmap[seed][i].alnstart, alnend - (int32_t) rec->core.pos);
-	      drawMatch(c, rg[rgIdx-1], rg[rgIdx], hm, (xcenter - matchlen / 2 - rg[rgIdx-1].beg), (xcenter + matchlen / 2 - rg[rgIdx-1].beg), (ycenter - matchlen / 2 - rg[rgIdx].beg), (ycenter + matchlen / 2 - rg[rgIdx].beg), forward);
+	      drawMatch(c, rg[rgIdx-1], rg[rgIdx], ctx, (xcenter - matchlen / 2 - rg[rgIdx-1].beg), (xcenter + matchlen / 2 - rg[rgIdx-1].beg), (ycenter - matchlen / 2 - rg[rgIdx].beg), (ycenter + matchlen / 2 - rg[rgIdx].beg), forward);
 	      
 	      //std::cout << hdr->target_name[rg[rgIdx-1].tid] << ',' << rmap[seed][i].alnstart << ',' << rmap[seed][i].alnend << '-' << hdr->target_name[rg[rgIdx].tid] << ',' << rec->core.pos << ',' <<  alnend << std::endl;
 	    }
@@ -131,15 +129,12 @@ namespace wallysworld
       hts_itr_destroy(iter);
 
 
+      ctx.end();
       if (rgIdx % 2 == 1)  {
-	// Store image (comment this for valgrind, png encoder seems leaky)	
+	// Store image
 	std::string outfile = rg[rgIdx].id;
 	outfile += ".png";
-	cv::imwrite(outfile.c_str(), hm);
-	if (c.showWindow) {
-	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), hm);
-	  cv::waitKey(0);
-	}
+	hm.write_to_file(outfile.c_str());
       }
     }
 

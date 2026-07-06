@@ -19,10 +19,6 @@
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 #include "version.h"
@@ -85,7 +81,9 @@ namespace wallysworld
     if (!parseRegions(hdr, c, rg)) return 1;
     for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
       // Generate image
-      cv::Mat hbt( c.width, c.height, CV_8UC3, cv::Scalar(0, 0, 0));
+      BLImage hbt(c.width, c.height, BL_FORMAT_PRGB32);
+      BLContext ctx(hbt);
+      ctx.fill_all(BLRgba32(0, 0, 0));
 
       // Lazy loading of genome
       std::string chrName = hdr->target_name[rg[rgIdx].tid];
@@ -204,17 +202,13 @@ namespace wallysworld
       }
 
       // Convert to hilbert curve
-      drawHilbert(c, rg[rgIdx], hbt, covA, covC, covG, covT, del, snp);
-      
-      // Store image (comment this for valgrind, png encoder seems leaky)
-      //cv::resize(hbt, hbt, cv::Size(32, 32));
+      drawHilbert(c, rg[rgIdx], ctx, covA, covC, covG, covT, del, snp);
+      ctx.end();
+
+      // Store image
       std::string outfile = rg[rgIdx].id;
       outfile += ".png";
-      cv::imwrite(outfile.c_str(), hbt);
-      if (c.showWindow) {
-	cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), hbt);
-	cv::waitKey(0);
-      }
+      hbt.write_to_file(outfile.c_str());
     }
 
     // Clean-up

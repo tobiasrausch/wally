@@ -14,6 +14,7 @@
 
 #include <htslib/sam.h>
 
+#include "render.h"
 
 namespace wallysworld
 {
@@ -21,65 +22,65 @@ namespace wallysworld
   #ifndef WALLY_PX
   #define WALLY_PX 8
   #endif
-  
+
   #ifndef WALLY_A
-  #define WALLY_A cv::Scalar(0,150,0)
+  #define WALLY_A BLRgba32(0,150,0)
   #endif
 
   #ifndef WALLY_C
-  #define WALLY_C cv::Scalar(255,0,0)
+  #define WALLY_C BLRgba32(0,0,255)
   #endif
 
   #ifndef WALLY_G
-  #define WALLY_G cv::Scalar(5,113,209)
+  #define WALLY_G BLRgba32(209,113,5)
   #endif
 
   #ifndef WALLY_T
-  #define WALLY_T cv::Scalar(0,0,255)
+  #define WALLY_T BLRgba32(255,0,0)
   #endif
 
   #ifndef WALLY_N
-  #define WALLY_N cv::Scalar(120,120,120)
+  #define WALLY_N BLRgba32(120,120,120)
   #endif
 
   #ifndef WALLY_READ1
-  #define WALLY_READ1 cv::Scalar(200,200,200)
+  #define WALLY_READ1 BLRgba32(200,200,200)
   #endif
 
   #ifndef WALLY_READ2
-  #define WALLY_READ2 cv::Scalar(180,180,180)
+  #define WALLY_READ2 BLRgba32(180,180,180)
   #endif
 
   #ifndef WALLY_FWDMATCH
-  #define WALLY_FWDMATCH cv::Scalar(233,217,171)
+  #define WALLY_FWDMATCH BLRgba32(171,217,233)
   #endif
 
   #ifndef WALLY_REVMATCH
-  #define WALLY_REVMATCH cv::Scalar(97,174,253)
+  #define WALLY_REVMATCH BLRgba32(253,174,97)
   #endif
 
   #ifndef WALLY_INDEL
-  #define WALLY_INDEL cv::Scalar(209,113,5)
+  #define WALLY_INDEL BLRgba32(5,113,209)
   #endif
 
   #ifndef WALLY_BORDER
-  #define WALLY_BORDER cv::Scalar(120,120,120)
+  #define WALLY_BORDER BLRgba32(120,120,120)
   #endif
 
   #ifndef WALLY_SPLITBORDER
-  #define WALLY_SPLITBORDER cv::Scalar(200,200,200)
+  #define WALLY_SPLITBORDER BLRgba32(200,200,200)
   #endif
 
   #ifndef WALLY_MOD_UNMOD
-  #define WALLY_MOD_UNMOD cv::Scalar(255,0,0)
+  #define WALLY_MOD_UNMOD BLRgba32(0,0,255)
   #endif
 
   #ifndef WALLY_MOD_5MC_COL
-  #define WALLY_MOD_5MC_COL cv::Scalar(0,0,255)
+  #define WALLY_MOD_5MC_COL BLRgba32(255,0,0)
   #endif
 
   #ifndef WALLY_MOD_5HMC_COL
-  #define WALLY_MOD_5HMC_COL cv::Scalar(0,165,255)
+  #define WALLY_MOD_5HMC_COL BLRgba32(255,165,0)
   #endif
 
   #ifndef POS_UNDEF
@@ -135,13 +136,9 @@ namespace wallysworld
     LibraryInfo() : rs(0), median(0), mad(0) {}
   };
 
-  inline cv::Size
+  inline TextSize
   textSize() {
-    std::string text = "240,000,000";
-    double font_scale = 0.4;
-    double font_thickness = 1.5;
-    int32_t baseline = 0;
-    return cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    return getTextSize("240,000,000");
   }
 
   uint32_t hexColor(std::string& color) {
@@ -153,8 +150,9 @@ namespace wallysworld
     }
   }
 
-  cv::Scalar hexToScalar(uint32_t const hex) {
-    return cv::Scalar(((hex) & 0xFF), ((hex >> 8) & 0xFF), ((hex >> 16) & 0xFF));
+  BLRgba32 hexToScalar(uint32_t const hex) {
+    // hex is 0xRRGGBB; add an opaque alpha to form 0xAARRGGBB
+    return BLRgba32(0xFF000000u | hex);
   }
   
   inline void

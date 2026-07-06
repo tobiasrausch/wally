@@ -19,10 +19,6 @@
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 #include "version.h"
@@ -97,7 +93,7 @@ namespace wallysworld
       std::cerr << "Image width is too small or too many splits!" << std::endl;
       return 1;
     }
-    std::vector<cv::Mat> imageStore;
+    std::vector<BLImage> imageStore;
     
     // Split region
     std::vector<Region> rg;
@@ -116,7 +112,9 @@ namespace wallysworld
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
       // Generate image
-      cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
+      BLImage bg(c.width, c.height, BL_FORMAT_PRGB32);
+      BLContext ctx(bg);
+      ctx.fill_all(BLRgba32(255, 255, 255));
 
       // Tracks
       int32_t headerTracks = 4;
@@ -143,13 +141,13 @@ namespace wallysworld
       }
 
       // Header
-      drawGenome(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg, 1);
+      drawGenome(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], ctx, 1);
 
       // Reference
-      drawReference(c, rg[rgIdx], bg, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
+      drawReference(c, rg[rgIdx], ctx, boost::to_upper_copy(std::string(seq + rg[rgIdx].beg, seq + rg[rgIdx].end)), 2);
 
       // Genes/Annotation
-      drawAnnotation(c, rg[rgIdx], tr, anno, bg, 3);
+      drawAnnotation(c, rg[rgIdx], tr, anno, ctx, 3);
       
       // Read offset
       int32_t genomicReadOffset  = (2.0 / (double) c.width) * (double) rg[rgIdx].size;
@@ -203,27 +201,27 @@ namespace wallysworld
 	  int32_t qlen = rec->core.l_qseq;
 
 	  // Find out layout
-	  cv::Scalar readCol = WALLY_READ1;
+	  BLRgba32 readCol = WALLY_READ1;
 	  if (c.showPairs) {
 	    if (rec->core.flag & BAM_FREAD2) readCol = WALLY_READ2;
 	    uint8_t pl = layout(rec);
 	    uint32_t minSep = 50;
 	    if (pl == 0) {
-	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(175, 175, 63);
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = BLRgba32(63, 175, 175);
 	    } else if (pl == 1) {
-	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(213, 100, 78);
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = BLRgba32(78, 100, 213);
 	    } else if (pl == 2) {
-	      if (std::abs(rec->core.isize) > sampleLib[file_c].median + c.madCutoff * sampleLib[file_c].mad) readCol = cv::Scalar(63, 63, 213);
+	      if (std::abs(rec->core.isize) > sampleLib[file_c].median + c.madCutoff * sampleLib[file_c].mad) readCol = BLRgba32(213, 63, 63);
 	    } else if (pl == 3) {
-	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = cv::Scalar(63, 175, 63);
+	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = BLRgba32(63, 175, 63);
 	    } else if (pl == DELLY_SVT_TRANS + 0) {
-	      readCol = cv::Scalar(153, 154, 251);
+	      readCol = BLRgba32(251, 154, 153);
 	    } else if (pl == DELLY_SVT_TRANS + 1) {
-	      readCol = cv::Scalar(111, 191, 253);
+	      readCol = BLRgba32(253, 191, 111);
 	    } else if (pl == DELLY_SVT_TRANS + 2) {
-	      readCol = cv::Scalar(0, 127, 255);
+	      readCol = BLRgba32(255, 127, 0);
 	    } else if (pl == DELLY_SVT_TRANS + 3) {
-	      readCol = cv::Scalar(214, 178, 202);
+	      readCol = BLRgba32(202, 178, 214);
 	    }
 	  }
 
@@ -247,7 +245,7 @@ namespace wallysworld
 		  taken[trackIdx] = std::max((int32_t) rec->core.mpos + genomicReadOffset, alnend + genomicReadOffset);
 		  assignedTrack[seed] = trackIdx;
 		  // draw the paired-end connector line
-		  drawPELine(c, rg[rgIdx], bg, trackIdx, (alnend - rg[rgIdx].beg), (rec->core.mpos - rg[rgIdx].beg), readCol);
+		  drawPELine(c, rg[rgIdx], ctx, trackIdx, (alnend - rg[rgIdx].beg), (rec->core.mpos - rg[rgIdx].beg), readCol);
 		} else {
 		  // Treat like single-end
 		  taken[trackIdx] = alnend + genomicReadOffset;
@@ -286,9 +284,9 @@ namespace wallysworld
 		firstBox = false;
 	      }
 	      if ((rp + bam_cigar_oplen(cigar[i]) == (uint32_t) alnend) && (!(rec->core.flag & BAM_FREVERSE))) drawTriangle = true;
-	      drawRead(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle, readCol);
+	      drawRead(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), (rec->core.flag & BAM_FREVERSE), drawTriangle, readCol);
 	      if (leadingSC > 0) {
-		drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
+		drawSC(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), leadingSC, true);
 		leadingSC = 0;
 	      }
 	      // match or mismatch
@@ -310,34 +308,34 @@ namespace wallysworld
 		if (c.modType != WALLY_MOD_NONE) {
 		  int32_t fwdPos = readRev ? (qlen - (int32_t) sp - 1) : (int32_t) sp;
 		  if ((fwdPos >= 0) && (fwdPos < (int32_t) methProb.size()) && (methProb[fwdPos] >= 0)) {
-		    cv::Scalar modClr = (c.modType == WALLY_MOD_5HMC) ? WALLY_MOD_5HMC_COL : WALLY_MOD_5MC_COL;
+		    BLRgba32 modClr = (c.modType == WALLY_MOD_5HMC) ? WALLY_MOD_5HMC_COL : WALLY_MOD_5MC_COL;
 		    int32_t gpos = (int32_t) rp - (int32_t) rg[rgIdx].beg - (readRev ? 1 : 0);
-		    drawModBase(c, rg[rgIdx], bg, trackIdx, gpos, methProb[fwdPos], modClr, WALLY_MOD_UNMOD);
+		    drawModBase(c, rg[rgIdx], ctx, trackIdx, gpos, methProb[fwdPos], modClr, WALLY_MOD_UNMOD);
 		  }
 		} else if (rec->core.l_qseq) {
 		  // Draw nucleotide for mismatches
 		  if (sequence[sp] != seq[rp]) {
-		    drawNuc(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
+		    drawNuc(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), (rp + 1 - rg[rgIdx].beg), sequence[sp], readCol);
 		  }
 		}
 		++sp;
 		++rp;
 	      }
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CDEL) {
-	      drawDel(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
+	      drawDel(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
 	      rp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CINS) {
-	      drawIns(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
+	      drawIns(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]));
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CSOFT_CLIP) {
 	      if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
-	      else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
+	      else drawSC(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
 	      sp += bam_cigar_oplen(cigar[i]);
 	    } else if(bam_cigar_op(cigar[i]) == BAM_CHARD_CLIP) {
 	      if (sp == 0) leadingSC = bam_cigar_oplen(cigar[i]);
-	      else drawSC(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
+	      else drawSC(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), bam_cigar_oplen(cigar[i]), false);
 	    } else if (bam_cigar_op(cigar[i]) == BAM_CREF_SKIP) {
-	      drawRefSkip(c, rg[rgIdx], bg, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg));
+	      drawRefSkip(c, rg[rgIdx], ctx, trackIdx, (rp - rg[rgIdx].beg), (rp + bam_cigar_oplen(cigar[i]) - rg[rgIdx].beg));
 	      rp += bam_cigar_oplen(cigar[i]);
 	    } else {
 	      std::cerr << "Unknown Cigar options" << std::endl;
@@ -377,42 +375,43 @@ namespace wallysworld
 	  }
 	}
 	if (c.showCoverage) {
-	  drawCoverage(c, rg[rgIdx], bg, covA, covC, covG, covT, snp, lowerBound + 1);
-	  drawSampleLabel(c, lowerBound + 3, c.files[file_c].stem().string(), bg);
+	  drawCoverage(c, rg[rgIdx], ctx, covA, covC, covG, covT, snp, lowerBound + 1);
+	  drawSampleLabel(c, lowerBound + 3, c.files[file_c].stem().string(), ctx);
 	} else {
-	  drawSampleLabel(c, lowerBound + 1, c.files[file_c].stem().string(), bg);
+	  drawSampleLabel(c, lowerBound + 1, c.files[file_c].stem().string(), ctx);
 	}
       }
-      drawBorder(c, bg);
+      drawBorder(c, ctx);
+      ctx.end();
 
-      
-      // Store image (comment this for valgrind, png encoder seems leaky)
+
+      // Store image
       if (c.splits == 1) {
 	std::string outfile = rg[rgIdx].id;
 	outfile += ".png";
-	cv::imwrite(outfile.c_str(), bg);
-	if (c.showWindow) {
-	  cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
-	  cv::waitKey(0);
-	}
+	bg.write_to_file(outfile.c_str());
       } else {
 	imageStore.push_back(bg);
 	// Concatenate
 	if (imageStore.size() == c.splits) {
-	  cv::Mat dst;
-	  cv::hconcat(imageStore[0], imageStore[1], dst);
-	  for(uint32_t i = 2; i < imageStore.size(); ++i) {
-	    cv::Mat tdst;
-	    cv::hconcat(dst, imageStore[i], tdst);
-	    dst = tdst;
+	  int32_t totalWidth = 0;
+	  int32_t maxHeight = 0;
+	  for(uint32_t i = 0; i < imageStore.size(); ++i) {
+	    totalWidth += imageStore[i].width();
+	    if (imageStore[i].height() > maxHeight) maxHeight = imageStore[i].height();
 	  }
+	  BLImage dst(totalWidth, maxHeight, BL_FORMAT_PRGB32);
+	  BLContext dctx(dst);
+	  dctx.fill_all(BLRgba32(255, 255, 255));
+	  int32_t xoffset = 0;
+	  for(uint32_t i = 0; i < imageStore.size(); ++i) {
+	    dctx.blit_image(BLPointI(xoffset, 0), imageStore[i]);
+	    xoffset += imageStore[i].width();
+	  }
+	  dctx.end();
 	  std::string outfile = rg[rgIdx].id;
 	  outfile += ".png";
-	  cv::imwrite(outfile.c_str(), dst);
-	  if (c.showWindow) {
-	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
-	    cv::waitKey(0);
-	  }
+	  dst.write_to_file(outfile.c_str());
 	  imageStore.clear();
 	}
       }

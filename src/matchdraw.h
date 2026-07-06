@@ -23,16 +23,16 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
-  drawSplitLine(TConfig const& c, cv::Mat& img, uint32_t const track) {
+  drawSplitLine(TConfig const& c, BLContext& img, uint32_t const track) {
     // Draw line
-    cv::line(img, cv::Point(0, track * c.tlheight), cv::Point(c.width, track * c.tlheight), WALLY_SPLITBORDER, 1);
+    drawLine(img, 0, track * c.tlheight, c.width, track * c.tlheight, WALLY_SPLITBORDER, 1);
   }
-  
+
   template<typename TConfig>
   inline void
-  drawSplitBorder(TConfig const& c, cv::Mat& img) {
-    cv::line(img, cv::Point(0, 0), cv::Point(0, c.height), WALLY_SPLITBORDER, 3);
-    cv::line(img, cv::Point(c.width - 1, 0), cv::Point(c.width - 1, c.height), WALLY_SPLITBORDER, 3);
+  drawSplitBorder(TConfig const& c, BLContext& img) {
+    drawLine(img, 0, 0, 0, c.height, WALLY_SPLITBORDER, 3);
+    drawLine(img, c.width - 1, 0, c.width - 1, c.height, WALLY_SPLITBORDER, 3);
   }
 
   template<typename TConfig>
@@ -45,10 +45,7 @@ namespace wallysworld
       std::string textEnd(boost::lexical_cast<std::string>(rg[i].end));
       insertComma(textEnd);
       std::string text = "##" + textBeg + "-" + textEnd + "##";
-      double font_scale = c.ftscale;
-      double font_thickness = 3 * c.ftscale;
-      int32_t baseline = 0;
-      cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+      TextSize textSize = getTextSize(text, scaleToPx(c.ftscale));
       if (textSize.width > (int32_t) maxsize) maxsize = textSize.width;
     }
     return maxsize * c.splits;
@@ -56,32 +53,27 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
-  drawReadLabel(TConfig const& c, int32_t const track, std::string const& text, cv::Mat& img) {
-    double font_scale = c.ftscale;
-    double font_thickness = 3 * c.ftscale;
-    int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
-    cv::Rect rect(0,  track * c.tlheight, textSize.width, textSize.height);
-    cv::rectangle(img, rect, cv::Scalar(0, 255, 255), -1);
-    cv::putText(img, text, cv::Point(0, track * c.tlheight + textSize.height), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+  drawReadLabel(TConfig const& c, int32_t const track, std::string const& text, BLContext& img) {
+    float px = scaleToPx(c.ftscale);
+    TextSize textSize = getTextSize(text, px);
+    img.fill_rect(BLRectI(0, track * c.tlheight, textSize.width, textSize.height), BLRgba32(255, 255, 0));
+    drawText(img, 0, track * c.tlheight + textSize.height, text, BLRgba32(0, 0, 0), px);
   }
-  
+
   template<typename TConfig>
   inline void
-  drawCoordinates(TConfig const& c, Region const& rg, std::string const& chr, cv::Mat& img) {
+  drawCoordinates(TConfig const& c, Region const& rg, std::string const& chr, BLContext& img) {
     std::string textBeg(boost::lexical_cast<std::string>(rg.beg));
     insertComma(textBeg);
     std::string textEnd(boost::lexical_cast<std::string>(rg.end));
     insertComma(textEnd);
     std::string text = textBeg + "-" + textEnd;
 
-    double font_scale = c.ftscale;
-    double font_thickness = 3 * c.ftscale;
-    int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(chr, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, chr, cv::Point(c.width / 2 - textSize.width / 2, 0 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
-    textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, text, cv::Point(c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+    float px = scaleToPx(c.ftscale);
+    TextSize textSize = getTextSize(chr, px);
+    drawText(img, c.width / 2 - textSize.width / 2, 0 * c.tlheight + textSize.height, chr, BLRgba32(0, 0, 0), px);
+    textSize = getTextSize(text, px);
+    drawText(img, c.width / 2 - textSize.width / 2, 1 * c.tlheight + textSize.height, text, BLRgba32(0, 0, 0), px);
 
     // Draw scale
     int32_t bpscale = 0.5 * c.width * c.bpoffset;
@@ -92,38 +84,38 @@ namespace wallysworld
     }
     bpscale *= mult;
     int32_t sep = 5;
-    int32_t px = sep;
+    int32_t pxs = sep;
     int32_t pxend = sep + c.pxoffset * bpscale;
-    cv::line(img, cv::Point(px, 2 * c.tlheight + c.tlheight / 2), cv::Point(pxend, 2 * c.tlheight + c.tlheight / 2), cv::Scalar(0, 0, 0), c.lw);
-    cv::line(img, cv::Point(px, 2 * c.tlheight + 1), cv::Point(px, 3 * c.tlheight - 1), cv::Scalar(0, 0, 0), c.lw);
-    cv::line(img, cv::Point(pxend, 2 * c.tlheight + 1), cv::Point(pxend, 3 * c.tlheight - 1), cv::Scalar(0, 0, 0), c.lw);
+    drawLine(img, pxs, 2 * c.tlheight + c.tlheight / 2, pxend, 2 * c.tlheight + c.tlheight / 2, BLRgba32(0, 0, 0), c.lw);
+    drawLine(img, pxs, 2 * c.tlheight + 1, pxs, 3 * c.tlheight - 1, BLRgba32(0, 0, 0), c.lw);
+    drawLine(img, pxend, 2 * c.tlheight + 1, pxend, 3 * c.tlheight - 1, BLRgba32(0, 0, 0), c.lw);
 
     std::string scaletxt(boost::lexical_cast<std::string>(bpscale));
     insertComma(scaletxt);
     scaletxt += "bp";
-    textSize = cv::getTextSize(scaletxt, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-    cv::putText(img, scaletxt, cv::Point(pxend + sep, 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+    textSize = getTextSize(scaletxt, px);
+    drawText(img, pxend + sep, 2 * c.tlheight + textSize.height, scaletxt, BLRgba32(0, 0, 0), px);
   }
 
   template<typename TConfig>
   inline void
-  drawCrossConnect(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, Mapping const& prev, Mapping const& mp) {
-    bool drawLine = false;
+  drawCrossConnect(TConfig const& c, Region const& rg, BLContext& img, int32_t const track, Mapping const& prev, Mapping const& mp) {
+    bool doLine = false;
     if ((prev.tid < rg.tid) || ((prev.tid == rg.tid) && (prev.gend < (rg.beg + rg.end) / 2))) {
-      if ((mp.tid > rg.tid) || ((mp.tid == rg.tid) && (mp.gstart > (rg.beg + rg.end) / 2))) drawLine = true;
+      if ((mp.tid > rg.tid) || ((mp.tid == rg.tid) && (mp.gstart > (rg.beg + rg.end) / 2))) doLine = true;
     }
     if ((prev.tid > rg.tid) || ((prev.tid == rg.tid) && (prev.gstart > (rg.beg + rg.end) / 2))) {
-      if ((mp.tid < rg.tid) || ((mp.tid == rg.tid) && (mp.gend < (rg.beg + rg.end) / 2))) drawLine = true;
+      if ((mp.tid < rg.tid) || ((mp.tid == rg.tid) && (mp.gend < (rg.beg + rg.end) / 2))) doLine = true;
     }
-    if (drawLine) {
+    if (doLine) {
       int32_t y = track * c.tlheight;
-      cv::line(img, cv::Point(0, y), cv::Point(c.width, y), cv::Scalar(0, 0, 0), c.lw);
+      drawLine(img, 0, y, c.width, y, BLRgba32(0, 0, 0), c.lw);
     }
-  }	
-  
+  }
+
   template<typename TConfig>
   inline void
-  drawBlock(TConfig const& c, Region const& rg, cv::Mat& img, int32_t const track, Mapping const& prev, Mapping const& mp, Mapping const& succ) {
+  drawBlock(TConfig const& c, Region const& rg, BLContext& img, int32_t const track, Mapping const& prev, Mapping const& mp, Mapping const& succ) {
 
     // Draw rectangle
     int32_t px = pixelX(c.width, rg.size, mp.gstart - rg.beg);
@@ -137,8 +129,8 @@ namespace wallysworld
     // Draw connectors
     if (mp.fwd) {
       if (prev.tid != -1) {
-	cv::line(img, cv::Point(x - 3, midpoint), cv::Point(x, midpoint), cv::Scalar(0, 0, 0), c.lw);
-	cv::line(img, cv::Point(x - 3, y), cv::Point(x - 3, midpoint), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x - 3, midpoint, x, midpoint, BLRgba32(0, 0, 0), c.lw);
+	drawLine(img, x - 3, y, x - 3, midpoint, BLRgba32(0, 0, 0), c.lw);
 	int32_t prevX = 0;
 	if (prev.tid < mp.tid) prevX = 0;
 	else if (prev.tid > mp.tid) prevX = c.width;
@@ -146,11 +138,11 @@ namespace wallysworld
 	  if (prev.fwd) prevX = pixelX(c.width, rg.size, prev.gend - rg.beg) + 2;
 	  else prevX = pixelX(c.width, rg.size, prev.gstart - rg.beg) - 3;
 	}
-	cv::line(img, cv::Point(x - 3, y), cv::Point(prevX, y), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x - 3, y, prevX, y, BLRgba32(0, 0, 0), c.lw);
       }
       if (succ.tid != -1) {
-	cv::line(img, cv::Point(x + w, midpoint), cv::Point(x + w + 2, midpoint), cv::Scalar(0, 0, 0), c.lw);
-	cv::line(img, cv::Point(x + w + 2, midpoint), cv::Point(x + w + 2, y + c.tlheight), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x + w, midpoint, x + w + 2, midpoint, BLRgba32(0, 0, 0), c.lw);
+	drawLine(img, x + w + 2, midpoint, x + w + 2, y + c.tlheight, BLRgba32(0, 0, 0), c.lw);
 	int32_t succX = 0;
 	if (succ.tid < mp.tid) succX = 0;
 	else if (succ.tid > mp.tid) succX = c.width;
@@ -158,12 +150,12 @@ namespace wallysworld
 	  if (succ.fwd) succX = pixelX(c.width, rg.size, succ.gstart - rg.beg) - 3;
 	  else succX = pixelX(c.width, rg.size, succ.gend - rg.beg) + 2;
 	}
-	cv::line(img, cv::Point(x + w + 2, y + c.tlheight), cv::Point(succX, y + c.tlheight), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x + w + 2, y + c.tlheight, succX, y + c.tlheight, BLRgba32(0, 0, 0), c.lw);
       }
     } else {
       if (succ.tid != -1) {
-	cv::line(img, cv::Point(x - 3, midpoint), cv::Point(x, midpoint), cv::Scalar(0, 0, 0), c.lw);
-	cv::line(img, cv::Point(x - 3, midpoint), cv::Point(x - 3, y + c.tlheight), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x - 3, midpoint, x, midpoint, BLRgba32(0, 0, 0), c.lw);
+	drawLine(img, x - 3, midpoint, x - 3, y + c.tlheight, BLRgba32(0, 0, 0), c.lw);
 	int32_t succX = 0;
 	if (succ.tid < mp.tid) succX = 0;
 	else if (succ.tid > mp.tid) succX = c.width;
@@ -171,11 +163,11 @@ namespace wallysworld
 	  if (succ.fwd) succX = pixelX(c.width, rg.size, succ.gstart - rg.beg) - 3;
 	  else succX = pixelX(c.width, rg.size, succ.gend - rg.beg) + 2;
 	}
-	cv::line(img, cv::Point(x - 3, y + c.tlheight), cv::Point(succX, y + c.tlheight), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x - 3, y + c.tlheight, succX, y + c.tlheight, BLRgba32(0, 0, 0), c.lw);
       }
       if (prev.tid != -1) {
-	cv::line(img, cv::Point(x + w, midpoint), cv::Point(x + w + 2, midpoint), cv::Scalar(0, 0, 0), c.lw);
-	cv::line(img, cv::Point(x + w + 2, y), cv::Point(x + w + 2, midpoint), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x + w, midpoint, x + w + 2, midpoint, BLRgba32(0, 0, 0), c.lw);
+	drawLine(img, x + w + 2, y, x + w + 2, midpoint, BLRgba32(0, 0, 0), c.lw);
 	int32_t prevX = 0;
 	if (prev.tid < mp.tid) prevX = 0;
 	else if (prev.tid > mp.tid) prevX = c.width;
@@ -183,15 +175,14 @@ namespace wallysworld
 	  if (prev.fwd) prevX = pixelX(c.width, rg.size, prev.gend - rg.beg) + 2;
 	  else prevX = pixelX(c.width, rg.size, prev.gstart - rg.beg) - 3;
 	}
-	cv::line(img, cv::Point(x + w + 2, y), cv::Point(prevX, y), cv::Scalar(0, 0, 0), c.lw);
+	drawLine(img, x + w + 2, y, prevX, y, BLRgba32(0, 0, 0), c.lw);
       }
     }
 
     // Draw read block
-    cv::Rect rect(x, midpoint - c.rdheight/2, w, c.rdheight);    
-    if (mp.fwd) cv::rectangle(img, rect, WALLY_FWDMATCH, -1);
-    else cv::rectangle(img, rect, WALLY_REVMATCH, -1);
-    
+    if (mp.fwd) img.fill_rect(BLRectI(x, midpoint - c.rdheight/2, w, c.rdheight), WALLY_FWDMATCH);
+    else img.fill_rect(BLRectI(x, midpoint - c.rdheight/2, w, c.rdheight), WALLY_REVMATCH);
+
     // Draw read positions
     if (!c.nolabel) {
       std::string rsta = boost::lexical_cast<std::string>(mp.rstart);
@@ -199,12 +190,10 @@ namespace wallysworld
       std::string	rend = boost::lexical_cast<std::string>(mp.rend);
       insertComma(rend);
       std::string readcoord = rsta + " - " + rend;
-      double font_scale = c.ftscale;
-      double font_thickness = 3 * c.ftscale;
-      int32_t baseline = 0;
-      cv::Size textSize = cv::getTextSize(readcoord, cv::FONT_HERSHEY_DUPLEX, font_scale, font_thickness, &baseline);
+      float px = scaleToPx(c.ftscale);
+      TextSize textSize = getTextSize(readcoord, px);
       if (textSize.width < w) {
-	cv::putText(img, readcoord, cv::Point(x + w / 2 - textSize.width / 2, y + c.tlheight/2 + textSize.height/2), cv::FONT_HERSHEY_SIMPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+	drawText(img, x + w / 2 - textSize.width / 2, y + c.tlheight/2 + textSize.height/2, readcoord, BLRgba32(0, 0, 0), px);
       }
     }
 

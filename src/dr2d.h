@@ -26,17 +26,17 @@ namespace wallysworld
   
   template<typename TConfig>
   inline void
-  drawMatch(TConfig const&, cv::Mat& img, int32_t const x, int32_t const xend, int32_t const y, int32_t const yend, bool const forward) {
+  drawMatch(TConfig const&, BLContext& img, int32_t const x, int32_t const xend, int32_t const y, int32_t const yend, bool const forward) {
     if (forward) {
-      cv::line(img, cv::Point(x, y), cv::Point(xend, yend), cv::Scalar(0, 0, 255), 1);
+      drawLine(img, x, y, xend, yend, BLRgba32(255, 0, 0), 1);
     } else {
-      cv::line(img, cv::Point(x, yend), cv::Point(xend, y), cv::Scalar(255, 0, 0), 1);
+      drawLine(img, x, yend, xend, y, BLRgba32(0, 0, 255), 1);
     }
   }
 
   template<typename TConfig>
   inline void
-  drawMatch(TConfig const& c, Region const& rg1, Region const& rg2, cv::Mat& img, int32_t const gstart, int32_t const gend, int32_t const rstart, int32_t const rend, bool const forward) {
+  drawMatch(TConfig const& c, Region const& rg1, Region const& rg2, BLContext& img, int32_t const gstart, int32_t const gend, int32_t const rstart, int32_t const rend, bool const forward) {
     int32_t px = pixelX(c.width, rg1.size, gstart);
     int32_t pxend = pixelX(c.width, rg1.size, gend);
     int32_t py = pixelX(c.height, rg2.size, rstart);

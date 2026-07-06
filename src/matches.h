@@ -20,10 +20,6 @@
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 #include "version.h"
@@ -237,7 +233,7 @@ namespace wallysworld
       c.width /= c.splits;
 
       // Store images
-      std::vector<cv::Mat> imageStore;
+      std::vector<BLImage> imageStore;
 
       // Split region
       for(uint32_t rgIdx = 0; rgIdx < rg.size(); ++rgIdx) {
@@ -247,21 +243,23 @@ namespace wallysworld
 	c.bpoffset = (1.0 / (double) c.width) * (double) rg[rgIdx].size;
       
 	// Generate image
-	cv::Mat bg( c.height, c.width, CV_8UC3, cv::Scalar(255, 255, 255));
-      
+	BLImage bg(c.width, c.height, BL_FORMAT_PRGB32);
+	BLContext ctx(bg);
+	ctx.fill_all(BLRgba32(255, 255, 255));
+
 	// Block header tracks
 	int32_t maxTracks = c.height / c.tlheight;
 	std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
 	for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
-	
+
 	// Header
-	drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], bg);
-	
+	drawCoordinates(c, rg[rgIdx], hdr->target_name[rg[rgIdx].tid], ctx);
+
 	// Split line
-	drawSplitLine(c, bg, 3);
-	
+	drawSplitLine(c, ctx, 3);
+
 	// Draw split border
-	drawSplitBorder(c, bg);
+	drawSplitBorder(c, ctx);
       
 	// Parse mappings
 	boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
@@ -277,57 +275,59 @@ namespace wallysworld
 	    if ((it->second[i].tid == rg[rgIdx].tid) && (it->second[i].gstart >= rg[rgIdx].beg) && (it->second[i].gend <= rg[rgIdx].end)) {
 	      // Draw match in the current region
 	      if ((i > 0) && (i + 1 < it->second.size())) {
-		drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], it->second[i+1]);
+		drawBlock(c, rg[rgIdx], ctx, trackIdx, it->second[i-1], it->second[i], it->second[i+1]);
 	      } else {
 		if ((i == 0) && (it->second.size() == 1)) {
-		  drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], Mapping());
+		  drawBlock(c, rg[rgIdx], ctx, trackIdx, Mapping(), it->second[i], Mapping());
 		} else {
-		  if (i == 0) drawBlock(c, rg[rgIdx], bg, trackIdx, Mapping(), it->second[i], it->second[i+1]);
-		  else drawBlock(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i], Mapping());
+		  if (i == 0) drawBlock(c, rg[rgIdx], ctx, trackIdx, Mapping(), it->second[i], it->second[i+1]);
+		  else drawBlock(c, rg[rgIdx], ctx, trackIdx, it->second[i-1], it->second[i], Mapping());
 		}
 	      }
 	      prevDraw = true;
 	    } else {
 	      // This match is outside but the connection might go through
-	      if ((i > 0) && (!prevDraw)) drawCrossConnect(c, rg[rgIdx], bg, trackIdx, it->second[i-1], it->second[i]);
+	      if ((i > 0) && (!prevDraw)) drawCrossConnect(c, rg[rgIdx], ctx, trackIdx, it->second[i-1], it->second[i]);
 	      prevDraw = false;
 	    }	  
 	    ++trackIdx;
 	  }	
 	  // Draw read name
-	  if (rgIdx == 0) drawReadLabel(c, prevReadOffset, it->first, bg);
+	  if (rgIdx == 0) drawReadLabel(c, prevReadOffset, it->first, ctx);
 	  // Draw split line
-	  drawSplitLine(c, bg, trackIdx);
+	  drawSplitLine(c, ctx, trackIdx);
 	  prevReadOffset = trackIdx;
 	}
           
-	// Store image (comment this for valgrind, png encoder seems leaky)
+	ctx.end();
+
+	// Store image
 	if (c.splits == 1) {
 	  std::string outfile = c.outfile.string();
 	  if (c.separatePlots) outfile = (*itread) + ".png";
-	  cv::imwrite(outfile.c_str(), bg);
-	  if (c.showWindow) {
-	    cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), bg);
-	    cv::waitKey(0);
-	  }
+	  bg.write_to_file(outfile.c_str());
 	} else {
 	  imageStore.push_back(bg);
 	  // Concatenate
 	  if (imageStore.size() == c.splits) {
-	    cv::Mat dst;
-	    cv::hconcat(imageStore[0], imageStore[1], dst);
-	    for(uint32_t i = 2; i < imageStore.size(); ++i) {
-	      cv::Mat tdst;
-	      cv::hconcat(dst, imageStore[i], tdst);
-	      dst = tdst;
+	    int32_t totalWidth = 0;
+	    int32_t maxHeight = 0;
+	    for(uint32_t i = 0; i < imageStore.size(); ++i) {
+	      totalWidth += imageStore[i].width();
+	      if (imageStore[i].height() > maxHeight) maxHeight = imageStore[i].height();
 	    }
+	    BLImage dst(totalWidth, maxHeight, BL_FORMAT_PRGB32);
+	    BLContext dctx(dst);
+	    dctx.fill_all(BLRgba32(255, 255, 255));
+	    int32_t xoffset = 0;
+	    for(uint32_t i = 0; i < imageStore.size(); ++i) {
+	      dctx.blit_image(BLPointI(xoffset, 0), imageStore[i]);
+	      xoffset += imageStore[i].width();
+	    }
+	    dctx.end();
 	    std::string outfile = c.outfile.string();
 	    if (c.separatePlots) outfile = (*itread) + ".png";
-	    cv::imwrite(outfile.c_str(), dst);
-	    if (c.showWindow) {
-	      cv::imshow(convertToStr(hdr, rg[rgIdx]).c_str(), dst);
-	      cv::waitKey(0);
-	    }
+	    dst.write_to_file(outfile.c_str());
 	    imageStore.clear();
 	  }
 	}

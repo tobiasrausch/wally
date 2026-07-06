@@ -24,10 +24,6 @@
 #include <htslib/sam.h>
 #include <htslib/tbx.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 #include "version.h"
@@ -188,7 +184,7 @@ namespace wallysworld
 
   template<typename TConfig, typename THashMap>
   inline void
-  wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
+  wordMatchShort(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, BLContext& img) {
     // Find word matches
     const uint64_t topmult = 1ULL << (2 * (c.matchlen - 1));
     uint64_t h = 0;
@@ -213,7 +209,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, BLRgba32(0, 0, 0), c.lw);
 	  }
 	}
 	// Reverse matches
@@ -223,7 +219,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	    drawLine(img, px, py, pxend, pyend, BLRgba32(255, 0, 0), c.lw);
 	  }
 	}
       }
@@ -233,7 +229,7 @@ namespace wallysworld
 
   template<typename TConfig, typename THashMap>
   inline void
-  wordMatchLong(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, cv::Mat& img) {
+  wordMatchLong(TConfig const& c, char* seq, int32_t const xlen, int32_t const ylen, THashMap& fwd, THashMap& rev, BLContext& img) {
     // Find word matches
     for(int32_t k = 0; k < (int32_t) ylen - (int32_t) c.matchlen + 1; ++k) {
       std::string word = std::string(seq + k, seq + k + c.matchlen);
@@ -246,7 +242,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, BLRgba32(0, 0, 0), c.lw);
 	  }
 	}
 	// Reverse matches
@@ -256,7 +252,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    cv::line(img, cv::Point(px, py), cv::Point(pxend, pyend), cv::Scalar(0, 0, 255), c.lw);
+	    drawLine(img, px, py, pxend, pyend, BLRgba32(255, 0, 0), c.lw);
 	  }
 	}
       }
@@ -265,18 +261,17 @@ namespace wallysworld
 
   template<typename TConfig, typename TReadMapping>
   inline void
-  drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
+  drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, BLRgba32>& cm, TReadMapping& mp, BLContext& img) {
     if (mp.find(refname) != mp.end()) {
       uint32_t runspacer = 4 * c.tlheight;
       for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t px = pixelX(c.usedwidth, len, mp[refname][k].rstart);
 	int32_t pxend = pixelX(c.usedwidth, len, mp[refname][k].rend);
-	cv::Rect rect(px, c.usedheight + runspacer, pxend - px, c.tlheight);
-	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
+	img.fill_rect(BLRectI(px, c.usedheight + runspacer, pxend - px, c.tlheight), cm[mp[refname][k].tid]);
 
 	if (c.flatten) {
-	  cv::line(img, cv::Point(px, c.usedheight + runspacer), cv::Point(px, c.usedheight + runspacer + c.tlheight), cv::Scalar(0, 0, 0), 1);
-	  cv::line(img, cv::Point(pxend, c.usedheight + runspacer), cv::Point(pxend, c.usedheight + runspacer + c.tlheight), cv::Scalar(0, 0, 0), 1);
+	  drawLine(img, px, c.usedheight + runspacer, px, c.usedheight + runspacer + c.tlheight, BLRgba32(0, 0, 0), 1);
+	  drawLine(img, pxend, c.usedheight + runspacer, pxend, c.usedheight + runspacer + c.tlheight, BLRgba32(0, 0, 0), 1);
 	} else {
 	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
 	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
@@ -286,16 +281,13 @@ namespace wallysworld
 	  text += ":" + gstart + "-" + gend;
 	  if (mp[refname][k].fwd) text += " -->";
 	  else text += " <--";
-	  double font_scale = 0.4;
-	  double font_thickness = 1.5;
-	  int32_t baseline = 0;
-	  cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	  TextSize textSize = getTextSize(text);
 	  if ((pxend - px) > textSize.width + 10) {
-	    cv::putText(img, text, cv::Point((px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+	    drawText(img, (px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
 	  } else if (px > (int32_t) c.usedwidth / 2) {
-	    cv::putText(img, text, cv::Point(px - textSize.width - 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+	    drawText(img, px - textSize.width - 5, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
 	  } else {
-	    cv::putText(img, text, cv::Point(pxend + 5, c.usedheight + runspacer + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+	    drawText(img, pxend + 5, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
 	  }
 
 	  // Next mapping
@@ -307,19 +299,17 @@ namespace wallysworld
 
   template<typename TConfig, typename TReadMapping>
   inline void
-  drawYMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, cv::Scalar>& cm, TReadMapping& mp, cv::Mat& img) {
+  drawYMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, BLRgba32>& cm, TReadMapping& mp, BLContext& img) {
     if (mp.find(refname) != mp.end()) {
       uint32_t runspacer = 4 * c.tlheight;
-      cv::Mat textimg(img.cols, img.rows, img.type(), cv::Scalar(0, 0, 0, 0)); // rows/cols swapped because of rotation
       for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t py = pixelX(c.usedheight, len, mp[refname][k].rstart);
 	int32_t pyend = pixelX(c.usedheight, len, mp[refname][k].rend);
-	cv::Rect rect(c.usedwidth + runspacer, py, c.tlheight, pyend - py);
-	cv::rectangle(img, rect, cm[mp[refname][k].tid], -1);
+	img.fill_rect(BLRectI(c.usedwidth + runspacer, py, c.tlheight, pyend - py), cm[mp[refname][k].tid]);
 
 	if (c.flatten) {
-	  cv::line(img, cv::Point(c.usedwidth + runspacer, py), cv::Point(c.usedwidth + runspacer + c.tlheight, py), cv::Scalar(0, 0, 0), 1);
-	  cv::line(img, cv::Point(c.usedwidth + runspacer, pyend), cv::Point(c.usedwidth + runspacer + c.tlheight, pyend), cv::Scalar(0, 0, 0), 1);
+	  drawLine(img, c.usedwidth + runspacer, py, c.usedwidth + runspacer + c.tlheight, py, BLRgba32(0, 0, 0), 1);
+	  drawLine(img, c.usedwidth + runspacer, pyend, c.usedwidth + runspacer + c.tlheight, pyend, BLRgba32(0, 0, 0), 1);
 	} else {
 	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
 	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
@@ -329,61 +319,51 @@ namespace wallysworld
 	  text += ":" + gstart + "-" + gend;
 	  if (mp[refname][k].fwd) text += " -->";
 	  else text += " <--";
-	  double font_scale = 0.4;
-	  double font_thickness = 1.5;
-	  int32_t baseline = 0;
-	  cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	  TextSize textSize = getTextSize(text);
 
+	  // Rotated text: anchor x is the label column, anchor y is the along-axis start
 	  if ((pyend - py) > textSize.width + 10) {
-	    cv::putText(textimg, text, cv::Point((py + pyend) / 2 - textSize.width / 2, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
+	    drawTextRotated(img, c.usedwidth + runspacer, (py + pyend) / 2 - textSize.width / 2, text, BLRgba32(0, 0, 0));
 	  } else if (py > (int32_t) c.usedheight / 2) {
-	    cv::putText(textimg, text, cv::Point(py - textSize.width - 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
+	    drawTextRotated(img, c.usedwidth + runspacer, py - textSize.width - 5, text, BLRgba32(0, 0, 0));
 	  } else {
-	    cv::putText(textimg, text, cv::Point(pyend + 5, img.cols - (c.usedwidth + runspacer)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
+	    drawTextRotated(img, c.usedwidth + runspacer, pyend + 5, text, BLRgba32(0, 0, 0));
 	  }
 
 	  // Next mapping
 	  runspacer += c.tlheight;
 	}
       }
-
-      // Incorporate text
-      cv::rotate(textimg, textimg, cv::ROTATE_90_CLOCKWISE);
-      img -= textimg;
     }
   }
 
 
   template<typename TConfig>
   inline void
-  drawXScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
+  drawXScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, BLContext& img) {
     std::string text(boost::lexical_cast<std::string>(len));
     insertComma(text);
-    double font_scale = 0.4;
-    double font_thickness = 1.5;
-    int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    TextSize textSize = getTextSize(text);
 
     // Find suitable tick size
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
 
     // Scale line
-    cv::line(img, cv::Point(0, c.usedheight), cv::Point(c.usedwidth, c.usedheight), cv::Scalar(255, 0, 0), 2);
+    drawLine(img, 0, c.usedheight, c.usedwidth, c.usedheight, BLRgba32(0, 0, 255), 2);
 
     // Ticks
     double px = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	cv::line(img, cv::Point(px - c.pxoffset/2, c.usedheight), cv::Point(px - c.pxoffset/2, c.usedheight + 0.75 * c.tlheight), cv::Scalar(255, 0, 0), 2);
+	drawLine(img, px - c.pxoffset/2, c.usedheight, px - c.pxoffset/2, c.usedheight + 0.75 * c.tlheight, BLRgba32(0, 0, 255), 2);
       }
       if (i % modval == 0) {
 	// Font
 	text = boost::lexical_cast<std::string>(i);
 	insertComma(text);
-	baseline = 0;
-	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	TextSize textSize = getTextSize(text);
 	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.usedwidth)) {
-	  cv::putText(img, text, cv::Point(px - c.pxoffset/2 - textSize.width/2, c.usedheight + c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+	  drawText(img, px - c.pxoffset/2 - textSize.width/2, c.usedheight + c.tlheight + textSize.height, text, BLRgba32(0, 0, 0));
 	}
       }
       px += c.pxoffset;
@@ -392,43 +372,38 @@ namespace wallysworld
     // Contig name
     if (true) {
       int32_t midpoint = c.usedwidth / 2;
-      cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
-      cv::putText(img, refname, cv::Point(midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), font_thickness, cv::LINE_AA);
+      TextSize textSize = getTextSize(refname);
+      drawText(img, midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height, refname, BLRgba32(0, 0, 0));
     }
   }
 
 
   template<typename TConfig>
   inline void
-  drawYScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, cv::Mat& img) {
+  drawYScaleDotplot(TConfig const& c, std::string const& refname, uint32_t const len, BLContext& img) {
     std::string text(boost::lexical_cast<std::string>(len));
     insertComma(text);
-    double font_scale = 0.4;
-    double font_thickness = 1.5;
-    int32_t baseline = 0;
-    cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+    TextSize textSize = getTextSize(text);
 
     // Find suitable tick size
     uint32_t modval = findTicks(c.pyoffset, textSize.width);
 
     // Scale line
-    cv::line(img, cv::Point(c.usedwidth, 0), cv::Point(c.usedwidth, c.usedheight), cv::Scalar(255, 0, 0), 2);
+    drawLine(img, c.usedwidth, 0, c.usedwidth, c.usedheight, BLRgba32(0, 0, 255), 2);
 
     // Ticks
-    cv::Mat textimg(img.cols, img.rows, img.type(), cv::Scalar(0, 0, 0, 0)); // rows/cols swapped because of rotation
     double py = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	cv::line(img, cv::Point(c.usedwidth, py - c.pyoffset/2), cv::Point(c.usedwidth + 0.75 * c.tlheight, py - c.pyoffset/2), cv::Scalar(255, 0, 0), 2);
+	drawLine(img, c.usedwidth, py - c.pyoffset/2, c.usedwidth + 0.75 * c.tlheight, py - c.pyoffset/2, BLRgba32(0, 0, 255), 2);
       }
       if (i % modval == 0) {
 	// Font
 	text = boost::lexical_cast<std::string>(i);
 	insertComma(text);
-	baseline = 0;
-	cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+	TextSize textSize = getTextSize(text);
 	if ((py - c.pyoffset/2 - textSize.width/2 > 0) && (py - c.pyoffset/2 + textSize.width < c.usedheight)) {
-	  cv::putText(textimg, text, cv::Point(py - c.pyoffset/2 - textSize.width/2, img.cols - (c.usedwidth + c.tlheight + textSize.height)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
+	  drawTextRotated(img, c.usedwidth + c.tlheight + textSize.height, py - c.pyoffset/2 - textSize.width/2, text, BLRgba32(0, 0, 0));
 	}
       }
       py += c.pyoffset;
@@ -436,14 +411,10 @@ namespace wallysworld
 
     // Contig name
     if (true) {
-      cv::Size textSize = cv::getTextSize(refname, cv::FONT_HERSHEY_SIMPLEX, font_scale, font_thickness, &baseline);
+      TextSize textSize = getTextSize(refname);
       int32_t midpoint = c.usedheight / 2;
-      cv::putText(textimg, refname, cv::Point(midpoint - textSize.width/2, img.cols - (c.usedwidth + 2 * c.tlheight + textSize.height)), cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), font_thickness, cv::LINE_AA);
+      drawTextRotated(img, c.usedwidth + 2 * c.tlheight + textSize.height, midpoint - textSize.width/2, refname, BLRgba32(0, 0, 0));
     }
-
-    // Incorporate text
-    cv::rotate(textimg, textimg, cv::ROTATE_90_CLOCKWISE);
-    img -= textimg;
   }
 
   
@@ -453,7 +424,7 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
     // Chromosome colors
-    cv::Scalar colors[12] = { cv::Scalar(44,160,51), cv::Scalar(180,120,31), cv::Scalar(28,26,227), cv::Scalar(153,255,255), cv::Scalar(227,206,166), cv::Scalar(138,223,178), cv::Scalar(153,154,251), cv::Scalar(111,191,253), cv::Scalar(0,127,255), cv::Scalar(214,178,202), cv::Scalar(154,61,106), cv::Scalar(40,89,177) };
+    BLRgba32 colors[12] = { BLRgba32(51,160,44), BLRgba32(31,120,180), BLRgba32(227,26,28), BLRgba32(255,255,153), BLRgba32(166,206,227), BLRgba32(178,223,138), BLRgba32(251,154,153), BLRgba32(253,191,111), BLRgba32(255,127,0), BLRgba32(202,178,214), BLRgba32(106,61,154), BLRgba32(177,89,40) };
 
     // Open file handles
     samFile* samfile = NULL;
@@ -657,20 +628,22 @@ namespace wallysworld
 	}
 	c.pxoffset = (1.0 / (double) xlen) * (double) (c.usedwidth);
 	c.pyoffset = (1.0 / (double) ylen) * (double) (c.usedheight);
-	cv::Mat img(c.usedheight + footer, c.usedwidth + margin, CV_8UC3, cv::Scalar(255, 255, 255));
+	BLImage img(c.usedwidth + margin, c.usedheight + footer, BL_FORMAT_PRGB32);
+	BLContext ctx(img);
+	ctx.fill_all(BLRgba32(255, 255, 255));
 
 	// Compute word matches
-	if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, img);
-	else wordMatchLong(c, seq2, xlen, ylen, fwd, rev, img);
+	if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, ctx);
+	else wordMatchLong(c, seq2, xlen, ylen, fwd, rev, ctx);
 
 	// Scales
-	drawXScaleDotplot(c, seqname1, xlen, img);
-	drawYScaleDotplot(c, seqname2, ylen, img);
+	drawXScaleDotplot(c, seqname1, xlen, ctx);
+	drawYScaleDotplot(c, seqname2, ylen, ctx);
 
 	// Include mappings
 	if (c.format == 0) {
 	  // Assign colors to chromosomes
-	  typedef std::map<uint32_t, cv::Scalar> TColorMap;
+	  typedef std::map<uint32_t, BLRgba32> TColorMap;
 	  TColorMap cm;
 	  uint32_t cidx = 0;
 	  if (mp.find(seqname1) != mp.end()) {
@@ -691,20 +664,17 @@ namespace wallysworld
 	  }
 
 	  // Draw mappings
-	  drawXMappings(c, hdr, seqname1, xlen, cm, mp, img);
-	  drawYMappings(c, hdr, seqname2, ylen, cm, mp, img);
+	  drawXMappings(c, hdr, seqname1, xlen, cm, mp, ctx);
+	  drawYMappings(c, hdr, seqname2, ylen, cm, mp, ctx);
 	}
+	ctx.end();
 
-	// Store image (comment this for valgrind, png encoder seems leaky)
+	// Store image
 	std::string outfile = seqname1;
 	outfile += "_";
 	outfile += seqname2;
 	outfile	+= ".png";
-	cv::imwrite(outfile.c_str(), img);
-	if (c.showWindow) {
-	  cv::imshow(outfile.c_str(), img);
-	  cv::waitKey(0);
-	}
+	img.write_to_file(outfile.c_str());
 
 	// Clean-up
 	free(seq2);

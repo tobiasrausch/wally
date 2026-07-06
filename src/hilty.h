@@ -63,7 +63,7 @@ namespace wallysworld
 
     template<typename TConfig, typename TCoverage>
     inline void
-    drawHilbert(TConfig const& c, Region const& rg, cv::Mat& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, TCoverage const& del, std::vector<bool> const& snp) {
+    drawHilbert(TConfig const& c, Region const& rg, BLContext& img, TCoverage const& covA, TCoverage const& covC, TCoverage const& covG, TCoverage const& covT, TCoverage const& del, std::vector<bool> const& snp) {
       uint32_t maxObsCov = 0;
       for(uint32_t i = 0; i < covA.size(); ++i) {
 	uint32_t cumsum = covA[i];
@@ -88,8 +88,7 @@ namespace wallysworld
 	int32_t y = 0;
 	posToHilbert(c.width, pos, x, y);
 	// Just the coverage in grey
-	cv::Rect rect(x, y, 1, 1);
-	cv::rectangle(img, rect, cv::Scalar(greyval, greyval, greyval), -1);
+	img.fill_rect(BLRectI(x, y, 1, 1), BLRgba32(greyval, greyval, greyval));
       }
 
       // Overdraw SNPs and deletions
@@ -106,14 +105,14 @@ namespace wallysworld
 	  double fracG = (double) covG[i] / (double) maxObsCov;
 	  double fracT = (double) covT[i] / (double) maxObsCov;
 	  double fracDel = (double) del[i] / (double) maxObsCov;
-	  int32_t newR = fracA * WALLY_A.val[2] + fracC * WALLY_C.val[2] + fracG * WALLY_G.val[2] + fracT * WALLY_T.val[2] + fracDel * WALLY_INDEL.val[2];
-	  int32_t newG = fracA * WALLY_A.val[1] + fracC * WALLY_C.val[1] + fracG * WALLY_G.val[1] + fracT * WALLY_T.val[1] + fracDel * WALLY_INDEL.val[1];
-	  int32_t newB = fracA * WALLY_A.val[0] + fracC * WALLY_C.val[0] + fracG * WALLY_G.val[0] + fracT * WALLY_T.val[0] + fracDel * WALLY_INDEL.val[0];
+	  int32_t newR = fracA * WALLY_A.r() + fracC * WALLY_C.r() + fracG * WALLY_G.r() + fracT * WALLY_T.r() + fracDel * WALLY_INDEL.r();
+	  int32_t newG = fracA * WALLY_A.g() + fracC * WALLY_C.g() + fracG * WALLY_G.g() + fracT * WALLY_T.g() + fracDel * WALLY_INDEL.g();
+	  int32_t newB = fracA * WALLY_A.b() + fracC * WALLY_C.b() + fracG * WALLY_G.b() + fracT * WALLY_T.b() + fracDel * WALLY_INDEL.b();
 	  int32_t pos = (int32_t) (((double) i / (double) rg.size) * (c.width * c.height));
 	  int32_t x = 0;
 	  int32_t y = 0;
 	  posToHilbert(c.width, pos, x, y);
-	  cv::circle(img, cv::Point(x, y), 5, cv::Scalar(newB, newG, newR), -1);
+	  img.fill_circle(x, y, 5, BLRgba32(newR, newG, newB));
 	}
       }
     }
