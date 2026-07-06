@@ -199,4 +199,4 @@ Wally is distributed under the BSD 3-Clause license. Consult the accompanying [L
 
 ## Credits
 
-Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and [OpenCV](https://github.com/opencv/opencv) libraries. [Claude](https://claude.com/) is used for bug fixes, performance improvements and code suggestions. The initial visualization of genomic alignments (`region` subcommand) was heavily inspired by [IGV](https://github.com/igvteam/igv).
+Wally relies heavily on the [HTSlib](https://github.com/samtools/htslib) and [Blend2D](https://github.com/blend2d/blend2d) libraries. [Claude](https://claude.com/) is used for bug fixes, performance improvements and code suggestions. The initial visualization of genomic alignments (`region` subcommand) was heavily inspired by [IGV](https://github.com/igvteam/igv).
