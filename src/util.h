@@ -128,14 +128,6 @@ namespace wallysworld
     }
   };
 
-  struct LibraryInfo {
-    int32_t rs;
-    int32_t median;
-    int32_t mad;
-
-    LibraryInfo() : rs(0), median(0), mad(0) {}
-  };
-
   inline TextSize
   textSize() {
     return getTextSize("240,000,000");
@@ -164,72 +156,6 @@ namespace wallysworld
     }
   }
   
-  template<typename TConfig, typename TSampleLibrary>
-  inline void
-  getLibraryParams(TConfig const& c, TSampleLibrary& sampleLib) {
-    // Open file handles
-    typedef std::vector<samFile*> TSamFile;
-    typedef std::vector<bam_hdr_t*> TSamHeader;
-    TSamFile samfile(c.files.size());
-    TSamHeader hdr(c.files.size());
-    for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
-      samfile[file_c] = sam_open(c.files[file_c].string().c_str(), "r");
-      hts_set_fai_filename(samfile[file_c], c.genome.string().c_str());
-      hdr[file_c] = sam_hdr_read(samfile[file_c]);
-    }
-
-    // Iterate all samples
-    for(uint32_t file_c = 0; file_c < c.files.size(); ++file_c) {
-      uint32_t maxAlignmentsScreened=10000;
-      uint32_t minAlignmentsScreened=1000;
-      uint32_t alignmentCount=0;
-      typedef std::vector<uint32_t> TSizeVector;
-      TSizeVector vecISize;
-      TSizeVector readSize;
-
-      bam1_t* rec = bam_init1();
-      while (sam_read1(samfile[file_c], hdr[file_c], rec) >= 0) {
-	if (!(rec->core.flag & BAM_FREAD2)) {
-	  if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP)) continue;
-	  if (alignmentCount > maxAlignmentsScreened) break;
-	  ++alignmentCount;
-	  readSize.push_back(rec->core.l_qseq);
-	  // Paired-end?
-	  if ((rec->core.flag & BAM_FPAIRED) && !(rec->core.flag & BAM_FMUNMAP) && (rec->core.tid==rec->core.mtid)) vecISize.push_back(abs(rec->core.isize));
-	}
-      }
-      bam_destroy1(rec);
-
-      // Get library parameters
-      if (alignmentCount > minAlignmentsScreened) {
-	std::sort(readSize.begin(), readSize.end());
-	sampleLib[file_c].rs = readSize[readSize.size() / 2];
-
-	if (vecISize.size() > (minAlignmentsScreened / 2)) {
-	  std::sort(vecISize.begin(), vecISize.end());
-	  int32_t median = vecISize[vecISize.size() / 2];
-	  std::vector<uint32_t> absDev;
-	  for(uint32_t i = 0; i < vecISize.size(); ++i) absDev.push_back(std::abs((int32_t) vecISize[i] - median));
-	  std::sort(absDev.begin(), absDev.end());
-	  int32_t mad = absDev[absDev.size() / 2];
-	  sampleLib[file_c].median = median;
-	  sampleLib[file_c].mad = mad;
-	}
-      } else {
-	// Some defaults
-	sampleLib[file_c].rs = 100;
-	sampleLib[file_c].median = 200;
-	sampleLib[file_c].mad = 30;
-      }
-    }
-
-    // Clean-up
-    for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
-      bam_hdr_destroy(hdr[file_c]);
-      sam_close(samfile[file_c]);
-    }
-  }
-
   inline int32_t     // -1: failure, 0: bam, 1: fasta
   inputType(std::string const& path) {
     htsFile *hts_fp = hts_open(path.c_str(), "r");

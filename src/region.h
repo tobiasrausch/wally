@@ -40,7 +40,7 @@ namespace wallysworld
     bool hasAnnotationFile;
     bool showCoverage;
     int32_t modType;  // no, 5mC, 5hmC
-    uint16_t madCutoff;
+    int32_t delsize;
     uint16_t splits;
     uint32_t minMapQual;
     uint32_t width;
@@ -63,12 +63,6 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
 
-    // Get library parameters
-    typedef std::vector<LibraryInfo> TLibInfo;
-    TLibInfo sampleLib(c.files.size());
-    getLibraryParams(c, sampleLib);
-    //for(uint32_t i = 0; i < c.files.size(); ++i) std::cerr << sampleLib[i].rs << ',' << sampleLib[i].median << ',' << sampleLib[i].mad << std::endl;
-    
     // Open file handles
     typedef std::vector<samFile*> TSamFile;
     typedef std::vector<hts_idx_t*> TIndex;
@@ -206,7 +200,7 @@ namespace wallysworld
 	    } else if (pl == 1) {
 	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = BLRgba32(78, 100, 213);
 	    } else if (pl == 2) {
-	      if (std::abs(rec->core.isize) > sampleLib[file_c].median + c.madCutoff * sampleLib[file_c].mad) readCol = BLRgba32(213, 63, 63);
+	      if (std::abs(rec->core.isize) > c.delsize) readCol = BLRgba32(213, 63, 63);
 	    } else if (pl == 3) {
 	      if (std::abs((int) rec->core.pos - (int) rec->core.mpos) >= minSep) readCol = BLRgba32(63, 175, 63);
 	    } else if (pl == DELLY_SVT_TRANS + 0) {
@@ -447,7 +441,7 @@ namespace wallysworld
     boost::program_options::options_description disc("Graphics options");
     disc.add_options()
       ("map-qual,q", boost::program_options::value<uint32_t>(&c.minMapQual)->default_value(1), "min. mapping quality")
-      ("mad-cutoff,a", boost::program_options::value<uint16_t>(&c.madCutoff)->default_value(9), "insert size cutoff, median+a*MAD")
+      ("del-size,a", boost::program_options::value<int32_t>(&c.delsize)->default_value(1000), "cutoff for deletion-type read pair coloring")
       ("mod,m", boost::program_options::value<std::string>(&modStr)->default_value("off"), "modified base view [off|5mC|5hmC]")
       ("snv-vaf,v", boost::program_options::value<float>(&c.snvvaf)->default_value(0.2), "min. SNV VAF")
       ("snv-cov,t", boost::program_options::value<uint32_t>(&c.snvcov)->default_value(10), "min. SNV coverage")
