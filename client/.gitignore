@@ -1,0 +1,8 @@
+/node_modules/
+/.cache/
+/dist/
+/.env.production
+/.parcel-cache/
+/test/
+/src/static/js/wally.js
+/src/static/js/wally.wasm

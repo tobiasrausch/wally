@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>wally: client-only genome viewer | GEAR</title>
+    <meta
+      name="description"
+      content="Render BAM/CRAM alignments in the web browser"
+    />
+    <link rel="stylesheet" href="https://www.gear-genomics.com/libs/bootstrap/4.6.2/css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://www.gear-genomics.com/libs/fontawesome-free-6.2.1-web/css/all.min.css">
+    <link rel="stylesheet" href="./static/css/gear.css" />
+    <link rel="stylesheet" href="./static/css/wally.css" />
+  </head>
+
+  <body>
+    <header class="px-0 py-4">
+      <div class="container">
+        <h1 class="display-4 app-name">wally</h1>
+        <p class="lead">
+          Render BAM/CRAM alignments in the web browser.
+        </p>
+        <a class="plain" href="https://www.gear-genomics.com/contact" target="_blank">
+          <i class="fas fa-question"></i> Get help
+        </a>
+        ·
+        <a class="plain" href="https://www.gear-genomics.com/citation" target="_blank">
+          <i class="fas fa-user-graduate"></i> Citation
+        </a>
+        ·
+        <a class="plain" target="_blank" href="https://github.com/tobiasrausch/wally">
+          <i class="fab fa-github-alt"></i> Source
+        </a>
+      </div>
+    </header>
+
+    <main class="container">
+      <ul class="nav nav-fill mb-4" id="mainTab">
+        <li class="nav-item">
+          <a class="nav-link active" href="#input-tab">Input</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#result-tab" id="link-results">Results</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#help-tab">Help</a>
+        </li>
+      </ul>
+      <div class="tab-content" id="main-tabs">
+        <div class="tab-pane show active" id="input-tab">
+          <form onsubmit="return false">
+
+            <div class="form-group">
+              <label>Data source</label>
+              <div class="nav nav-pills mb-3" id="source-tabs">
+                <a class="nav-link active show" id="source-local-tab" data-toggle="pill" href="#source-local">
+                  <i class="fas fa-folder-open"></i> Local BAM/CRAM files
+                </a>
+                <a class="nav-link" id="source-remote-tab" data-toggle="pill" href="#source-remote">
+                  <i class="fas fa-cloud"></i> 1000 Genomes (ONT)
+                </a>
+              </div>
+
+              <div class="tab-content">
+                <!-- Local files -->
+                <div class="tab-pane fade active show" id="source-local">
+                  <div class="form-group">
+                    <label>Alignments (.bam/.cram + .bai/.crai)</label>
+                    <input type="file" class="filepond" id="localAln" multiple
+                           accept=".bam,.cram,.bai,.crai,.csi" />
+                  </div>
+                  <div class="form-group mb-2">
+                    <label>Reference (.fa/.fa.gz + .fai/.gzi)</label>
+                    <input type="file" class="filepond" id="localRef" multiple
+                           accept=".fa,.fasta,.fna,.gz,.fai,.gzi" />
+                  </div>
+                </div>
+
+                <!-- Remote 1000 Genomes -->
+                <div class="tab-pane fade" id="source-remote">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <div class="form-group">
+                        <label for="remoteBuild">Reference build</label>
+                        <select class="form-control" id="remoteBuild">
+                          <option value="hg38" selected>GRCh38 (hg38)</option>
+                          <option value="t2t">T2T-CHM13 (t2t)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-8">
+                      <div class="form-group">
+                        <label for="remoteSample">Samples</label>
+                        <select class="form-control" id="remoteSample" multiple></select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr />
+
+            <div class="form-group">
+              <label for="region">Region</label>
+              <input type="text" class="form-control text-monospace" id="region" value="chr1:1000000-1000200" spellcheck="false" />
+            </div>
+          </form>
+          <div class="mb-3">
+            <button type="button" class="btn btn-outline-primary" id="btn-submit">
+              <i class="fas fa-rocket" style="margin-right: 5px;"></i>
+              Render Region
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="btn-example">
+              <i class="fas fa-eye" style="margin-right: 5px;"></i>
+              Show Example
+            </button>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="result-tab">
+          <!-- toolbar -->
+          <div id="results-toolbar" class="wally-toolbar mb-3 d-none">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Navigate">
+              <button type="button" class="btn btn-outline-secondary" id="nav-left" title="Shift left">
+                <i class="fas fa-arrow-left"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="nav-zoomout" title="Zoom out">
+                <i class="fas fa-search-minus"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="nav-zoomin" title="Zoom in">
+                <i class="fas fa-search-plus"></i>
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="nav-right" title="Shift right">
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+            <input type="text" class="form-control form-control-sm text-monospace" id="regionNav"
+                   style="max-width: 15rem" spellcheck="false" title="Go to region" />
+            <button type="button" class="btn btn-outline-primary btn-sm" id="nav-go" title="Render this region">
+              <i class="fas fa-sync"></i>
+            </button>
+            <span class="wally-toolbar-sep"></span>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="paired" />
+              <label class="form-check-label" for="paired">Paired</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="clip" />
+              <label class="form-check-label" for="clip">Soft-clips</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="supp" />
+              <label class="form-check-label" for="supp">Supplementary</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="coverage" checked />
+              <label class="form-check-label" for="coverage">Coverage</label>
+            </div>
+            <label class="mb-0 ml-1" for="modType">Mod:</label>
+            <select class="form-control form-control-sm" id="modType" style="width: auto" title="Modified base view">
+              <option value="0" selected>Off</option>
+              <option value="1">5mC</option>
+              <option value="2">5hmC</option>
+            </select>
+          </div>
+
+          <div id="wally-error" class="alert alert-danger d-none" role="alert">
+            <i class="fas fa-fire"></i>
+            <span id="error-message"></span>
+          </div>
+
+          <section id="results-container" class="d-none">
+            <div class="canvas-wrap">
+              <canvas id="canvas"></canvas>
+            </div>
+          </section>
+
+          <h6 class="mt-4">Log</h6>
+          <pre id="wally-log" class="wally-log"></pre>
+        </div>
+
+        <div class="tab-pane" id="help-tab">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">How to use wally</h5>
+              <h6 class="mt-3">Local BAM/CRAM files</h6>
+              <ol class="mb-3">
+                <li>Drag one or more sorted, indexed <strong>BAM/CRAM</strong> files and their <code>.bai</code>/<code>.crai</code> indexes into the drop zone.</li>
+                <li>Add a matching reference <strong>FASTA</strong> and its <code>.fai</code> (and <code>.gzi</code> if the reference is bgzipped).</li>
+                <li>Enter a <strong>region</strong> and click <strong>Render Region</strong>.</li>
+              </ol>
+              <h6>Remote 1000 Genomes data</h6>
+              <ol class="mb-3">
+                <li>Pick a reference build (<strong>GRCh38</strong> or <strong>T2T-CHM13</strong>) and add <strong>one or more samples</strong>.</li>
+                <li>Enter a region and click <strong>Render Region</strong>.</li>
+              </ol>
+              <p class="mb-0">
+                Everything runs locally via WebAssembly, i.e., your local BAM/CRAM files never leave your machine.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="container">
+        <div class="float-left">
+          GEAR ~
+          <a class="plain" target="_blank" href="https://www.gear-genomics.com">
+            <i class="fas fa-home"></i>
+          </a>
+          ·
+          <a class="plain" target="_blank" href="https://github.com/gear-genomics">
+            <i class="fab fa-github-alt"></i>
+          </a>
+          ·
+          <a class="plain" target="_blank" href="https://www.gear-genomics.com/terms">
+            Terms of Use
+          </a>
+          ·
+          <a class="plain" target="_blank" href="https://www.gear-genomics.com/contact">
+            Contact Us
+          </a>
+        </div>
+        <div class="float-right">
+          Supported by
+          <a class="plain" target="_blank" href="https://www.embl.de/">
+            <img class="footer-logo" alt="EMBL logo" src="./static/img/embl.svg" />
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://www.gear-genomics.com/libs/js/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gear-genomics.com/libs/js/popper-1.12.9/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gear-genomics.com/libs/bootstrap/4.6.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script type="module" src="./static/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,81 @@
+/* rosarivo-regular - latin-ext_latin */
+@font-face {
+  font-family: 'Rosarivo';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.eot'); /* IE9 Compat Modes */
+  src: local(''),
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-regular.svg#Rosarivo') format('svg'); /* Legacy iOS */
+}
+/* rosarivo-italic - latin-ext_latin */
+@font-face {
+  font-family: 'Rosarivo';
+  font-style: italic;
+  font-weight: 400;
+  src: url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.eot'); /* IE9 Compat Modes */
+  src: local(''),
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.woff2') format('woff2'), /* Super Modern Browsers */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.woff') format('woff'), /* Modern Browsers */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('https://www.gear-genomics.com/libs/fonts/rosarivo-v20-latin-ext_latin-italic.svg#Rosarivo') format('svg'); /* Legacy iOS */
+}
+
+header,
+footer {
+  background: url(../img/pattern.png);
+}
+
+header {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  height: 50px;
+  line-height: 50px;
+  width: 100%;
+  border-top: 1px solid #f0f0f0;
+}
+
+.footer-logo {
+  height: 2rem;
+}
+
+main {
+  padding-top: 30px;
+  padding-bottom: 75px;
+}
+
+.embl-red {
+  color: #e2001a;
+}
+
+.app-name {
+  font-family: 'Rosarivo', sans-serif;
+}
+
+a.plain,
+a.plain:link,
+a.plain:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+#mainTab .nav-link.active {
+  border-bottom: 2px solid;
+}
+
+.spinner {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

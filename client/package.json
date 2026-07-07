@@ -1,0 +1,22 @@
+{
+  "name": "wally",
+  "private": true,
+  "version": "0.8.1",
+  "description": "",
+  "scripts": {
+    "build": "npx rimraf dist && parcel build src/index.html --no-cache --no-source-maps --public-url ./",
+    "dev": "parcel src/index.html --no-cache --open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "",
+  "devDependencies": {
+    "parcel": "^2.15.4",
+    "puppeteer": "^24.10.0",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "choices.js": "^11.2.3",
+    "filepond": "^4.32.12"
+  }
+}

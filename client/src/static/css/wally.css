@@ -1,0 +1,74 @@
+/* Data-source */
+#source-tabs .nav-link {
+  border: 1px solid #dee2e6;
+  margin-right: .5rem;
+  color: #495057;
+}
+#source-tabs .nav-link.active {
+  background-color: #2d6cdf;
+  border-color: #2d6cdf;
+}
+
+/* File drop */
+.filepond--root {
+  margin-bottom: .5rem;
+}
+.filepond--drop-label {
+  color: #555;
+}
+
+/* Sample dropdown */
+.choices { margin-bottom: 0; }
+.choices__inner {
+  min-height: calc(1.5em + .75rem + 2px);
+  border-radius: .25rem;
+}
+
+.wally-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem .6rem;
+  padding: .5rem .6rem;
+  background: #f7f7f8;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+.wally-toolbar .form-check {
+  margin-bottom: 0;
+}
+.wally-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  background: #ddd;
+  margin: 0 .3rem;
+}
+
+.canvas-wrap {
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  padding: 4px;
+}
+
+#canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  cursor: grab;
+}
+
+.wally-log {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.8rem;
+  color: #555;
+  background: #f7f7f8;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  margin-bottom: 0;
+}
