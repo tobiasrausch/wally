@@ -96,7 +96,7 @@ all:   	$(TARGETS)
 	if [ -r src/htslib/Makefile ]; then cd src/htslib && autoreconf -i && ./configure ${HTSSTATIC} --disable-plugins && $(MAKE) && $(MAKE) lib-static && cd ../../ && touch .htslib; fi
 
 .blend2d: ${BLEND2DSOURCES}
-	if [ -f ${BLEND2DSRC}/CMakeLists.txt ]; then unset CXXFLAGS CFLAGS LDFLAGS; cd ${BLEND2DSRC} && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON && cmake --build build --target blend2d -j${NPROC} && cd ../../ && touch .blend2d; fi
+	if [ -f ${BLEND2DSRC}/CMakeLists.txt ]; then unset CXXFLAGS CFLAGS LDFLAGS; cd ${BLEND2DSRC} && cmake -S . -B build ${CMAKE_ARGS} -DCMAKE_BUILD_TYPE=Release -DBLEND2D_STATIC=ON -DBLEND2D_NO_JIT=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON && cmake --build build --target blend2d -j${NPROC} && cd ../../ && touch .blend2d; fi
 
 src/wally: ${SUBMODULES} $(SOURCES)
 	$(CXX) $(CXXFLAGS) $@.cpp -o $@ $(BLEND2DLIB) $(LDFLAGS)
