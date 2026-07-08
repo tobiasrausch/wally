@@ -3,11 +3,15 @@ SHELL := /bin/bash
 DEBUG ?= 0
 STATIC ?= 0
 
-# Submodules
+# To build against HTSlib system libraries
+#   make HTSLIBINCDIR=/usr/include HTSLIBLIBDIR=/usr/lib all
 PWD = $(shell pwd)
-EBROOTHTSLIB ?= ${PWD}/src/htslib/
+HTSLIBINCDIR ?= ${PWD}/src/htslib/
+HTSLIBLIBDIR ?= ${PWD}/src/htslib/
 BLEND2DSRC ?= ${PWD}/src/blend2d/
 BLEND2DLIB ?= ${BLEND2DSRC}/build/libblend2d.a
+BOOSTINCDIR ?=
+BOOSTLIBDIR ?=
 
 # Optional: wasm
 EMCXX ?= em++
@@ -32,8 +36,16 @@ bindir ?= $(exec_prefix)/bin
 
 # Flags
 CXX=g++
-CXXFLAGS += -std=c++17 -isystem ${EBROOTHTSLIB} -isystem ${BLEND2DSRC} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
-LDFLAGS += -L${EBROOTHTSLIB} -lboost_iostreams -lboost_filesystem -lboost_program_options -lboost_date_time
+CXXFLAGS += -std=c++17 -isystem ${HTSLIBINCDIR} -isystem ${BLEND2DSRC} -pedantic -W -Wall -Wno-unknown-pragmas -D__STDC_LIMIT_MACROS -fno-strict-aliasing -fpermissive
+LDFLAGS += -L${HTSLIBLIBDIR} -lboost_iostreams -lboost_filesystem -lboost_program_options -lboost_date_time
+
+# Boost location
+ifneq (${BOOSTINCDIR},)
+	CXXFLAGS += -isystem ${BOOSTINCDIR}
+endif
+ifneq (${BOOSTLIBDIR},)
+	LDFLAGS += -L${BOOSTLIBDIR} -Wl,-rpath,${BOOSTLIBDIR}
+endif
 
 # Flags for static compile
 ifeq (${STATIC}, 1)
@@ -43,7 +55,7 @@ ifeq (${STATIC}, 1)
 else
 	LDSTATIC =
 	HTSSTATIC =
-	LDFLAGS += -pthread -lhts -lz -llzma -lbz2 -Wl,-rpath,${EBROOTHTSLIB}
+	LDFLAGS += -pthread -lhts -lz -llzma -lbz2 -Wl,-rpath,${HTSLIBLIBDIR}
 endif
 
 # librt
@@ -62,7 +74,7 @@ else
 endif
 
 # Submodules
-ifeq (${EBROOTHTSLIB}, ${PWD}/src/htslib/)
+ifeq (${HTSLIBINCDIR}, ${PWD}/src/htslib/)
 	SUBMODULES += .htslib
 endif
 ifeq (${BLEND2DSRC}, ${PWD}/src/blend2d/)
