@@ -7,7 +7,7 @@
 
 # Wally
 
-Plotting of aligned sequencing reads, assembled contigs or pan-genome graphs in BAM/CRAM format and visualization of genomic variants.
+Plotting of aligned sequencing reads in BAM/CRAM format and visualization of genomic variants.
 
 ## Installing Wally
 
