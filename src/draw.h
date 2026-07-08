@@ -94,50 +94,64 @@ namespace wallysworld
   template<typename TConfig>
   inline void
   drawAnnotation(TConfig const& c, Region const& rg, std::vector<Transcript> const& tr, std::vector<Region> const& anno, BLContext& img, int32_t const track) {
-
     // Transcripts
+    BLRgba32 intronClr(120, 138, 178);
+    BLRgba32 arrowClr(74, 96, 150);
+    BLRgba32 exonClr(86, 126, 196);
+    BLRgba32 exonBorder(46, 70, 130);
+    BLRgba32 labelClr(38, 54, 96);
+
+    int32_t y0 = track * c.tlheight;
+    int32_t yc = y0 + c.tlheight / 2;
+    int32_t exonH = (c.tlheight >= 8) ? (c.tlheight - 4) : std::max(2, (int32_t) c.tlheight - 1);
+    int32_t exonY = yc - exonH / 2;
+    double exonR = (exonH >= 6) ? 2.0 : 1.0;
+
     if (!tr.empty()) {
+      int32_t ah = (c.tlheight >= 14) ? 3 : ((c.tlheight >= 9) ? 2 : 1);
+      int32_t aw = ah;
       for(uint32_t i = 0; i < tr.size(); ++i) {
 	int32_t px = pixelX(c.width, rg.size, tr[i].rg.beg - rg.beg);
 	int32_t pxend = pixelX(c.width, rg.size, tr[i].rg.end - rg.beg);
-	drawLine(img, px, track * c.tlheight + c.tlheight/2, pxend, track * c.tlheight + c.tlheight/2, BLRgba32(0, 0, 255), 1);
-	int32_t pxi = px + 5;
-	if (pxi < 0) pxi = 5;
-	if (tr[i].forward) {
-	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
-	    drawLine(img, pxi, track * c.tlheight + 1, pxi+5, track * c.tlheight + c.tlheight/2, BLRgba32(0, 0, 255), 1);
-	    drawLine(img, pxi, track * c.tlheight + c.tlheight - 2, pxi+5, track * c.tlheight + c.tlheight/2, BLRgba32(0, 0, 255), 1);
-	  }
-	} else {
-	  for(; ((pxi < pxend) && (pxi < (int32_t) c.width)); pxi += 20) {
-	    drawLine(img, pxi, track * c.tlheight + 1, pxi-5, track * c.tlheight + c.tlheight/2, BLRgba32(0, 0, 255), 1);
-	    drawLine(img, pxi, track * c.tlheight + c.tlheight - 2, pxi-5, track * c.tlheight + c.tlheight/2, BLRgba32(0, 0, 255), 1);
+	drawLine(img, px, yc, pxend, yc, intronClr, 1.5);
+	int32_t startx = (px < 6) ? 6 : (px + 8);
+	for(int32_t x = startx; ((x < pxend - 2) && (x < (int32_t) c.width)); x += 16) {
+	  if (tr[i].forward) {
+	    BLPoint pv[3] = {BLPoint(x - aw, yc - ah), BLPoint(x + aw, yc), BLPoint(x - aw, yc + ah)};
+	    img.fill_polygon(pv, 3, arrowClr);
+	  } else {
+	    BLPoint pv[3] = {BLPoint(x + aw, yc - ah), BLPoint(x - aw, yc), BLPoint(x + aw, yc + ah)};
+	    img.fill_polygon(pv, 3, arrowClr);
 	  }
 	}
       }
     }
 
-    // Annotations (e.g., exons)
+    // Annotations
     typedef boost::dynamic_bitset<> TBitSet;
     TBitSet blocked(c.width, false);
     if (!anno.empty()) {
       for(uint32_t i = 0; i < anno.size(); ++i) {
 	int32_t px = pixelX(c.width, rg.size, anno[i].beg - rg.beg);
 	int32_t pxend = pixelX(c.width, rg.size, anno[i].end - rg.beg);
-	img.fill_rect(BLRectI(px, track * c.tlheight + 1, pxend - px, c.tlheight - 2), hexToScalar(anno[i].color));
+	int32_t w = (pxend - px < 2) ? 2 : (pxend - px);
+	BLRgba32 fillClr = (anno[i].color == 255) ? exonClr : hexToScalar(anno[i].color);
+	img.fill_round_rect(BLRoundRect(px, exonY, w, exonH, exonR, exonR), fillClr);
+	img.set_stroke_width(1.0);
+	img.stroke_round_rect(BLRoundRect(px + 0.5, exonY + 0.5, w - 1, exonH - 1, exonR, exonR), exonBorder);
 
-	// Block regions
-	if (px < 0) px = 0;
-	if (pxend > (int32_t) c.width) pxend = c.width;
-	if ((pxend - px > 2) && (!tr.empty())) {
-	  for(int32_t k = px; k < pxend; ++k) blocked[k] = true;
+	// Block regions for transcript-name placement
+	int32_t bpx = (px < 0) ? 0 : px;
+	int32_t bpxend = (pxend > (int32_t) c.width) ? c.width : pxend;
+	if ((bpxend - bpx > 2) && (!tr.empty())) {
+	  for(int32_t k = bpx; k < bpxend; ++k) blocked[k] = true;
 	}
 
-	// Add text
+	// Exon label
 	TextSize textSize = getTextSize(anno[i].id);
 	int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
-	if ((pxmid > px) && (pxmid + textSize.width < pxend)) {
-	  drawText(img, pxmid, track * c.tlheight + c.tlheight - 2, anno[i].id, BLRgba32(255, 255, 255));
+	if ((pxmid > px) && (pxmid + textSize.width < pxend) && (exonH >= textSize.height)) {
+	  drawText(img, pxmid, yc + textSize.height/2 - 1, anno[i].id, BLRgba32(255, 255, 255));
 	}
       }
     }
@@ -158,8 +172,7 @@ namespace wallysworld
 	    kend = k;
 	    if ((kend - kstart) > 2.5 * textSize.width) {
 	      int32_t midpoint = (kstart + kend) / 2;
-	      img.fill_rect(BLRectI(midpoint - textSize.width/2, track * c.tlheight, textSize.width, c.tlheight), BLRgba32(255, 255, 255));
-	      drawText(img, midpoint - textSize.width/2, track * c.tlheight + c.tlheight - 2, tr[i].rg.id, BLRgba32(0, 0, 255));
+	      drawChip(img, midpoint - textSize.width/2 - 3, yc + textSize.height/2 - 1, tr[i].rg.id, labelClr, BLRgba32(255, 255, 255, 235), true);
 	      for(int32_t l = kstart; l < kend; ++l) blocked[l] = true;
 	      break;
 	    }
@@ -220,9 +233,9 @@ namespace wallysworld
 	double frac = (double) cumsum / (double) maxObsCov;
 	int32_t ch = (int32_t) (frac * 2 * c.tlheight);
 	if (c.pxoffset >= WALLY_PX) {
-	  img.fill_rect(BLRectI(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch), BLRgba32(100, 100, 100));
+	  img.fill_rect(BLRectI(px + 1, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset - 1, ch), BLRgba32(150, 158, 172));
 	} else {
-	  img.fill_rect(BLRectI(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset + 1, ch), BLRgba32(100, 100, 100));
+	  img.fill_rect(BLRectI(px, (track-1) * c.tlheight + 2 * c.tlheight - ch, c.pxoffset + 1, ch), BLRgba32(150, 158, 172));
 	}
       }
       px += c.pxoffset;
@@ -259,23 +272,20 @@ namespace wallysworld
       px += c.pxoffset;
     }
 
-    // Put coverage scale
-    if (true) {
-      std::string text = "[0-";
+    // Coverage scale
+    {
+      std::string text = "0-";
       text += boost::lexical_cast<std::string>(maxObsCov);
-      text += "]";
       TextSize textSize = getTextSize(text);
-      img.fill_rect(BLRectI(0, track * c.tlheight - textSize.height/2, textSize.width, textSize.height), BLRgba32(255, 255, 0));
-      drawText(img, 0, track * c.tlheight + textSize.height/2, text, BLRgba32(0, 0, 0));
+      int32_t baseline = (track - 1) * c.tlheight + textSize.height + 2;
+      drawChip(img, 2, baseline, text, BLRgba32(96, 106, 122), BLRgba32(238, 240, 244), false);
     }
   }
 
   template<typename TConfig>
   inline void
   drawSampleLabel(TConfig const& c, int32_t const track, std::string const& text, BLContext& img) {
-    TextSize textSize = getTextSize(text);
-    img.fill_rect(BLRectI(0, track * c.tlheight - textSize.height, textSize.width, textSize.height), BLRgba32(255, 255, 0));
-    drawText(img, 0, track * c.tlheight, text, BLRgba32(0, 0, 0));
+    drawChip(img, 2, track * c.tlheight, text, BLRgba32(37, 52, 92), BLRgba32(223, 231, 246), true);
   }
 
 

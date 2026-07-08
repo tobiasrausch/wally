@@ -39,6 +39,7 @@ namespace wallysworld
     bool hasRegionFile;
     bool hasAnnotationFile;
     bool showCoverage;
+    bool autoHeight;
     int32_t modType;  // no, 5mC, 5hmC
     int32_t delsize;
     uint16_t splits;
@@ -57,6 +58,61 @@ namespace wallysworld
     std::vector<boost::filesystem::path> files;
   };
   
+  // Est. sample track height
+  template<typename TConfig>
+  inline int32_t
+  layoutTrackCount(TConfig const& c, samFile* samfile, hts_idx_t* idx, Region const& rg) {
+    int32_t genomicReadOffset = (2.0 / (double) c.width) * (double) rg.size;
+    std::vector<int32_t> taken;
+    auto findTrack = [&taken](int32_t pos) -> int32_t {
+      for(uint32_t i = 0; i < taken.size(); ++i) if (taken[i] < pos) return (int32_t) i;
+      taken.push_back(WALLY_UNBLOCK);
+      return (int32_t) taken.size() - 1;
+    };
+    int32_t maxIdx = -1;
+    int32_t lastAlignedPos = 0;
+    std::set<std::size_t> lastAlignedPosReads;
+    std::map<std::size_t, int32_t> assignedTrack;
+    hts_itr_t* iter = sam_itr_queryi(idx, rg.tid, rg.beg, rg.end);
+    bam1_t* rec = bam_init1();
+    while (sam_itr_next(samfile, iter, rec) >= 0) {
+      if (rec->core.flag & (BAM_FQCFAIL | BAM_FDUP | BAM_FUNMAP | BAM_FSECONDARY)) continue;
+      if ((rec->core.qual < c.minMapQual) || (rec->core.tid < 0)) continue;
+      if ((!c.showSupplementary) && (rec->core.flag & BAM_FSUPPLEMENTARY)) continue;
+      int32_t trackIdx = -1;
+      int32_t alnend = rec->core.pos + alignmentLength(rec);
+      if ((c.showPairs) && !(rec->core.flag & BAM_FSUPPLEMENTARY)) {
+	unsigned seed = hash_string(bam_get_qname(rec));
+	if (rec->core.pos > lastAlignedPos) { lastAlignedPosReads.clear(); lastAlignedPos = rec->core.pos; }
+	if (_firstPairObs(rec, seed, lastAlignedPosReads)) {
+	  trackIdx = findTrack(rec->core.pos);
+	  if ((rec->core.tid == rec->core.mtid) && (rec->core.mpos < rg.end)) {
+	    taken[trackIdx] = std::max((int32_t) rec->core.mpos + genomicReadOffset, alnend + genomicReadOffset);
+	    assignedTrack[seed] = trackIdx;
+	  } else {
+	    taken[trackIdx] = alnend + genomicReadOffset;
+	  }
+	} else {
+	  if (assignedTrack.find(seed) == assignedTrack.end()) {
+	    trackIdx = findTrack(rec->core.pos);
+	    taken[trackIdx] = alnend + genomicReadOffset;
+	  } else {
+	    trackIdx = assignedTrack[seed];
+	    assignedTrack.erase(seed);
+	    taken[trackIdx] = std::max(alnend + genomicReadOffset, taken[trackIdx]);
+	  }
+	}
+      } else {
+	trackIdx = findTrack(rec->core.pos);
+	taken[trackIdx] = alnend + genomicReadOffset;
+      }
+      if (trackIdx > maxIdx) maxIdx = trackIdx;
+    }
+    bam_destroy1(rec);
+    hts_itr_destroy(iter);
+    return maxIdx + 1;
+  }
+
   template<typename TConfigStruct>
   inline int wallyRun(TConfigStruct& c) {
 #ifdef PROFILE
@@ -104,26 +160,50 @@ namespace wallysworld
       // Get pixel width of 1bp
       c.pxoffset = (1.0 / (double) rg[rgIdx].size) * (double) c.width;
 
+      // Tracks
+      int32_t headerTracks = 4;
+      int32_t covTracks = (c.showCoverage) ? 2 : 1;
+      std::vector<int32_t> bandStart(c.files.size(), 0);
+      std::vector<int32_t> bandEnd(c.files.size(), 0);
+      int32_t maxTracks = 0;
+      if (c.autoHeight) {
+	// Fit reads
+	int32_t maxTotalTracks = 16000 / (int32_t) c.tlheight;
+	int32_t perFileBudget = (int32_t) ((maxTotalTracks - headerTracks) / c.files.size()) - covTracks;
+	if (perFileBudget < 1) perFileBudget = 1;
+	int32_t cursor = headerTracks;
+	for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+	  int32_t need = layoutTrackCount(c, samfile[file_c], idx[file_c], rg[rgIdx]);
+	  if (need < 1) need = 1;
+	  if (need > perFileBudget) need = perFileBudget;
+	  bandStart[file_c] = cursor;
+	  bandEnd[file_c] = cursor + covTracks + need;
+	  cursor = bandEnd[file_c];
+	}
+	maxTracks = cursor;
+	c.height = maxTracks * c.tlheight;
+      } else {
+	maxTracks = c.height / c.tlheight;
+	if (maxTracks < headerTracks + 10 * (int32_t) c.files.size()) {
+	  std::cerr << "Image height is too small!" << std::endl;
+	  return 1;
+	}
+	int32_t bamTrackSize = (int32_t) ((maxTracks - headerTracks) / c.files.size());
+	for(unsigned int file_c = 0; file_c < c.files.size(); ++file_c) {
+	  bandStart[file_c] = file_c * bamTrackSize + headerTracks;
+	  bandEnd[file_c] = (file_c + 1) * bamTrackSize + headerTracks;
+	}
+      }
+
       // Generate image
       BLImage bg(c.width, c.height, BL_FORMAT_PRGB32);
       BLContext ctx(bg);
       ctx.fill_all(BLRgba32(255, 255, 255));
 
-      // Tracks
-      int32_t headerTracks = 4;
-      int32_t maxTracks = c.height / c.tlheight;
-      if (maxTracks < headerTracks + 10 * (int32_t) c.files.size()) {
-	std::cerr << "Image height is too small!" << std::endl;
-	return 1;
-      }
-
       // Block header tracks
       std::vector<int32_t> taken(maxTracks, WALLY_UNBLOCK);
       for(int32_t i = 0; i < headerTracks; ++i) taken[i] = WALLY_BLOCKED;
-      
-      // Split by number of BAMs
-      int32_t bamTrackSize = (int32_t) ((maxTracks - headerTracks) / c.files.size());
-          
+
       // Load reference slice covering this region
       if (seq != NULL) free(seq);
       seq = faidx_fetch_seq(fai, hdr->target_name[rg[rgIdx].tid], rg[rgIdx].beg, rg[rgIdx].end - 1, &seqlen);
@@ -148,15 +228,14 @@ namespace wallysworld
 	std::cout << '[' << boost::posix_time::to_simple_string(now) << "] " << "Region " << rg[rgIdx].id << "; File " << c.files[file_c].stem().string() << std::endl;
 	
 	// Reserve tracks for other BAM files
-	int32_t lowerBound = file_c * bamTrackSize + headerTracks;
-	int32_t upperBound = (file_c + 1) * bamTrackSize + headerTracks;
+	int32_t lowerBound = bandStart[file_c];
+	int32_t upperBound = bandEnd[file_c];
 	for(int32_t i = headerTracks; i < maxTracks; ++i) {
 	  if (i < lowerBound) taken[i] = WALLY_BLOCKED;
 	  else if (i >= upperBound) taken[i] = WALLY_BLOCKED;
 	  else taken[i] = WALLY_UNBLOCK;
 	}
 	// Reserve coverage track
-	int32_t covTracks = (c.showCoverage) ? 2 : 1;
 	for(int32_t i = lowerBound; i < lowerBound + covTracks; ++i) taken[i] = WALLY_BLOCKED;
 	
 	// Coverage
@@ -456,7 +535,7 @@ namespace wallysworld
     geno.add_options()
       ("split,s", boost::program_options::value<uint16_t>(&c.splits)->default_value(1), "number of horizontal images")
       ("width,x", boost::program_options::value<uint32_t>(&c.width)->default_value(1024), "width of the plot")
-      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(1024), "height of the plot")
+      ("height,y", boost::program_options::value<uint32_t>(&c.height)->default_value(0), "height of the plot (0 = auto-fit)")
       ("tlheight", boost::program_options::value<uint32_t>(&c.tlheight)->default_value(14), "track line height in pixels")
       ("rdheight", boost::program_options::value<uint32_t>(&c.rdheight)->default_value(12), "read height in pixels")
       ("no-coverage", "turn off the coverage track")
@@ -509,6 +588,9 @@ namespace wallysworld
     // Coverage track
     if (vm.count("no-coverage")) c.showCoverage = false;
     else c.showCoverage = true;
+
+    // Auto-fit height
+    c.autoHeight = (c.height == 0);
 
     // Track heights
     if (c.tlheight < 1) c.tlheight = 1;

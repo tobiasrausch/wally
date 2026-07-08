@@ -73,6 +73,26 @@ namespace wallysworld
   }
 
   inline void
+  drawTextBold(BLContext& img, int32_t const x, int32_t const y, std::string const& text, BLRgba32 const& clr, float const px = WALLY_FONT_PX) {
+    const BLFont& font = wallyFont(px);
+    img.fill_utf8_text(BLPoint((double) x, (double) y), font, text.c_str(), SIZE_MAX, clr);
+    img.fill_utf8_text(BLPoint((double) x + 0.55, (double) y), font, text.c_str(), SIZE_MAX, clr);
+  }
+
+  inline void
+  drawChip(BLContext& img, int32_t const x, int32_t const baseline, std::string const& text, BLRgba32 const& textClr, BLRgba32 const& bgClr, bool const bold = false) {
+    TextSize ts = getTextSize(text);
+    int32_t padX = 3;
+    int32_t padY = 1;
+    int32_t topY = baseline - ts.height - padY;
+    int32_t w = ts.width + 2 * padX;
+    int32_t h = ts.height + 2 * padY;
+    img.fill_round_rect(BLRoundRect((double) x, (double) topY, (double) w, (double) h, 2.5, 2.5), bgClr);
+    if (bold) drawTextBold(img, x + padX, baseline, text, textClr);
+    else drawText(img, x + padX, baseline, text, textClr);
+  }
+
+  inline void
   drawLine(BLContext& img, double const x0, double const y0, double const x1, double const y1, BLRgba32 const& clr, double const w = 1.0) {
     img.set_stroke_width(w);
     img.stroke_line(BLPoint(x0 + 0.5, y0 + 0.5), BLPoint(x1 + 0.5, y1 + 0.5), clr);

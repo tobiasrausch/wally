@@ -12,14 +12,14 @@ extern "C" {
 
   // Region subcommand
   EMSCRIPTEN_KEEPALIVE
-  int wally_region(const char* bams, const char* genome, const char* region, int width, int height, int paired, int showSoftClip, int showSupplementary, int showCoverage, int delsize, int mod) {
+  int wally_region(const char* bams, const char* genome, const char* region, int width, int height, int paired, int showSoftClip, int showSupplementary, int showCoverage, int delsize, int mod, int tlheight, int rdheight, const char* bed) {
     ConfigRegion c;
     c.showWindow = false;
+    c.autoHeight = (height <= 0);
     c.showSoftClip = (showSoftClip != 0);
     c.showSupplementary = (showSupplementary != 0);
     c.showPairs = (paired != 0);
     c.hasRegionFile = false;
-    c.hasAnnotationFile = false;
     c.showCoverage = (showCoverage != 0);
     c.modType = ((mod >= WALLY_MOD_NONE) && (mod <= WALLY_MOD_5HMC)) ? mod : WALLY_MOD_NONE;
     c.delsize = (delsize > 0) ? delsize : 1000;
@@ -27,12 +27,22 @@ extern "C" {
     c.minMapQual = 1;
     c.width = (uint32_t) width;
     c.height = (uint32_t) height;
-    c.tlheight = 14;
-    c.rdheight = 12;
+    c.tlheight = (tlheight > 0) ? (uint32_t) tlheight : 14;
+    c.rdheight = (rdheight > 0) ? (uint32_t) rdheight : 12;
+    if (c.rdheight > c.tlheight) c.rdheight = c.tlheight;
     c.snvcov = 10;
     c.snvvaf = 0.2;
     c.regionStr = std::string(region) + ":wallyplot";
     c.genome = boost::filesystem::path(genome);
+
+    // Optional BED annotation
+    std::string bedStr(bed ? bed : "");
+    if (!bedStr.empty()) {
+      c.bedFile = boost::filesystem::path(bedStr);
+      c.hasAnnotationFile = true;
+    } else {
+      c.hasAnnotationFile = false;
+    }
 
     // Split alignment list into individual files
     std::stringstream bamStream(bams);
