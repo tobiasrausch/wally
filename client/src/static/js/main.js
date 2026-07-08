@@ -4,6 +4,14 @@ import 'filepond/dist/filepond.min.css'
 import 'choices.js/public/assets/styles/choices.min.css'
 import dataset from '../datasets/1kg-ont.json'
 
+// Example
+import exAlignBam from 'url:../example/Sample.bam'
+import exAlignBai from 'url:../example/Sample.bam.bai'
+import exChrFa from 'url:../example/chrA.fa'
+import exChrFai from 'url:../example/chrA.fa.fai'
+import exGeneBed from 'url:../example/gene.bed.gz'
+import exGeneBedTbi from 'url:../example/gene.bed.gz.tbi'
+
 const el = (id) => document.getElementById(id)
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })
@@ -36,14 +44,20 @@ const pondRef = FilePond.create(el('localRef'), {
   ...fpOpts,
   labelIdle: 'Drag &amp; drop reference + index, or <span class="filepond--label-action">browse</span>'
 })
+const pondBed = FilePond.create(el('localBed'), {
+  ...fpOpts,
+  labelIdle: 'Drag &amp; drop BED annotation (.bed.gz + .tbi), or <span class="filepond--label-action">browse</span>'
+})
 
 // Test hook
-window.__wally = { pondAln, pondRef, sampleChoices: null }
+window.__wally = { pondAln, pondRef, pondBed, sampleChoices: null }
 
 const rx = {
   alignment: /\.(bam|cram)$/i,
   alnIndex: /\.(bai|crai|csi)$/i,
-  reference: /\.(fa|fasta|fna)(\.gz)?$/i
+  reference: /\.(fa|fasta|fna)(\.gz)?$/i,
+  annotation: /\.bed(\.gz)?$/i,
+  annoIndex: /\.(tbi|csi)$/i
 }
 
 // Index files
@@ -77,11 +91,27 @@ function collectLocal() {
     throw new Error(`Missing ${ref.name}.gzi - a bgzipped reference needs its .gzi index.`)
   }
 
+  // Optional annotation
+  const bedFiles = pondBed.getFiles().map((f) => f.file)
+  const bedNames = bedFiles.map((f) => f.name)
+  const beds = bedFiles.filter((f) => rx.annotation.test(f.name))
+  let bedName = null
+  if (beds.length > 1) throw new Error('Multiple annotation BED files - please provide exactly one.')
+  if (beds.length === 1) {
+    const b = beds[0]
+    if (!/\.gz$/i.test(b.name)) throw new Error(`${b.name} must be bgzipped and tabix-indexed (.bed.gz + .tbi).`)
+    if (!bedNames.some((n) => rx.annoIndex.test(n))) {
+      throw new Error(`Missing ${b.name}.tbi - index the annotation with tabix.`)
+    }
+    bedName = b.name
+  }
+
   return {
     mode: 'local',
-    files: [...alnFiles, ...refFiles],
+    files: [...alnFiles, ...refFiles, ...bedFiles],
     bamNames: alignments.map((f) => f.name),
-    refName: ref.name
+    refName: ref.name,
+    bedName
   }
 }
 
@@ -114,6 +144,8 @@ function collectRemote() {
     mode: 'remote',
     refName: b.reference.split('/').pop(),
     refUrl: b.reference,
+    annoName: b.geneAnnotation ? b.geneAnnotation.split('/').pop() : null,
+    annoUrl: b.geneAnnotation || null,
     samples: samples.map((s) => {
       const cramName = s + b.cramSuffix
       const cramUrl = `${b.cramBase}/${cramName}`
@@ -146,7 +178,22 @@ function clampView(v) {
 
 let currentView = null
 
-// Render 
+// Plot width
+function plotWidth() {
+  const wrap = resultsEl.querySelector('.canvas-wrap')
+  let avail = wrap ? wrap.clientWidth - 24 : 0
+  if (!avail || avail < 320) avail = 1024
+  return avail
+}
+
+// Track height
+function trackHeights() {
+  const tl = parseInt(el('trackHeight').value, 10) || 14
+  const rd = Math.max(1, Math.min(tl - 1, Math.round(0.85 * tl)))
+  return { tlheight: tl, rdheight: rd }
+}
+
+// Render
 function doRender(view) {
   showError('')
   if (!view) { showError('Invalid region. Use e.g. chr1:1000000-1000200'); activateTab('#result-tab'); return }
@@ -158,22 +205,31 @@ function doRender(view) {
   el('region').value = region
   el('regionNav').value = region
 
+  const hasAnno = source.mode === 'remote' ? !!source.annoUrl : !!source.bedName
+  const annoEl = el('anno')
+  annoEl.disabled = !hasAnno
+
   logEl.textContent = ''
-  el('results-toolbar').classList.remove('d-none') 
+  el('results-toolbar').classList.remove('d-none')
   showResults(true)
   activateTab('#result-tab')
   busy(true)
 
+  const width = plotWidth()
+  const { tlheight, rdheight } = trackHeights()
   worker.postMessage({
     type: 'render',
     ...source,
     region,
-    width: 1024,
-    height: 1024,
+    width,
+    height: 0,
+    tlheight,
+    rdheight,
     paired: el('paired').checked,
     clip: el('clip').checked,
     supplementary: el('supp').checked,
     coverage: el('coverage').checked,
+    anno: hasAnno && annoEl.checked,
     mod: parseInt(el('modType').value, 10) || 0
   })
 }
@@ -226,9 +282,17 @@ el('nav-left').addEventListener('click', () => shift(-0.2))
 el('nav-right').addEventListener('click', () => shift(0.2))
 el('nav-go').addEventListener('click', () => doRender(parseRegion(el('regionNav').value)))
 el('regionNav').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doRender(parseRegion(el('regionNav').value)) } })
-for (const id of ['paired', 'clip', 'supp', 'coverage', 'modType']) {
+for (const id of ['paired', 'clip', 'supp', 'coverage', 'anno', 'modType', 'trackHeight']) {
   el(id).addEventListener('change', () => { if (currentView) doRender(currentView) })
 }
+
+// Re-render on window resize
+let resizeTimer = null
+window.addEventListener('resize', () => {
+  if (!currentView) return
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => doRender(currentView), 200)
+})
 
 // Mouse panning
 {
@@ -259,13 +323,45 @@ for (const id of ['paired', 'clip', 'supp', 'coverage', 'modType']) {
   })
 }
 
-el('btn-example').addEventListener('click', () => {
+// Show Example: load the bundled local genome + gene annotation + alignment and render.
+async function loadExample() {
   showError('')
-  $('#source-remote-tab').tab('show')
+  $('#source-local-tab').tab('show')
+  const fetchFile = async (url, name) =>
+    new File([await (await fetch(url)).arrayBuffer()], name)
+  const [alnBam, alnBai, fa, fai, bed, tbi] = await Promise.all([
+    fetchFile(exAlignBam, 'Sample.bam'),
+    fetchFile(exAlignBai, 'Sample.bam.bai'),
+    fetchFile(exChrFa, 'chrA.fa'),
+    fetchFile(exChrFai, 'chrA.fa.fai'),
+    fetchFile(exGeneBed, 'gene.bed.gz'),
+    fetchFile(exGeneBedTbi, 'gene.bed.gz.tbi')
+  ])
+  pondAln.removeFiles(); pondRef.removeFiles(); pondBed.removeFiles()
+  await Promise.all([
+    pondAln.addFiles([alnBam, alnBai]),
+    pondRef.addFiles([fa, fai]),
+    pondBed.addFiles([bed, tbi])
+  ])
+  el('anno').checked = true
+  el('region').value = 'chrA:76087-86128'
+  doRender(parseRegion('chrA:76087-86128'))
+}
+el('btn-example').addEventListener('click', () => {
+  loadExample().catch((e) => { showError('Could not load the example: ' + e.message); busy(false) })
+})
+
+// Defaults
+function applyRemoteDefaults() {
   el('remoteBuild').value = 'hg38'
   if (sampleChoices) {
     sampleChoices.removeActiveItems()
     sampleChoices.setChoiceByValue(['NA19900', 'NA19720', 'HG02266'])
   }
   el('region').value = 'chr8:33904080-33904200'
+  el('regionNav').value = 'chr8:33904080-33904200'
+}
+$('#source-remote-tab').on('shown.bs.tab', () => {
+  const sel = sampleChoices ? sampleChoices.getValue(true) : []
+  if (!sel || sel.length === 0) applyRemoteDefaults()
 })

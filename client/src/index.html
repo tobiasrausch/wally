@@ -38,7 +38,7 @@
       </div>
     </header>
 
-    <main class="container">
+    <main class="container-fluid px-4">
       <ul class="nav nav-fill mb-4" id="mainTab">
         <li class="nav-item">
           <a class="nav-link active" href="#input-tab">Input</a>
@@ -77,6 +77,11 @@
                     <label>Reference (.fa/.fa.gz + .fai/.gzi)</label>
                     <input type="file" class="filepond" id="localRef" multiple
                            accept=".fa,.fasta,.fna,.gz,.fai,.gzi" />
+                  </div>
+                  <div class="form-group mb-2">
+                    <label>BED annotation file (optional, bgzipped .bed.gz + .tbi)</label>
+                    <input type="file" class="filepond" id="localBed" multiple
+                           accept=".bed,.bed.gz,.gz,.tbi,.csi" />
                   </div>
                 </div>
 
@@ -161,12 +166,22 @@
               <input class="form-check-input" type="checkbox" id="coverage" checked />
               <label class="form-check-label" for="coverage">Coverage</label>
             </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="anno" checked />
+              <label class="form-check-label" for="anno">Genes</label>
+            </div>
             <label class="mb-0 ml-1" for="modType">Mod:</label>
             <select class="form-control form-control-sm" id="modType" style="width: auto" title="Modified base view">
               <option value="0" selected>Off</option>
               <option value="1">5mC</option>
               <option value="2">5hmC</option>
             </select>
+            <span class="wally-toolbar-sep"></span>
+            <label class="mb-0" for="trackHeight" title="Track &amp; read height">
+              <i class="fas fa-text-height"></i>
+            </label>
+            <input type="range" id="trackHeight" class="wally-range" min="6" max="40" step="1" value="14"
+                   title="Row height" />
           </div>
 
           <div id="wally-error" class="alert alert-danger d-none" role="alert">
@@ -192,6 +207,7 @@
               <ol class="mb-3">
                 <li>Drag one or more sorted, indexed <strong>BAM/CRAM</strong> files and their <code>.bai</code>/<code>.crai</code> indexes into the drop zone.</li>
                 <li>Add a matching reference <strong>FASTA</strong> and its <code>.fai</code> (and <code>.gzi</code> if the reference is bgzipped).</li>
+                <li>Optionally add a bgzipped, tabix-indexed BED annotation (<code>.bed.gz</code> + <code>.tbi</code>) to overlay, for instance, gene models.</li>
                 <li>Enter a <strong>region</strong> and click <strong>Render Region</strong>.</li>
               </ol>
               <h6>Remote 1000 Genomes data</h6>
@@ -199,8 +215,13 @@
                 <li>Pick a reference build (<strong>GRCh38</strong> or <strong>T2T-CHM13</strong>) and add <strong>one or more samples</strong>.</li>
                 <li>Enter a region and click <strong>Render Region</strong>.</li>
               </ol>
+              <p class="mb-2">
+                On the <strong>Results</strong> tab you can zoom, shift, and pan the plot, toggle tracks (paired-end,
+                soft-clips, supplementary, coverage, genes, modified bases), and set the row height with the slider.
+		Click <strong>Show Example</strong> for a bundled demo.
+              </p>
               <p class="mb-0">
-                Everything runs locally via WebAssembly, i.e., your local BAM/CRAM files never leave your machine.
+                Everything runs locally via WebAssembly, i.e., local BAM/CRAM files never leave your computer.
               </p>
             </div>
           </div>

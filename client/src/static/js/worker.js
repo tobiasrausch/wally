@@ -57,7 +57,7 @@ function mountLocal(M, msg) {
 let remoteKey = null
 
 function mountRemote(M, msg) {
-  const key = msg.samples.map((s) => s.cramUrl).join(',') + '|' + msg.refUrl
+  const key = msg.samples.map((s) => s.cramUrl).join(',') + '|' + msg.refUrl + '|' + (msg.annoUrl || '')
   if (key !== remoteKey) {
     freshDir(M, '/remote')
     freshDir(M, '/ref')
@@ -68,6 +68,10 @@ function mountRemote(M, msg) {
     M.FS.createLazyFile('/ref', msg.refName, msg.refUrl, true, false)
     M.FS.createLazyFile('/ref', msg.refName + '.fai', msg.refUrl + '.fai', true, false)
     M.FS.createLazyFile('/ref', msg.refName + '.gzi', msg.refUrl + '.gzi', true, false)
+    if (msg.annoUrl && msg.annoName) {
+      M.FS.createLazyFile('/ref', msg.annoName, msg.annoUrl, true, false)
+      M.FS.createLazyFile('/ref', msg.annoName + '.tbi', msg.annoUrl + '.tbi', true, false)
+    }
     remoteKey = key
   }
 }
@@ -110,16 +114,18 @@ self.onmessage = async (ev) => {
   try {
     const M = await init()
 
-    let bams, genome, prefetched = false
+    let bams, genome, bed = '', prefetched = false
     if (msg.mode === 'remote') {
-      mountRemote(M, msg) 
+      mountRemote(M, msg)
       const view = parseRegion(msg.region)
       if (!view) throw new Error('Invalid region: ' + msg.region)
       const s = ensureSlice(M, msg, view)
       bams = s.bams; genome = s.genome; prefetched = s.prefetched
+      if (msg.anno && msg.annoName) bed = '/ref/' + msg.annoName
     } else {
       const m = mountLocal(M, msg)
       bams = m.bams; genome = m.genome
+      if (msg.anno && msg.bedName) bed = '/data/' + msg.bedName
     }
 
     try { M.FS.unlink('/wallyplot.png') } catch (e) { }
@@ -127,10 +133,10 @@ self.onmessage = async (ev) => {
     const xhr0 = xhrCount
     const t0 = performance.now()
     const rc = M.ccall('wally_region', 'number',
-      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'string'],
       [bams, genome, msg.region, msg.width, msg.height,
         msg.paired ? 1 : 0, msg.clip ? 1 : 0, msg.supplementary ? 1 : 0, msg.coverage ? 1 : 0,
-        msg.delsize || 1000, msg.mod || 0])
+        msg.delsize || 1000, msg.mod || 0, msg.tlheight || 14, msg.rdheight || 12, bed])
     const elapsed = Math.round(performance.now() - t0)
 
     if (rc !== 0) {
