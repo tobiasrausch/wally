@@ -7,7 +7,7 @@
 
 # Wally
 
-Plotting of aligned sequencing reads, assembled contigs or pan-genome graphs in BAM/CRAM format and visualization of genomic variants.
+Plotting of aligned sequencing reads in BAM/CRAM format and visualization of genomic variants.
 
 ## Installing Wally
 
@@ -19,10 +19,11 @@ Wally is available as a [Bioconda package](https://anaconda.org/bioconda/wally),
 
 `make all`
 
+The [wally web application](https://www.gear-genomics.com/wally/) can be compiled as described [here](https://github.com/tobiasrausch/wally/tree/main/client).
 
 ## Running Wally
 
-Wally uses subcommands for different visualization modes.
+The [wally web application](https://www.gear-genomics.com/wally/) is available at [www.gear-genomics.com/wally](https://www.gear-genomics.com/wally/). The command-line wally application uses subcommands for different visualization modes.
 
 ## Subcommand `region`: Visualization of alignment regions
 
