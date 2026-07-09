@@ -236,6 +236,10 @@
                    min="0.5" max="5" step="0.5" value="1" title="Match line width" />
             <span class="wally-toolbar-sep"></span>
             <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="dotTranspose" />
+              <label class="form-check-label" for="dotTranspose" title="Transposed layout">Transpose</label>
+            </div>
+            <div class="form-check form-check-inline">
               <input class="form-check-input" type="checkbox" id="dotFlatten" />
               <label class="form-check-label" for="dotFlatten" title="Flatten the mapping segments">Flatten</label>
             </div>
@@ -243,7 +247,7 @@
             <label class="mb-0" for="dotScale" title="Scale the dotplots">
               <i class="fas fa-expand-arrows-alt"></i>
             </label>
-            <input type="range" id="dotScale" class="wally-range" min="25" max="150" step="5" value="100"
+            <input type="range" id="dotScale" class="wally-range" min="25" max="150" step="5" value="150"
                    title="Scale the dotplots" />
           </div>
 

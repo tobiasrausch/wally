@@ -336,14 +336,18 @@ namespace wallysworld
 	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	  insertComma(gend);
 	  text += ":" + gstart + "-" + gend;
-	  TextSize textSize = getTextSize(text);
-	  int32_t baseline = yTop + th / 2 + textSize.height / 2 - 1;
+	  // Font
+	  float lblPx = (float) (th - 4) / 0.72f;
+	  if (lblPx > (float) WALLY_FONT_PX) lblPx = (float) WALLY_FONT_PX;
+	  if (lblPx < 6.0f) lblPx = 6.0f;
+	  TextSize textSize = getTextSize(text, lblPx);
+	  int32_t baseline = yTop + th / 2 + textSize.height / 2;
 	  if (w > textSize.width + 2 * (int32_t) ah + 14) {
-	    drawText(img, (px + pxend) / 2 - textSize.width / 2, baseline, text, dpLabelOn(barClr));
+	    drawText(img, (px + pxend) / 2 - textSize.width / 2, baseline, text, dpLabelOn(barClr), lblPx);
 	  } else if (px > (int32_t) c.usedwidth / 2) {
-	    drawText(img, px - textSize.width - 6, baseline, text, DP_NAMETXT);
+	    drawText(img, px - textSize.width - 6, baseline, text, DP_NAMETXT, lblPx);
 	  } else {
-	    drawText(img, pxend + 6, baseline, text, DP_NAMETXT);
+	    drawText(img, pxend + 6, baseline, text, DP_NAMETXT, lblPx);
 	  }
 
 	  // Next mapping
@@ -396,15 +400,19 @@ namespace wallysworld
 	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	  insertComma(gend);
 	  text += ":" + gstart + "-" + gend;
-	  TextSize textSize = getTextSize(text);
+	  // Font
+	  float lblPx = (float) (th - 4) / 0.72f;
+	  if (lblPx > (float) WALLY_FONT_PX) lblPx = (float) WALLY_FONT_PX;
+	  if (lblPx < 6.0f) lblPx = 6.0f;
+	  TextSize textSize = getTextSize(text, lblPx);
 
 	  // Rotated text: anchor x is the label column, anchor y is the along-axis start
 	  if (h > textSize.width + 2 * (int32_t) ah + 14) {
-	    drawTextRotated(img, xLeft + th / 2 - textSize.height / 2, (py + pyend) / 2 - textSize.width / 2, text, dpLabelOn(barClr));
+	    drawTextRotated(img, xLeft + th / 2 - textSize.height / 2, (py + pyend) / 2 - textSize.width / 2, text, dpLabelOn(barClr), lblPx);
 	  } else if (py > (int32_t) c.usedheight / 2) {
-	    drawTextRotated(img, xLeft, py - textSize.width - 6, text, DP_NAMETXT);
+	    drawTextRotated(img, xLeft, py - textSize.width - 6, text, DP_NAMETXT, lblPx);
 	  } else {
-	    drawTextRotated(img, xLeft, pyend + 6, text, DP_NAMETXT);
+	    drawTextRotated(img, xLeft, pyend + 6, text, DP_NAMETXT, lblPx);
 	  }
 
 	  // Next mapping

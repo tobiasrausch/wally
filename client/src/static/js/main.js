@@ -289,7 +289,8 @@ function dotParams() {
     matchlen: Number.isFinite(match) && match >= 7 ? match : 31,
     linewidth: Number.isFinite(line) && line > 0 ? line : 1.5,
     flatten: el('dotFlatten').checked,
-    mapq: Number.isFinite(mq) && mq >= 0 ? mq : 1
+    mapq: Number.isFinite(mq) && mq >= 0 ? mq : 1,
+    refTop: el('dotTranspose').checked
   }
 }
 
@@ -338,6 +339,7 @@ function doDotplot(view) {
     linewidth: p.linewidth,
     flatten: p.flatten,
     mapq: p.mapq,
+    refTop: p.refTop,
     width: dotWidth()
   })
 }
@@ -453,7 +455,7 @@ el('dot-left').addEventListener('click', () => dotShift(-0.2))
 el('dot-right').addEventListener('click', () => dotShift(0.2))
 el('dot-go').addEventListener('click', () => doDotplot(parseRegion(el('dotRegionNav').value)))
 el('dotRegionNav').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doDotplot(parseRegion(el('dotRegionNav').value)) } })
-for (const id of ['dotSample', 'dotReads', 'dotMatch', 'dotLine', 'dotFlatten', 'dotMapq', 'dotScale']) {
+for (const id of ['dotSample', 'dotReads', 'dotMatch', 'dotLine', 'dotFlatten', 'dotMapq', 'dotScale', 'dotTranspose']) {
   el(id).addEventListener('change', () => { if (viewMode === 'dotplot' && currentView) doDotplot(currentView) })
 }
 
