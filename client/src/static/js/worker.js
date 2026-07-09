@@ -133,10 +133,11 @@ self.onmessage = async (ev) => {
     const xhr0 = xhrCount
     const t0 = performance.now()
     const rc = M.ccall('wally_region', 'number',
-      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'string'],
+      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'string'],
       [bams, genome, msg.region, msg.width, msg.height,
         msg.paired ? 1 : 0, msg.clip ? 1 : 0, msg.supplementary ? 1 : 0, msg.coverage ? 1 : 0,
-        msg.delsize || 1000, msg.mod || 0, msg.tlheight || 14, msg.rdheight || 12, bed])
+        msg.delsize || 1000, msg.mod || 0, msg.tlheight || 14, msg.rdheight || 12,
+        Number.isFinite(msg.mapq) ? msg.mapq : 1, bed])
     const elapsed = Math.round(performance.now() - t0)
 
     if (rc !== 0) {

@@ -24,19 +24,19 @@ namespace wallysworld
   #endif
 
   #ifndef WALLY_A
-  #define WALLY_A BLRgba32(0,150,0)
+  #define WALLY_A BLRgba32(34,151,66)
   #endif
 
   #ifndef WALLY_C
-  #define WALLY_C BLRgba32(0,0,255)
+  #define WALLY_C BLRgba32(40,92,224)
   #endif
 
   #ifndef WALLY_G
-  #define WALLY_G BLRgba32(209,113,5)
+  #define WALLY_G BLRgba32(208,124,24)
   #endif
 
   #ifndef WALLY_T
-  #define WALLY_T BLRgba32(255,0,0)
+  #define WALLY_T BLRgba32(219,48,48)
   #endif
 
   #ifndef WALLY_N

@@ -103,7 +103,7 @@ namespace wallysworld
 
     int32_t y0 = track * c.tlheight;
     int32_t yc = y0 + c.tlheight / 2;
-    int32_t exonH = (c.tlheight >= 8) ? (c.tlheight - 4) : std::max(2, (int32_t) c.tlheight - 1);
+    int32_t exonH = std::max(2, (int32_t) c.tlheight - 1);
     int32_t exonY = yc - exonH / 2;
     double exonR = (exonH >= 6) ? 2.0 : 1.0;
 
@@ -148,10 +148,14 @@ namespace wallysworld
 	}
 
 	// Exon label
-	TextSize textSize = getTextSize(anno[i].id);
-	int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
-	if ((pxmid > px) && (pxmid + textSize.width < pxend) && (exonH >= textSize.height)) {
-	  drawText(img, pxmid, yc + textSize.height/2 - 1, anno[i].id, BLRgba32(255, 255, 255));
+	float lblPx = (float) (exonH - 4) / 0.72f;
+	if (lblPx > (float) WALLY_FONT_PX) lblPx = (float) WALLY_FONT_PX;
+	if (lblPx >= 7.0f) {
+	  TextSize textSize = getTextSize(anno[i].id, lblPx);
+	  int32_t pxmid = (px + pxend) / 2 - textSize.width/2;
+	  if ((pxmid > px) && (pxmid + textSize.width < pxend)) {
+	    drawText(img, pxmid, yc + textSize.height/2, anno[i].id, BLRgba32(255, 255, 255), lblPx);
+	  }
 	}
       }
     }
@@ -291,15 +295,28 @@ namespace wallysworld
 
   template<typename TConfig>
   inline void
-  drawRead(TConfig const& c, BLContext& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const tri, BLRgba32 const& clr) {
-    img.fill_rect(BLRectI(x, y, w, h), clr);
-    if (tri) {
-      if (reverse) {
-	BLPoint pvec[3] = {BLPoint(x, y), BLPoint(x, y+h-1), BLPoint(x-c.pxoffset/3, y + h/2)};
-	img.fill_polygon(pvec, 3, clr);
-      } else {
-	BLPoint pvec[3] = {BLPoint(x+w, y), BLPoint(x+w, y+h-1), BLPoint(x+w+c.pxoffset/3, y + h/2)};
-	img.fill_polygon(pvec, 3, clr);
+  drawRead(TConfig const& c, BLContext& img, int32_t const x, int32_t const y, int32_t const w, int32_t const h, bool const reverse, bool const, BLRgba32 const& clr) {
+    double rr = ((h >= 6) && (w >= 4)) ? std::min(2.5, (double) h / 2.0) : 0.0;
+    if (rr > 0.0) img.fill_round_rect(BLRoundRect(x, y, w, h, rr, rr), clr);
+    else img.fill_rect(BLRectI(x, y, w, h), clr);
+
+    // Strand direction
+    if ((c.pxoffset >= WALLY_PX) && (h >= 6) && (w >= 8)) {
+      BLRgba32 chev(255, 255, 255, 160);
+      int32_t ah = h / 4;
+      if (ah < 2) ah = 2;
+      int32_t cy = y + h / 2;
+      double sw = (h >= 12) ? 1.4 : 1.0;
+      int32_t spacing = (4 * h < 36) ? 36 : 4 * h;
+      for(int32_t cx = x + spacing / 2; cx + ah < x + w; cx += spacing) {
+	if (cx - ah < x) continue;
+	if (reverse) {
+	  drawLine(img, cx + ah, cy - ah, cx, cy, chev, sw);
+	  drawLine(img, cx, cy, cx + ah, cy + ah, chev, sw);
+	} else {
+	  drawLine(img, cx, cy - ah, cx + ah, cy, chev, sw);
+	  drawLine(img, cx + ah, cy, cx, cy + ah, chev, sw);
+	}
       }
     }
   }

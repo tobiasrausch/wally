@@ -12,7 +12,7 @@ extern "C" {
 
   // Region subcommand
   EMSCRIPTEN_KEEPALIVE
-  int wally_region(const char* bams, const char* genome, const char* region, int width, int height, int paired, int showSoftClip, int showSupplementary, int showCoverage, int delsize, int mod, int tlheight, int rdheight, const char* bed) {
+  int wally_region(const char* bams, const char* genome, const char* region, int width, int height, int paired, int showSoftClip, int showSupplementary, int showCoverage, int delsize, int mod, int tlheight, int rdheight, int mapQual, const char* bed) {
     ConfigRegion c;
     c.showWindow = false;
     c.autoHeight = (height <= 0);
@@ -24,7 +24,7 @@ extern "C" {
     c.modType = ((mod >= WALLY_MOD_NONE) && (mod <= WALLY_MOD_5HMC)) ? mod : WALLY_MOD_NONE;
     c.delsize = (delsize > 0) ? delsize : 1000;
     c.splits = 1;
-    c.minMapQual = 1;
+    c.minMapQual = (mapQual >= 0) ? (uint32_t) mapQual : 1;
     c.width = (uint32_t) width;
     c.height = (uint32_t) height;
     c.tlheight = (tlheight > 0) ? (uint32_t) tlheight : 14;

@@ -193,6 +193,12 @@ function trackHeights() {
   return { tlheight: tl, rdheight: rd }
 }
 
+// Min. mapping quality
+function mapQual() {
+  const q = parseInt(el('mapq').value, 10)
+  return Number.isFinite(q) && q >= 0 ? q : 1
+}
+
 // Render
 function doRender(view) {
   showError('')
@@ -230,7 +236,8 @@ function doRender(view) {
     supplementary: el('supp').checked,
     coverage: el('coverage').checked,
     anno: hasAnno && annoEl.checked,
-    mod: parseInt(el('modType').value, 10) || 0
+    mod: parseInt(el('modType').value, 10) || 0,
+    mapq: mapQual()
   })
 }
 
@@ -282,7 +289,7 @@ el('nav-left').addEventListener('click', () => shift(-0.2))
 el('nav-right').addEventListener('click', () => shift(0.2))
 el('nav-go').addEventListener('click', () => doRender(parseRegion(el('regionNav').value)))
 el('regionNav').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doRender(parseRegion(el('regionNav').value)) } })
-for (const id of ['paired', 'clip', 'supp', 'coverage', 'anno', 'modType', 'trackHeight']) {
+for (const id of ['paired', 'clip', 'supp', 'coverage', 'anno', 'modType', 'trackHeight', 'mapq']) {
   el(id).addEventListener('change', () => { if (currentView) doRender(currentView) })
 }
 
