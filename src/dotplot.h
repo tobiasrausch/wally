@@ -35,6 +35,35 @@
 namespace wallysworld
 {
 
+  #ifndef DP_AXIS
+  #define DP_AXIS BLRgba32(120, 132, 152)      // axis + ticks
+  #endif
+  #ifndef DP_TICKTXT
+  #define DP_TICKTXT BLRgba32(104, 114, 132)
+  #endif
+  #ifndef DP_NAMETXT
+  #define DP_NAMETXT BLRgba32(42, 54, 78)      // read names
+  #endif
+  #ifndef DP_FWD
+  #define DP_FWD BLRgba32(46, 52, 66)          // forward matches
+  #endif
+  #ifndef DP_REV
+  #define DP_REV BLRgba32(214, 84, 72)         // reverse matches
+  #endif
+  #ifndef DP_ARROW
+  #define DP_ARROW BLRgba32(255, 255, 255, 232)  // arrow
+  #endif
+  #ifndef DP_BARBORDER
+  #define DP_BARBORDER BLRgba32(0, 0, 0, 40)   // outline
+  #endif
+
+  // Label
+  inline BLRgba32
+  dpLabelOn(BLRgba32 const& bg) {
+    double lum = 0.299 * bg.r() + 0.587 * bg.g() + 0.114 * bg.b();
+    return (lum > 150.0) ? BLRgba32(30, 38, 54) : BLRgba32(255, 255, 255);
+  }
+
   // Config arguments
   struct ConfigDotplot {
     bool showWindow;
@@ -212,7 +241,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    drawLine(img, px, py, pxend, pyend, BLRgba32(0, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, DP_FWD, c.lw);
 	  }
 	}
 	// Reverse matches
@@ -222,7 +251,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    drawLine(img, px, py, pxend, pyend, BLRgba32(255, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, DP_REV, c.lw);
 	  }
 	}
       }
@@ -245,7 +274,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, fwd[h][idx] + c.matchlen);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    drawLine(img, px, py, pxend, pyend, BLRgba32(0, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, DP_FWD, c.lw);
 	  }
 	}
 	// Reverse matches
@@ -255,7 +284,7 @@ namespace wallysworld
 	    int32_t pxend = pixelX(c.usedwidth, xlen, rev[h][idx]);
 	    int32_t py = pixelX(c.usedheight, ylen, k);
 	    int32_t pyend = pixelX(c.usedheight, ylen, k + c.matchlen);
-	    drawLine(img, px, py, pxend, pyend, BLRgba32(255, 0, 0), c.lw);
+	    drawLine(img, px, py, pxend, pyend, DP_REV, c.lw);
 	  }
 	}
       }
@@ -266,31 +295,55 @@ namespace wallysworld
   inline void
   drawXMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, BLRgba32>& cm, TReadMapping& mp, BLContext& img) {
     if (mp.find(refname) != mp.end()) {
+      int32_t th = c.tlheight;
+      double r = (th >= 6) ? std::min(3.0, th / 2.5) : 1.0;
+      double ah = (th * 0.30 < 2.5) ? 2.5 : th * 0.30;
       uint32_t runspacer = 4 * c.tlheight;
       for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t px = pixelX(c.usedwidth, len, mp[refname][k].rstart);
 	int32_t pxend = pixelX(c.usedwidth, len, mp[refname][k].rend);
-	img.fill_rect(BLRectI(px, c.usedheight + runspacer, pxend - px, c.tlheight), cm[mp[refname][k].tid]);
+	int32_t yTop = c.usedheight + runspacer;
+	int32_t w = (pxend - px < 2) ? 2 : (pxend - px);
+	bool fwd = mp[refname][k].fwd;
+	BLRgba32 barClr = cm[mp[refname][k].tid];
+
+	// Rounded, outlined bar
+	img.fill_round_rect(BLRoundRect(px, yTop, w, th, r, r), barClr);
+	img.set_stroke_width(1.0);
+	img.stroke_round_rect(BLRoundRect(px + 0.5, yTop + 0.5, w - 1, th - 1, r, r), DP_BARBORDER);
 
 	if (c.flatten) {
-	  drawLine(img, px, c.usedheight + runspacer, px, c.usedheight + runspacer + c.tlheight, BLRgba32(0, 0, 0), 1);
-	  drawLine(img, pxend, c.usedheight + runspacer, pxend, c.usedheight + runspacer + c.tlheight, BLRgba32(0, 0, 0), 1);
+	  drawLine(img, px, yTop, px, yTop + th, DP_AXIS, 1);
+	  drawLine(img, pxend, yTop, pxend, yTop + th, DP_AXIS, 1);
 	} else {
+	  // Direction
+	  double cyc = yTop + th / 2.0;
+	  if (w > 3.0 * ah + 4) {
+	    if (fwd) {
+	      double xr = px + w - 3;
+	      BLPoint tri[3] = {BLPoint(xr - 1.7 * ah, cyc - ah), BLPoint(xr, cyc), BLPoint(xr - 1.7 * ah, cyc + ah)};
+	      img.fill_polygon(tri, 3, DP_ARROW);
+	    } else {
+	      double xl = px + 3;
+	      BLPoint tri[3] = {BLPoint(xl + 1.7 * ah, cyc - ah), BLPoint(xl, cyc), BLPoint(xl + 1.7 * ah, cyc + ah)};
+	      img.fill_polygon(tri, 3, DP_ARROW);
+	    }
+	  }
+	  // Coordinate label
 	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
 	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
 	  insertComma(gstart);
 	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	  insertComma(gend);
 	  text += ":" + gstart + "-" + gend;
-	  if (mp[refname][k].fwd) text += " -->";
-	  else text += " <--";
 	  TextSize textSize = getTextSize(text);
-	  if ((pxend - px) > textSize.width + 10) {
-	    drawText(img, (px + pxend) / 2 - textSize.width / 2, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
+	  int32_t baseline = yTop + th / 2 + textSize.height / 2 - 1;
+	  if (w > textSize.width + 2 * (int32_t) ah + 14) {
+	    drawText(img, (px + pxend) / 2 - textSize.width / 2, baseline, text, dpLabelOn(barClr));
 	  } else if (px > (int32_t) c.usedwidth / 2) {
-	    drawText(img, px - textSize.width - 5, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
+	    drawText(img, px - textSize.width - 6, baseline, text, DP_NAMETXT);
 	  } else {
-	    drawText(img, pxend + 5, c.usedheight + runspacer + textSize.height, text, BLRgba32(0, 0, 0));
+	    drawText(img, pxend + 6, baseline, text, DP_NAMETXT);
 	  }
 
 	  // Next mapping
@@ -304,33 +357,54 @@ namespace wallysworld
   inline void
   drawYMappings(TConfig const& c, bam_hdr_t* hdr, std::string const& refname, uint32_t const len, std::map<uint32_t, BLRgba32>& cm, TReadMapping& mp, BLContext& img) {
     if (mp.find(refname) != mp.end()) {
+      int32_t th = c.tlheight;
+      double r = (th >= 6) ? std::min(3.0, th / 2.5) : 1.0;
+      double ah = (th * 0.30 < 2.5) ? 2.5 : th * 0.30;
       uint32_t runspacer = 4 * c.tlheight;
       for(uint32_t k = 0; k < mp[refname].size(); ++k) {
 	int32_t py = pixelX(c.usedheight, len, mp[refname][k].rstart);
 	int32_t pyend = pixelX(c.usedheight, len, mp[refname][k].rend);
-	img.fill_rect(BLRectI(c.usedwidth + runspacer, py, c.tlheight, pyend - py), cm[mp[refname][k].tid]);
+	int32_t xLeft = c.usedwidth + runspacer;
+	int32_t h = (pyend - py < 2) ? 2 : (pyend - py);
+	bool fwd = mp[refname][k].fwd;
+	BLRgba32 barClr = cm[mp[refname][k].tid];
+
+	img.fill_round_rect(BLRoundRect(xLeft, py, th, h, r, r), barClr);
+	img.set_stroke_width(1.0);
+	img.stroke_round_rect(BLRoundRect(xLeft + 0.5, py + 0.5, th - 1, h - 1, r, r), DP_BARBORDER);
 
 	if (c.flatten) {
-	  drawLine(img, c.usedwidth + runspacer, py, c.usedwidth + runspacer + c.tlheight, py, BLRgba32(0, 0, 0), 1);
-	  drawLine(img, c.usedwidth + runspacer, pyend, c.usedwidth + runspacer + c.tlheight, pyend, BLRgba32(0, 0, 0), 1);
+	  drawLine(img, xLeft, py, xLeft + th, py, DP_AXIS, 1);
+	  drawLine(img, xLeft, pyend, xLeft + th, pyend, DP_AXIS, 1);
 	} else {
+	  // Direction
+	  double cxc = xLeft + th / 2.0;
+	  if (h > 3.0 * ah + 4) {
+	    if (fwd) {
+	      double yb = py + h - 3;
+	      BLPoint tri[3] = {BLPoint(cxc - ah, yb - 1.7 * ah), BLPoint(cxc, yb), BLPoint(cxc + ah, yb - 1.7 * ah)};
+	      img.fill_polygon(tri, 3, DP_ARROW);
+	    } else {
+	      double yt = py + 3;
+	      BLPoint tri[3] = {BLPoint(cxc - ah, yt + 1.7 * ah), BLPoint(cxc, yt), BLPoint(cxc + ah, yt + 1.7 * ah)};
+	      img.fill_polygon(tri, 3, DP_ARROW);
+	    }
+	  }
 	  std::string text = std::string(hdr->target_name[mp[refname][k].tid]);
 	  std::string gstart = boost::lexical_cast<std::string>(mp[refname][k].gstart);
 	  insertComma(gstart);
 	  std::string gend = boost::lexical_cast<std::string>(mp[refname][k].gend);
 	  insertComma(gend);
 	  text += ":" + gstart + "-" + gend;
-	  if (mp[refname][k].fwd) text += " -->";
-	  else text += " <--";
 	  TextSize textSize = getTextSize(text);
 
 	  // Rotated text: anchor x is the label column, anchor y is the along-axis start
-	  if ((pyend - py) > textSize.width + 10) {
-	    drawTextRotated(img, c.usedwidth + runspacer, (py + pyend) / 2 - textSize.width / 2, text, BLRgba32(0, 0, 0));
+	  if (h > textSize.width + 2 * (int32_t) ah + 14) {
+	    drawTextRotated(img, xLeft + th / 2 - textSize.height / 2, (py + pyend) / 2 - textSize.width / 2, text, dpLabelOn(barClr));
 	  } else if (py > (int32_t) c.usedheight / 2) {
-	    drawTextRotated(img, c.usedwidth + runspacer, py - textSize.width - 5, text, BLRgba32(0, 0, 0));
+	    drawTextRotated(img, xLeft, py - textSize.width - 6, text, DP_NAMETXT);
 	  } else {
-	    drawTextRotated(img, c.usedwidth + runspacer, pyend + 5, text, BLRgba32(0, 0, 0));
+	    drawTextRotated(img, xLeft, pyend + 6, text, DP_NAMETXT);
 	  }
 
 	  // Next mapping
@@ -352,13 +426,13 @@ namespace wallysworld
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
 
     // Scale line
-    drawLine(img, 0, c.usedheight, c.usedwidth, c.usedheight, BLRgba32(0, 0, 255), 2);
+    drawLine(img, 0, c.usedheight, c.usedwidth, c.usedheight, DP_AXIS, 1.5);
 
     // Ticks
     double px = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	drawLine(img, px - c.pxoffset/2, c.usedheight, px - c.pxoffset/2, c.usedheight + 0.75 * c.tlheight, BLRgba32(0, 0, 255), 2);
+	drawLine(img, px - c.pxoffset/2, c.usedheight, px - c.pxoffset/2, c.usedheight + 0.5 * c.tlheight, DP_AXIS, 1.0);
       }
       if (i % modval == 0) {
 	// Font
@@ -366,7 +440,7 @@ namespace wallysworld
 	insertComma(text);
 	TextSize textSize = getTextSize(text);
 	if ((px - c.pxoffset/2 - textSize.width/2 > 0) && (px - c.pxoffset/2 + textSize.width < c.usedwidth)) {
-	  drawText(img, px - c.pxoffset/2 - textSize.width/2, c.usedheight + c.tlheight + textSize.height, text, BLRgba32(0, 0, 0));
+	  drawText(img, px - c.pxoffset/2 - textSize.width/2, c.usedheight + c.tlheight + textSize.height, text, DP_TICKTXT);
 	}
       }
       px += c.pxoffset;
@@ -376,7 +450,7 @@ namespace wallysworld
     if (true) {
       int32_t midpoint = c.usedwidth / 2;
       TextSize textSize = getTextSize(refname);
-      drawText(img, midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height, refname, BLRgba32(0, 0, 0));
+      drawTextBold(img, midpoint - textSize.width/2, c.usedheight + 2 * c.tlheight + textSize.height, refname, DP_NAMETXT);
     }
   }
 
@@ -389,17 +463,17 @@ namespace wallysworld
     insertComma(text);
     TextSize textSize = getTextSize(text);
     uint32_t modval = findTicks(c.pxoffset, textSize.width);
-    drawLine(img, 0, 0, c.usedwidth, 0, BLRgba32(0, 0, 255), 2);
+    drawLine(img, 0, 0, c.usedwidth, 0, DP_AXIS, 1.5);
 
     double px = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	drawLine(img, px - c.pxoffset/2, -0.55 * c.tlheight, px - c.pxoffset/2, 0, BLRgba32(0, 0, 255), 2);
+	drawLine(img, px - c.pxoffset/2, -0.5 * c.tlheight, px - c.pxoffset/2, 0, DP_AXIS, 1.0);
 	std::string txt = boost::lexical_cast<std::string>(i);
 	insertComma(txt);
 	TextSize ts = getTextSize(txt);
 	if ((px - c.pxoffset/2 - ts.width/2 > 0) && (px - c.pxoffset/2 + ts.width < c.usedwidth)) {
-	  drawText(img, px - c.pxoffset/2 - ts.width/2, -0.7 * c.tlheight, txt, BLRgba32(0, 0, 0));
+	  drawText(img, px - c.pxoffset/2 - ts.width/2, -0.7 * c.tlheight, txt, DP_TICKTXT);
 	}
       }
       px += c.pxoffset;
@@ -407,7 +481,7 @@ namespace wallysworld
 
     // Contig name
     TextSize ns = getTextSize(refname);
-    drawText(img, c.usedwidth / 2 - ns.width / 2, -0.7 * c.tlheight - ns.height - 4, refname, BLRgba32(0, 0, 0));
+    drawTextBold(img, c.usedwidth / 2 - ns.width / 2, -0.7 * c.tlheight - ns.height - 4, refname, DP_NAMETXT);
   }
 
   template<typename TConfig>
@@ -421,13 +495,13 @@ namespace wallysworld
     uint32_t modval = findTicks(c.pyoffset, textSize.width);
 
     // Scale line
-    drawLine(img, c.usedwidth, 0, c.usedwidth, c.usedheight, BLRgba32(0, 0, 255), 2);
+    drawLine(img, c.usedwidth, 0, c.usedwidth, c.usedheight, DP_AXIS, 1.5);
 
     // Ticks
     double py = 0;
     for(uint32_t i = 0; i < len; ++i) {
       if (i % modval == 0) {
-	drawLine(img, c.usedwidth, py - c.pyoffset/2, c.usedwidth + 0.75 * c.tlheight, py - c.pyoffset/2, BLRgba32(0, 0, 255), 2);
+	drawLine(img, c.usedwidth, py - c.pyoffset/2, c.usedwidth + 0.5 * c.tlheight, py - c.pyoffset/2, DP_AXIS, 1.0);
       }
       if (i % modval == 0) {
 	// Font
@@ -435,7 +509,7 @@ namespace wallysworld
 	insertComma(text);
 	TextSize textSize = getTextSize(text);
 	if ((py - c.pyoffset/2 - textSize.width/2 > 0) && (py - c.pyoffset/2 + textSize.width < c.usedheight)) {
-	  drawTextRotated(img, c.usedwidth + c.tlheight + textSize.height, py - c.pyoffset/2 - textSize.width/2, text, BLRgba32(0, 0, 0));
+	  drawTextRotated(img, c.usedwidth + c.tlheight + textSize.height, py - c.pyoffset/2 - textSize.width/2, text, DP_TICKTXT);
 	}
       }
       py += c.pyoffset;
@@ -445,7 +519,7 @@ namespace wallysworld
     if (true) {
       TextSize textSize = getTextSize(refname);
       int32_t midpoint = c.usedheight / 2;
-      drawTextRotated(img, c.usedwidth + 2 * c.tlheight + textSize.height, midpoint - textSize.width/2, refname, BLRgba32(0, 0, 0));
+      drawTextRotated(img, c.usedwidth + 2 * c.tlheight + textSize.height, midpoint - textSize.width/2, refname, DP_NAMETXT);
     }
   }
 
@@ -456,7 +530,7 @@ namespace wallysworld
     ProfilerStart("wally.prof");
 #endif
     // Chromosome colors
-    BLRgba32 colors[12] = { BLRgba32(51,160,44), BLRgba32(31,120,180), BLRgba32(227,26,28), BLRgba32(255,255,153), BLRgba32(166,206,227), BLRgba32(178,223,138), BLRgba32(251,154,153), BLRgba32(253,191,111), BLRgba32(255,127,0), BLRgba32(202,178,214), BLRgba32(106,61,154), BLRgba32(177,89,40) };
+    BLRgba32 colors[12] = { BLRgba32(78,121,167), BLRgba32(242,142,44), BLRgba32(89,161,79), BLRgba32(225,87,89), BLRgba32(118,183,178), BLRgba32(175,122,161), BLRgba32(237,201,73), BLRgba32(255,157,167), BLRgba32(156,117,95), BLRgba32(102,153,204), BLRgba32(120,178,120), BLRgba32(186,176,171) };
 
     // Open file handles
     samFile* samfile = NULL;
@@ -689,6 +763,7 @@ namespace wallysworld
 	  BLImage img(c.usedwidth + margin, topHeader + c.usedheight + footer, BL_FORMAT_PRGB32);
 	  BLContext ctx(img);
 	  ctx.fill_all(BLRgba32(255, 255, 255));
+	  ctx.set_stroke_caps(BL_STROKE_CAP_ROUND);
 	  ctx.translate(0, topHeader);
 	  if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, ctx);
 	  else wordMatchLong(c, seq2, xlen, ylen, fwd, rev, ctx);
@@ -720,6 +795,7 @@ namespace wallysworld
 	  BLImage img(c.usedwidth + margin, c.usedheight + footer, BL_FORMAT_PRGB32);
 	  BLContext ctx(img);
 	  ctx.fill_all(BLRgba32(255, 255, 255));
+	  ctx.set_stroke_caps(BL_STROKE_CAP_ROUND);
 	  if (c.matchlen < 32) wordMatchShort(c, seq2, xlen, ylen, fwd, rev, ctx);
 	  else wordMatchLong(c, seq2, xlen, ylen, fwd, rev, ctx);
 	  drawXScaleDotplot(c, seqname1, xlen, ctx);
