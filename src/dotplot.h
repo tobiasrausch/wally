@@ -909,6 +909,7 @@ namespace wallysworld
     if ((vm.count("help")) || (!vm.count("input-file"))) {
       std::cout << std::endl;
       std::cout << "Usage: wally " << argv[0] << " [OPTIONS] -g <ref.fa> -R <reads.lst> <sample.bam>" << std::endl;
+      std::cout << "       wally " << argv[0] << " [OPTIONS] -g <ref.fa> -t 10 -e chrA:500-18000 <sample.bam>" << std::endl;
       std::cout << "       wally " << argv[0] << " [OPTIONS] <sample.fa>" << std::endl;
       std::cout << visible_options << "\n";
       return 0;
