@@ -264,23 +264,32 @@ function shift(frac) {
 }
 
 // Dotplot view
+
+function dotScale() {
+  const s = parseInt(el('dotScale').value, 10)
+  return Number.isFinite(s) && s > 0 ? s / 100 : 1
+}
+
+// Reference-axis width (shared across plots for alignment), scaled by dotScale.
 function dotWidth() {
   const cont = el('dotplot-container')
   let avail = cont ? cont.clientWidth - 150 : 0
   if (!avail || avail < 320) avail = 900
   if (avail > 1100) avail = 1100
-  return Math.round(avail)
+  return Math.max(120, Math.round(avail * dotScale()))
 }
 
 function dotParams() {
   const reads = parseInt(el('dotReads').value, 10)
   const match = parseInt(el('dotMatch').value, 10)
   const line = parseFloat(el('dotLine').value)
+  const mq = parseInt(el('dotMapq').value, 10)
   return {
     numReads: Number.isFinite(reads) && reads > 0 ? reads : 10,
     matchlen: Number.isFinite(match) && match >= 7 ? match : 31,
     linewidth: Number.isFinite(line) && line > 0 ? line : 1.5,
-    flatten: el('dotFlatten').checked
+    flatten: el('dotFlatten').checked,
+    mapq: Number.isFinite(mq) && mq >= 0 ? mq : 1
   }
 }
 
@@ -328,6 +337,7 @@ function doDotplot(view) {
     matchlen: p.matchlen,
     linewidth: p.linewidth,
     flatten: p.flatten,
+    mapq: p.mapq,
     width: dotWidth()
   })
 }
@@ -443,7 +453,7 @@ el('dot-left').addEventListener('click', () => dotShift(-0.2))
 el('dot-right').addEventListener('click', () => dotShift(0.2))
 el('dot-go').addEventListener('click', () => doDotplot(parseRegion(el('dotRegionNav').value)))
 el('dotRegionNav').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doDotplot(parseRegion(el('dotRegionNav').value)) } })
-for (const id of ['dotSample', 'dotReads', 'dotMatch', 'dotLine', 'dotFlatten']) {
+for (const id of ['dotSample', 'dotReads', 'dotMatch', 'dotLine', 'dotFlatten', 'dotMapq', 'dotScale']) {
   el(id).addEventListener('change', () => { if (viewMode === 'dotplot' && currentView) doDotplot(currentView) })
 }
 

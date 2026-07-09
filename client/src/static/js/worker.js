@@ -134,8 +134,9 @@ self.onmessage = async (ev) => {
       const bam = bamList[msg.sampleIndex || 0] || bamList[0]
       const t0 = performance.now()
       const rc = M.ccall('wally_dotplot', 'number',
-        ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number'],
-        [bam, genome, msg.region, msg.numReads || 10, msg.matchlen || 31, msg.linewidth || 1.5, msg.width || 0, msg.flatten ? 1 : 0])
+        ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number'],
+        [bam, genome, msg.region, msg.numReads || 10, msg.matchlen || 31, msg.linewidth || 1.5, msg.width || 0, msg.flatten ? 1 : 0,
+          Number.isFinite(msg.mapq) ? msg.mapq : 1])
       const elapsed = Math.round(performance.now() - t0)
       if (rc !== 0) {
         postMessage({ type: 'error', message: `wally dotplot returned ${rc} - no primary reads in this region, or check the sample/reference.` })

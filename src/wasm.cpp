@@ -137,7 +137,7 @@ extern "C" {
 
   // Dotplot
   EMSCRIPTEN_KEEPALIVE
-  int wally_dotplot(const char* bams, const char* genome, const char* region, int numReads, int matchlen, double linewidth, int width, int flatten) {
+  int wally_dotplot(const char* bams, const char* genome, const char* region, int numReads, int matchlen, double linewidth, int width, int flatten, int mapQual) {
     // Use the first alignment file
     std::string bamPath;
     {
@@ -159,6 +159,7 @@ extern "C" {
     c.flip = false;
     c.incSelf = false;
     c.refTop = true;
+    c.minMapQual = (mapQual >= 0) ? (uint32_t) mapQual : 1;
     c.matchlen = (matchlen > 0) ? (uint32_t) matchlen : 31;
     c.topN = (numReads > 0) ? (uint32_t) numReads : 10;
     c.seqsize = 0;
