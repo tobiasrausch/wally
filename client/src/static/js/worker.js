@@ -110,7 +110,7 @@ function ensureSlice(M, msg, view) {
 
 self.onmessage = async (ev) => {
   const msg = ev.data
-  if (msg.type !== 'render') return
+  if (msg.type !== 'render' && msg.type !== 'dotplot') return
   try {
     const M = await init()
 
@@ -126,6 +126,35 @@ self.onmessage = async (ev) => {
       const m = mountLocal(M, msg)
       bams = m.bams; genome = m.genome
       if (msg.anno && msg.bedName) bed = '/data/' + msg.bedName
+    }
+
+    // Dotplot view
+    if (msg.type === 'dotplot') {
+      const bamList = bams.split('\n').filter(Boolean)
+      const bam = bamList[msg.sampleIndex || 0] || bamList[0]
+      const t0 = performance.now()
+      const rc = M.ccall('wally_dotplot', 'number',
+        ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number'],
+        [bam, genome, msg.region, msg.numReads || 10, msg.matchlen || 31, msg.linewidth || 1.5, msg.width || 0, msg.flatten ? 1 : 0])
+      const elapsed = Math.round(performance.now() - t0)
+      if (rc !== 0) {
+        postMessage({ type: 'error', message: `wally dotplot returned ${rc} - no primary reads in this region, or check the sample/reference.` })
+        return
+      }
+      // longest-first
+      let order = []
+      try { order = M.FS.readFile('/dpreads.txt', { encoding: 'utf8' }).split('\n').filter(Boolean) } catch (e) { }
+      const files = M.FS.readdir('/dot').filter((f) => f.endsWith('.png'))
+      const plots = files.map((name) => {
+        const read = order.find((q) => name.startsWith(q + '_')) || name.replace(/\.png$/, '')
+        return { name, read, png: M.FS.readFile('/dot/' + name) }
+      })
+      plots.sort((a, b) => {
+        const ia = order.indexOf(a.read); const ib = order.indexOf(b.read)
+        return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib)
+      })
+      postMessage({ type: 'dotresult', plots, elapsed, prefetched }, plots.map((p) => p.png.buffer))
+      return
     }
 
     try { M.FS.unlink('/wallyplot.png') } catch (e) { }

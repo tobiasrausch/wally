@@ -1,10 +1,16 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <unistd.h>
 #include <emscripten.h>
 
 #include "version.h"
 #include "region.h"
+#include "dotplot.h"
 
 using namespace wallysworld;
 
@@ -127,6 +133,63 @@ extern "C" {
       if (sam_index_build(outPaths[i].c_str(), 0) < 0) return 7;
     }
     return 0;
+  }
+
+  // Dotplot
+  EMSCRIPTEN_KEEPALIVE
+  int wally_dotplot(const char* bams, const char* genome, const char* region, int numReads, int matchlen, double linewidth, int width, int flatten) {
+    // Use the first alignment file
+    std::string bamPath;
+    {
+      std::stringstream s(bams);
+      std::string line;
+      while (std::getline(s, line)) { if (!line.empty()) { bamPath = line; break; } }
+    }
+    if (bamPath.empty()) {
+      std::cerr << "wally error: no alignment file provided" << std::endl;
+      return 2;
+    }
+
+    ConfigDotplot c;
+    c.showWindow = false;
+    c.hasReadFile = false;
+    c.hasRegionFile = false;
+    c.storeSequences = true;
+    c.flatten = (flatten != 0);
+    c.flip = false;
+    c.incSelf = false;
+    c.refTop = true;
+    c.matchlen = (matchlen > 0) ? (uint32_t) matchlen : 31;
+    c.topN = (numReads > 0) ? (uint32_t) numReads : 10;
+    c.seqsize = 0;
+    c.width = (width > 0) ? (uint32_t) width : 0;
+    c.height = 0;
+    c.usedwidth = c.width;
+    c.usedheight = c.height;
+    c.tlheight = textSize().height + 2;
+    c.lw = (linewidth > 0) ? (float) linewidth : 1.5f;
+    c.format = 0;
+    c.readStr = "";
+    c.regionStr = std::string(region);
+    c.readFile = boost::filesystem::path("/dpreads.txt");
+    c.seqfile = boost::filesystem::path("/dpseq.fa");
+    c.genome = boost::filesystem::path(genome);
+    c.file = boost::filesystem::path(bamPath);
+
+    // dotplot directory
+    boost::filesystem::remove_all("/dot");
+    boost::filesystem::create_directories("/dot");
+    if (chdir("/dot") != 0) { std::cerr << "wally error: chdir /dot failed" << std::endl; return 7; }
+
+    int32_t rc = 2;
+    try {
+      rc = dotplotRun(c);
+    } catch (std::exception const& e) {
+      std::cerr << "wally error: " << e.what() << std::endl;
+      rc = 2;
+    }
+    if (chdir("/") != 0) { }
+    return rc;
   }
 
 }

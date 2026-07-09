@@ -1,3 +1,12 @@
+/* Full-window */
+body.results-fullscreen header,
+body.results-fullscreen footer {
+  display: none;
+}
+body.results-fullscreen main {
+  padding-top: 0.5rem;
+}
+
 /* Tabs */
 #mainTab,
 #input-tab,
@@ -70,6 +79,36 @@
   display: block;
   height: auto;
   cursor: grab;
+}
+
+/* Dotplot gallery */
+.dotplot-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: 82vh;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  padding: 8px;
+}
+.dotplot-item {
+  margin: 0;
+}
+.dotplot-item figcaption {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #444;
+  margin-bottom: 0.25rem;
+  word-break: break-all;
+}
+.dotplot-item img {
+  display: block;
+  max-width: none;
+  height: auto;
+  border: 1px solid #eee;
+  border-radius: 3px;
 }
 
 .wally-log {

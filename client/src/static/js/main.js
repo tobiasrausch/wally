@@ -26,6 +26,11 @@ $('#mainTab a, #source-tabs a').on('click', function (e) {
   $(this).tab('show')
 })
 
+// Full window
+$('#mainTab a').on('shown.bs.tab', function (e) {
+  document.body.classList.toggle('results-fullscreen', $(e.target).attr('href') === '#result-tab')
+})
+
 function showError(msg) {
   errorMsgEl.textContent = msg
   errorEl.classList.toggle('d-none', !msg)
@@ -177,6 +182,8 @@ function clampView(v) {
 }
 
 let currentView = null
+let viewMode = 'region'
+let dotUrls = []
 
 // Plot width
 function plotWidth() {
@@ -216,6 +223,9 @@ function doRender(view) {
   annoEl.disabled = !hasAnno
 
   logEl.textContent = ''
+  viewMode = 'region'
+  el('dotplot-toolbar').classList.add('d-none')
+  el('dotplot-container').classList.add('d-none')
   el('results-toolbar').classList.remove('d-none')
   showResults(true)
   activateTab('#result-tab')
@@ -253,6 +263,133 @@ function shift(frac) {
   doRender(clampView({ chr: currentView.chr, start: currentView.start + d, end: currentView.end + d }))
 }
 
+// Dotplot view
+function dotWidth() {
+  const cont = el('dotplot-container')
+  let avail = cont ? cont.clientWidth - 150 : 0
+  if (!avail || avail < 320) avail = 900
+  if (avail > 1100) avail = 1100
+  return Math.round(avail)
+}
+
+function dotParams() {
+  const reads = parseInt(el('dotReads').value, 10)
+  const match = parseInt(el('dotMatch').value, 10)
+  const line = parseFloat(el('dotLine').value)
+  return {
+    numReads: Number.isFinite(reads) && reads > 0 ? reads : 10,
+    matchlen: Number.isFinite(match) && match >= 7 ? match : 31,
+    linewidth: Number.isFinite(line) && line > 0 ? line : 1.5,
+    flatten: el('dotFlatten').checked
+  }
+}
+
+function sampleNames(source) {
+  if (source.mode === 'remote') return source.samples.map((s) => s.name)
+  return source.bamNames.map((n) => n.replace(rx.alignment, ''))
+}
+
+function populateDotSamples(source) {
+  const sel = el('dotSample')
+  const names = sampleNames(source)
+  const keep = sel.value
+  sel.innerHTML = ''
+  names.forEach((nm, i) => {
+    const o = document.createElement('option')
+    o.value = String(i)
+    o.textContent = nm
+    sel.appendChild(o)
+  })
+  if (keep && parseInt(keep, 10) < names.length) sel.value = keep
+  sel.disabled = names.length <= 1
+}
+
+function doDotplot(view) {
+  showError('')
+  if (!view) { showError('Invalid region. Use e.g. chr1:1000000-1000200'); return }
+  let source
+  try { source = currentSource() === 'remote' ? collectRemote() : collectLocal() } catch (err) { showError(err.message); return }
+
+  currentView = view
+  const region = fmtRegion(view)
+  el('region').value = region
+  el('regionNav').value = region
+  el('dotRegionNav').value = region
+
+  busy(true)
+  const p = dotParams()
+  const sampleIndex = parseInt(el('dotSample').value, 10) || 0
+  worker.postMessage({
+    type: 'dotplot',
+    ...source,
+    region,
+    sampleIndex,
+    numReads: p.numReads,
+    matchlen: p.matchlen,
+    linewidth: p.linewidth,
+    flatten: p.flatten,
+    width: dotWidth()
+  })
+}
+
+function enterDotplot() {
+  if (!currentView) return
+  let source
+  try { source = currentSource() === 'remote' ? collectRemote() : collectLocal() } catch (err) { showError(err.message); return }
+  viewMode = 'dotplot'
+  populateDotSamples(source)
+  el('results-toolbar').classList.add('d-none')
+  el('dotplot-toolbar').classList.remove('d-none')
+  showResults(false)
+  el('dotplot-container').classList.remove('d-none')
+  el('dotRegionNav').value = fmtRegion(currentView)
+  logEl.textContent = ''
+  doDotplot(currentView)
+}
+
+function exitDotplot() {
+  viewMode = 'region'
+  el('dotplot-toolbar').classList.add('d-none')
+  el('dotplot-container').classList.add('d-none')
+  doRender(currentView)
+}
+
+function dotZoom(factor) {
+  if (!currentView) return
+  const center = (currentView.start + currentView.end) / 2
+  const span = Math.max(20, Math.round((currentView.end - currentView.start) * factor))
+  doDotplot(clampView({ chr: currentView.chr, start: Math.round(center - span / 2), end: Math.round(center + span / 2) }))
+}
+function dotShift(frac) {
+  if (!currentView) return
+  const d = Math.round((currentView.end - currentView.start) * frac)
+  doDotplot(clampView({ chr: currentView.chr, start: currentView.start + d, end: currentView.end + d }))
+}
+
+function renderGallery(plots) {
+  const gal = el('dotplot-gallery')
+  dotUrls.forEach((u) => URL.revokeObjectURL(u))
+  dotUrls = []
+  gal.innerHTML = ''
+  if (!plots || !plots.length) {
+    gal.innerHTML = '<p class="text-muted mb-0">No reads to plot in this region.</p>'
+    return
+  }
+  for (const pl of plots) {
+    const url = URL.createObjectURL(new Blob([pl.png], { type: 'image/png' }))
+    dotUrls.push(url)
+    const fig = document.createElement('figure')
+    fig.className = 'dotplot-item'
+    const cap = document.createElement('figcaption')
+    cap.textContent = pl.read || pl.name.replace(/\.png$/, '')
+    const img = document.createElement('img')
+    img.src = url
+    fig.appendChild(cap)
+    fig.appendChild(img)
+    gal.appendChild(fig)
+  }
+}
+
 worker.onmessage = (ev) => {
   const msg = ev.data
   if (msg.type === 'log') {
@@ -272,6 +409,10 @@ worker.onmessage = (ev) => {
     img.src = url
     showResults(true)
     appendLog(`Rendered in ${msg.elapsed} ms${msg.prefetched ? ' (prefetched window)' : msg.xhr ? ` (${msg.xhr} requests)` : ' (cached)'}.`)
+    busy(false)
+  } else if (msg.type === 'dotresult') {
+    renderGallery(msg.plots)
+    appendLog(`Dotplot rendered in ${msg.elapsed} ms${msg.prefetched ? ' (prefetched window)' : ' (cached)'}.`)
     busy(false)
   } else if (msg.type === 'error') {
     showError(msg.message)
@@ -293,10 +434,23 @@ for (const id of ['paired', 'clip', 'supp', 'coverage', 'anno', 'modType', 'trac
   el(id).addEventListener('change', () => { if (currentView) doRender(currentView) })
 }
 
+// Dotplot view toggle + controls
+el('btn-dotplot').addEventListener('click', enterDotplot)
+el('dot-back').addEventListener('click', exitDotplot)
+el('dot-zoomin').addEventListener('click', () => dotZoom(0.5))
+el('dot-zoomout').addEventListener('click', () => dotZoom(2))
+el('dot-left').addEventListener('click', () => dotShift(-0.2))
+el('dot-right').addEventListener('click', () => dotShift(0.2))
+el('dot-go').addEventListener('click', () => doDotplot(parseRegion(el('dotRegionNav').value)))
+el('dotRegionNav').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doDotplot(parseRegion(el('dotRegionNav').value)) } })
+for (const id of ['dotSample', 'dotReads', 'dotMatch', 'dotLine', 'dotFlatten']) {
+  el(id).addEventListener('change', () => { if (viewMode === 'dotplot' && currentView) doDotplot(currentView) })
+}
+
 // Re-render on window resize
 let resizeTimer = null
 window.addEventListener('resize', () => {
-  if (!currentView) return
+  if (!currentView || viewMode !== 'region') return
   clearTimeout(resizeTimer)
   resizeTimer = setTimeout(() => doRender(currentView), 200)
 })
