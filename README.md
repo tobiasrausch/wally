@@ -41,11 +41,11 @@ Most often you probably want to use a BED file with regions of interest and just
 
 `wally region -R regions.bed -g <genome> <input.bam>`
 
-### Methylation view
+### Modified base (methylation) view
 
-Wally parses modified bases and you can visualize them using
+For long reads with `MM`/`ML` modified base tags, you can switch to a 2-color modified base view, e.g., for methylation (5mC):
 
-`wally region -m 5mC -r <region> -g <genome> <input.bam>`
+`wally region -m 5mC -r chrA:35-80 -g <genome> <input.bam>`
 
 ### Gene annotations
 
@@ -74,22 +74,15 @@ can be visualized using
 
 `wally region -b anno.bed.gz -r chr17:7350000-7354000 -g <genome> <input.bam>`
 
-
 ### Multiple BAM files
 
 You can include multiple BAM files in a plot such as a tumor genome and a matched control in cancer genomics.
 
 `wally region -r chr17:7573900-7574000 -g <genome> <tumor.bam> <control.bam>`
 
-In fact, wally can be used to create "wallpapers" of genomes which gave rise to the tool name. For instance, the below command can be used to create a full genome view of 96 samples of a full plate of SARS-CoV-2 genomes.
+In fact, wally can be used to create "wallpapers" of genomes which gave rise to the tool name `wally`. For instance, the below command can be used to create a full genome view of 96 samples of a full plate of SARS-CoV-2 genomes.
 
 `wally region -y 20480 -r NC_045512.2:1-30000 -g NC_045512.2.fa Plate*.bam`
-
-### Modified base (methylation) view
-
-For long reads with `MM`/`ML` modified base tags, you can switch to a 2-color modified base view, e.g., for methylation (5mC):
-
-`wally region -m 5mC -r chrA:35-80 -g <genome> <input.bam>`
 
 ### Aligning multiple regions horizontally (split view)
 
@@ -120,19 +113,30 @@ The paired-end coloring highlights candidate structural variants supported by re
 - ![#ff8000](https://placehold.co/15x15/ff8000/ff8000.png) `inter-chr paired-end, A:--R1--> B:<--R2-- leads to --A--> --B--> junction, BND:3to5`
 - ![#cab2d6](https://placehold.co/15x15/cab2d6/cab2d6.png) `inter-chr paired-end, A:<--R1-- B:--R2--> leads to <--A-- <--B-- junction, BND:5to3`
 
-For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split with a larger image size.
+For large and complex structural variants, wally supports split views (as explained above). For instance, for an inter-chromosomal translocation you probably want to use a 2-way horizontal split.
 
-`wally region -p -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+`wally region -p -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
 To visualize genomic breakpoints it's also helpful to highlight clipped reads `-c` and supplementary alignments `-u`.
 
-`wally region -cup -x 2048 -y 2048 -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
+`wally region -cup -s 2 -r chrA:35-80,chrB:60-80 -g <genome> <tumor.bam> <control.bam>`
 
 ### Track customization
 
 You can turn off the coverage track and/or control the pixel height of a track line (`--tlheight`) and of a single read (`--rdheight`).
 
 `wally region --no-coverage --tlheight 5 --rdheight 4 -r chrA:35-80 -g <genome> <input.bam>`
+
+### Examples
+
+The [wally web application](https://www.gear-genomics.com/wally/) ships a minimal example that you can also run from the command-line.
+
+```
+cd client/src/static/example/
+wally region -g chrA.fa -r chrA:76087-86128:del -b gene.bed.gz Sample.bam
+wally region -m 5mC -g chrA.fa -r chrA:76087-86128:del_5mC -b gene.bed.gz Sample.bam
+wally region -c -s 2 -r chrA:77100-77150:del_split,chrA:84100-84150:del_split -g chrA.fa -b gene.bed.gz Sample.bam
+```
 
 ## Subcommand `matches`: Visualization of chained alignment matches
 
