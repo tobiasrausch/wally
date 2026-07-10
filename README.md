@@ -41,6 +41,12 @@ Most often you probably want to use a BED file with regions of interest and just
 
 `wally region -R regions.bed -g <genome> <input.bam>`
 
+### Methylation view
+
+Wally parses modified bases and you can visualize them using
+
+`wally region -m 5mC -r <region> -g <genome> <input.bam>`
+
 ### Gene annotations
 
 Simple BED files are used to provide gene or other annotations. The BED file needs to be bgzipped and indexed via tabix (`tabix -p bed input.bed.gz`). The required columns are chromosome, start, end and an identifier which is displayed if there is sufficient space.
